@@ -1,4 +1,3 @@
-
 /**
  * MyPage Service
  * 마이페이지 비즈니스 로직 - 데이터 가공 및 처리
@@ -8,56 +7,31 @@ import { mypageRepository } from '../repositories/mypageRepository.js';
 
 export const mypageService = {
   /**
-   * 마이페이지 전체 데이터 로드
+   * 마이페이지 전체 데이터 로드 (통합 API 사용)
    */
   async loadMypageData(userId) {
     try {
-      console.log('📖 마이페이지 데이터 로드 시작:', userId);
+      console.log('📖 마이페이지 통합 데이터 로드 시작:', userId);
 
-      // 병렬로 모든 데이터 조회
-      const [userInfo, orders, reviews, favoriteStores, regularLevels, storePoints] = await Promise.all([
-        mypageRepository.getUserInfo(userId),
-        mypageRepository.getOrders(userId, 3),
-        mypageRepository.getReviews(userId),
-        mypageRepository.getFavoriteStores(userId),
-        mypageRepository.getRegularLevels(userId),
-        mypageRepository.getStorePoints(userId)
-      ]);
+      // 통합 API 한 번 호출로 모든 데이터 조회
+      const data = await mypageRepository.getMypageData(userId);
 
-      // 통계 계산
-      const stats = this.calculateStats(orders, reviews, favoriteStores);
-
-      console.log('✅ 마이페이지 데이터 로드 완료');
+      console.log('✅ 마이페이지 통합 데이터 로드 완료');
 
       return {
-        userInfo,
-        orders,
-        reviews: reviews.reviews,
-        reviewTotal: reviews.total,
-        favoriteStores,
-        regularLevels,
-        storePoints,
-        stats
+        userInfo: data.userInfo,
+        orders: data.recentOrders,
+        reviews: data.reviews.items,
+        reviewTotal: data.reviews.total,
+        favoriteStores: data.favoriteStores,
+        regularLevels: data.regularLevels,
+        storePoints: [], // 보유포인트는 보류
+        stats: data.stats
       };
     } catch (error) {
       console.error('❌ loadMypageData 실패:', error);
       throw error;
     }
-  },
-
-  /**
-   * 통계 계산
-   */
-  calculateStats(orders, reviews, favoriteStores) {
-    const totalOrders = orders.length;
-    const totalReviews = reviews.total || 0;
-    const favoriteCount = favoriteStores.length;
-
-    return {
-      totalOrders,
-      totalReviews,
-      favoriteCount
-    };
   },
 
   /**

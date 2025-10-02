@@ -1,772 +1,148 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
+const userController = require('../controllers/userController');
+const authService = require('../services/authService');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+// ============ 회원가입 관련 ============
 
-// 아이디 중복 체크 API
-router.post('/users/check-id', async (req, res) => {
-  const { id } = req.body;
-
-  console.log(`🔍 아이디 중복 확인 요청: ${id}`);
-
-  if (!id) {
-    return res.status(400).json({ success: false, error: '아이디를 입력해주세요' });
-  }
-
-  if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-    return res.status(400).json({ success: false, error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
-  }
-
+// 아이디 중복 체크
+router.post('/users/check-id', async (req, res, next) => {
   try {
-    const result = await pool.query('SELECT user_id FROM users WHERE user_id = $1', [id.trim()]);
+    const { id } = req.body;
 
-    if (result.rows.length > 0) {
-      console.log(`❌ 아이디 중복: ${id}`);
-      res.json({ success: true, available: false, message: '이미 사용 중인 아이디입니다' });
-    } else {
-      console.log(`✅ 아이디 사용 가능: ${id}`);
-      res.json({ success: true, available: true, message: '사용 가능한 아이디입니다' });
-    }
-  } catch (error) {
-    console.error('❌ 아이디 중복 체크 실패:', error);
-    res.status(500).json({ success: false, error: '아이디 중복 체크 중 오류가 발생했습니다' });
-  }
-});
-
-// 전화번호 중복 체크 API
-router.post('/users/check-phone', async (req, res) => {
-  const { phone } = req.body;
-
-  console.log(`📞 전화번호 중복 확인 요청: ${phone}`);
-
-  if (!phone) {
-    return res.status(400).json({ success: false, error: '전화번호를 입력해주세요' });
-  }
-
-  if (!/^010-\d{4}-\d{4}$/.test(phone)) {
-    return res.status(400).json({ success: false, error: '올바른 전화번호 형식이 아닙니다' });
-  }
-
-  try {
-    const result = await pool.query('SELECT user_id FROM users WHERE phone = $1', [phone.trim()]);
-
-    if (result.rows.length > 0) {
-      console.log(`❌ 전화번호 중복: ${phone}`);
-      res.json({ success: true, available: false, message: '이미 등록된 전화번호입니다' });
-    } else {
-      console.log(`✅ 전화번호 사용 가능: ${phone}`);
-      res.json({ success: true, available: true, message: '사용 가능한 전화번호입니다' });
-    }
-  } catch (error) {
-    console.error('❌ 전화번호 중복 체크 실패:', error);
-    res.status(500).json({ success: false, error: '전화번호 중복 체크 중 오류가 발생했습니다' });
-  }
-});
-
-// 사용자 회원가입 API
-router.post('/users/signup', async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    const { id, pw, name, phone } = req.body;
-
-    if (!id || !pw) {
-      return res.status(400).json({ 
-        success: false,
-        error: '아이디와 비밀번호는 필수입니다' 
-      });
+    if (!id) {
+      return res.status(400).json({ success: false, error: '아이디를 입력해주세요' });
     }
 
     if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-      return res.status(400).json({ 
-        success: false,
-        error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' 
-      });
+      return res.status(400).json({ success: false, error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' });
     }
 
-    if (pw.length < 4) {
-      return res.status(400).json({ 
-        success: false,
-        error: '비밀번호는 최소 4자 이상이어야 합니다' 
-      });
-    }
+    const available = await authService.checkIdAvailability(id.trim());
 
-    if (phone && !/^010-\d{4}-\d{4}$/.test(phone)) {
-      return res.status(400).json({ 
-        success: false,
-        error: '전화번호 형식이 올바르지 않습니다' 
-      });
-    }
-
-    await client.query('BEGIN');
-
-    const cleanedData = {
-      user_id: id.trim(),
-      user_pw: pw.trim(),
-      name: name ? name.trim() : null,
-      phone: phone ? phone.trim() : null
-    };
-
-    // 실제 users 테이블 스키마에 맞춰 회원 생성
-    const result = await client.query(`
-      INSERT INTO users (
-        user_id, user_pw, name, phone, 
-        email, address, birth, gender
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-      RETURNING id, user_id, name, phone
-    `, [
-      cleanedData.user_id, 
-      cleanedData.user_pw, 
-      cleanedData.name, 
-      cleanedData.phone,
-      null, null, null, null
-    ]);
-
-    const newUser = result.rows[0];
-    console.log(`✅ 새 사용자 가입: ${newUser.user_id} (${newUser.name || '익명'})`);
-
-    await client.query('COMMIT');
-
-    res.json({ 
-      success: true, 
-      message: '회원가입이 완료되었습니다',
-      user: {
-        id: newUser.user_id,
-        userId: newUser.id,
-        name: newUser.name,
-        phone: newUser.phone
-      }
+    res.json({
+      success: true,
+      available,
+      message: available ? '사용 가능한 아이디입니다' : '이미 사용 중인 아이디입니다'
     });
-
   } catch (error) {
-    await client.query('ROLLBACK');
-
-    if (error.code === '23505') {
-      res.status(409).json({ 
-        success: false,
-        error: '이미 존재하는 아이디 또는 전화번호입니다' 
-      });
-    } else {
-      console.error('회원가입 실패:', error);
-      res.status(500).json({ 
-        success: false,
-        error: '회원가입 처리 중 오류가 발생했습니다' 
-      });
-    }
-  } finally {
-    client.release();
+    next(error);
   }
 });
 
-// 통합 로그인 함수
-async function handleLogin(req, res) {
-  const { id, pw } = req.body;
-
-  console.log('🔍 로그인 요청:', { id });
-
-  if (!id || !pw) {
-    return res.status(400).json({ 
-      success: false, 
-
-
-
-
-      error: '아이디와 비밀번호를 입력해주세요' 
-    });
-  }
-
+// 전화번호 중복 체크
+router.post('/users/check-phone', async (req, res, next) => {
   try {
-    // users 테이블에서 사용자 조회 (실제 스키마에 맞춤)
-    const result = await pool.query('SELECT * FROM users WHERE user_id = $1', [id]);
+    const { phone } = req.body;
 
-    if (result.rows.length === 0) {
-      console.log(`❌ 사용자를 찾을 수 없음: ${id}`);
-      return res.status(401).json({ 
-        success: false, 
-        error: '아이디 또는 비밀번호가 일치하지 않습니다' 
-      });
+    if (!phone) {
+      return res.status(400).json({ success: false, error: '전화번호를 입력해주세요' });
     }
 
-    const user = result.rows[0];
-    if (user.user_pw !== pw) {
-      console.log(`❌ 비밀번호 불일치: ${id}`);
-      return res.status(401).json({ 
-        success: false, 
-        error: '아이디 또는 비밀번호가 일치하지 않습니다' 
-      });
+    if (!/^010-\d{4}-\d{4}$/.test(phone)) {
+      return res.status(400).json({ success: false, error: '올바른 전화번호 형식이 아닙니다' });
     }
 
-    console.log(`✅ 로그인 성공: ${user.name} (${user.user_id})`);
+    const available = await authService.checkPhoneAvailability(phone.trim());
+
+    res.json({
+      success: true,
+      available,
+      message: available ? '사용 가능한 전화번호입니다' : '이미 등록된 전화번호입니다'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// 회원가입
+router.post('/users/signup', async (req, res, next) => {
+  try {
+    const { id, pw, name, phone } = req.body;
+
+    const newUser = await authService.signup({ id, pw, name, phone });
+
+    res.json({
+      success: true,
+      message: '회원가입이 완료되었습니다',
+      user: newUser
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============ 로그인 관련 ============
+
+// 로그인 (POST /login, /users/login 모두 지원)
+router.post('/login', async (req, res, next) => {
+  try {
+    const { id, pw } = req.body;
+
+    const user = await authService.login(id, pw);
 
     res.json({
       success: true,
       message: '로그인 성공',
-      user: {
-        id: user.user_id,        // 사용자 아이디 (문자열)
-        userId: user.id,         // users 테이블 PK (정수)
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        address: user.address,
-        birth: user.birth,
-        gender: user.gender
-      }
+      user
     });
   } catch (error) {
-    console.error('❌ 로그인 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '로그인 처리 중 오류가 발생했습니다' 
-    });
-  }
-}
-
-// 레거시 경로 호환성: /users/login
-router.post('/users/login', handleLogin);
-
-// 새 시스템 경로: /login
-router.post('/login', handleLogin);
-
-// 사용자 정보 조회 API
-router.get('/user/:userId', async (req, res) => {
-  const { userId } = req.params;
-
-  console.log(`🔍 사용자 정보 조회 요청: ${userId}`);
-
-  try {
-    // 사용자 기본 정보 조회
-    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
-
-    if (userResult.rows.length === 0) {
-      console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
-      return res.status(404).json({ 
-        success: false, 
-        error: '사용자를 찾을 수 없습니다' 
-      });
-    }
-
-    const user = userResult.rows[0];
-
-    // 사용자 쿠폰 정보 조회 (JOIN) - user_id로 users.id 조회 후 사용
-    const couponsResult = await pool.query(`
-      SELECT 
-        c.id as coupon_id,
-        c.name as coupon_name,
-        c.description,
-        c.discount_type,
-        c.discount_value,
-        c.min_order_price as min_order_amount,
-        c.max_discount_value as max_discount,
-        c.valid_from as starts_at,
-        c.valid_until as ends_at,
-        uc.used_at,
-        uc.status,
-        s.name as store_name
-      FROM user_coupons uc
-      JOIN coupons c ON uc.coupon_id = c.id
-      LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
-      ORDER BY 
-        CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
-        c.valid_until ASC
-    `, [userId]);
-
-    // 쿠폰을 사용가능/사용완료로 분류
-    const coupons = {
-      unused: [],
-      used: []
-    };
-
-    couponsResult.rows.forEach(coupon => {
-      const couponData = {
-        id: coupon.coupon_id,
-        name: coupon.coupon_name,
-        description: coupon.description,
-        discountType: coupon.discount_type,
-        discountValue: coupon.discount_value,
-        minOrderAmount: coupon.min_order_amount,
-        maxDiscount: coupon.max_discount,
-        startsAt: coupon.starts_at,
-        endsAt: coupon.ends_at,
-        storeName: coupon.store_name,
-        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null,
-        status: coupon.status
-      };
-
-      if (coupon.used_at || coupon.status === 'USED') {
-        coupons.used.push({
-          ...couponData,
-          usedAt: coupon.used_at
-        });
-      } else {
-        // 만료되지 않은 쿠폰만 사용가능 목록에 추가
-        const now = new Date();
-        const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-
-        if ((!endDate || endDate > now) && coupon.status === 'AVAILABLE') {
-          coupons.unused.push(couponData);
-        } else {
-          // 만료된 쿠폰은 사용완료로 처리
-          coupons.used.push({
-            ...couponData,
-            usedAt: null,
-            expired: true
-          });
-        }
-      }
-    });
-
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id}), 쿠폰 ${couponsResult.rows.length}개`);
-
-    res.json({
-      success: true,
-      user: {
-        id: user.user_id,        // 사용자 아이디 (문자열)
-        userId: user.id,         // users 테이블 PK (정수)
-        name: user.name,
-        phone: user.phone,
-        email: user.email,
-        address: user.address,
-        birth: user.birth,
-        gender: user.gender,
-        coupons: coupons,
-        couponStats: {
-          total: couponsResult.rows.length,
-          unused: coupons.unused.length,
-          used: coupons.used.length
-        }
-      }
-    });
-  } catch (error) {
-    console.error('❌ 사용자 정보 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '사용자 정보 조회 실패' 
-    });
+    next(error);
   }
 });
 
-// 즐겨찾기 조회 API
-router.get('/users/favorites/:userId', async (req, res) => {
+router.post('/users/login', async (req, res, next) => {
+  try {
+    const { id, pw } = req.body;
+
+    const user = await authService.login(id, pw);
+
+    res.json({
+      success: true,
+      message: '로그인 성공',
+      user
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ============ 사용자 정보 관련 ============
+
+// 마이페이지 통합 데이터 조회 (NEW!)
+router.get('/users/:userId/mypage', userController.getMypageData);
+
+// 사용자 정보 조회 (POST)
+router.post('/users/info', userController.getUserInfo);
+
+// 사용자 정보 조회 (GET)
+router.get('/user/:userId', async (req, res, next) => {
   try {
     const { userId } = req.params;
 
-    const userCheck = await pool.query('SELECT user_id FROM users WHERE id = $1', [userId]);
-    if (userCheck.rows.length === 0) {
-      return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
-    }
-
-    const favoritesResult = await pool.query(`
-      SELECT 
-        f.id as favorite_id,
-        f.created_at,
-        s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
-        sa.address_full as address, sa.latitude, sa.longitude
-      FROM favorites f
-      JOIN stores s ON f.store_id = s.id
-      LEFT JOIN store_address sa ON s.id = sa.store_id
-      WHERE f.user_id = $1
-      ORDER BY f.created_at DESC
-    `, [userId]);
-
-    const favoriteStores = favoritesResult.rows.map(store => ({
-      id: store.id,
-      favoriteId: store.favorite_id,
-      name: store.name,
-      category: store.category,
-      address: store.address || '주소 정보 없음',
-      ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
-      reviewCount: store.review_count || 0,
-      isOpen: store.is_open !== false,
-      favoriteDate: store.created_at,
-      coord: store.latitude && store.longitude 
-        ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
-        : null
-    }));
-
-    console.log(`✅ 사용자 ${userId} 즐겨찾기 조회: ${favoriteStores.length}개 매장`);
+    const user = await authService.getUserWithCoupons(userId);
 
     res.json({
       success: true,
-      stores: favoriteStores
+      user
     });
-
   } catch (error) {
-    console.error('즐겨찾기 조회 실패:', error);
-    res.status(500).json({ error: '즐겨찾기 조회 실패' });
+    next(error);
   }
 });
 
-// 즐겨찾기 토글 API
-router.post('/users/favorite/toggle', async (req, res) => {
-  const { userId, storeId, action } = req.body;
+// 사용자 정보 업데이트
+router.put('/users/update', userController.updateUserInfo);
 
-  console.log(`🔄 즐겨찾기 토글 요청: userId=${userId}, storeId=${storeId}, action=${action}`);
+// ============ 즐겨찾기 관련 ============
 
-  try {
-    if (!userId || !storeId) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'userId와 storeId가 필요합니다' 
-      });
-    }
+// 즐겨찾기 조회
+router.get('/users/favorites/:userId', userController.getFavoriteStores);
 
-    const userCheck = await pool.query('SELECT id FROM users WHERE id = $1', [userId]);
-    if (userCheck.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false,
-        error: '사용자를 찾을 수 없습니다' 
-      });
-    }
+// 즐겨찾기 토글
+router.post('/users/favorite/toggle', userController.toggleFavorite);
 
-    const storeCheck = await pool.query('SELECT id, name FROM stores WHERE id = $1', [parseInt(storeId)]);
-    if (storeCheck.rows.length === 0) {
-      return res.status(404).json({ 
-        success: false,
-        error: '매장을 찾을 수 없습니다' 
-      });
-    }
-
-    const storeName = storeCheck.rows[0].name;
-
-    const currentFavorite = await pool.query(
-      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
-      [userId, parseInt(storeId)]
-    );
-
-    const isFavorited = currentFavorite.rows.length > 0;
-    let finalAction = action || (isFavorited ? 'remove' : 'add');
-
-    if (finalAction === 'add') {
-      if (isFavorited) {
-        return res.json({
-          success: true,
-          message: '이미 즐겨찾기에 등록된 매장입니다',
-          storeName: storeName,
-          action: 'already_added'
-        });
-      }
-
-      await pool.query(`
-        INSERT INTO favorites (user_id, store_id)
-        VALUES ($1, $2)
-      `, [userId, parseInt(storeId)]);
-
-      // 매장 즐겨찾기 수 증가
-      await pool.query(`
-        UPDATE stores SET favorite_count = favorite_count + 1 WHERE id = $1
-      `, [parseInt(storeId)]);
-
-      console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 추가`);
-
-      res.json({
-        success: true,
-        message: '즐겨찾기에 추가되었습니다',
-        storeName: storeName,
-        action: 'added'
-      });
-
-    } else if (finalAction === 'remove') {
-      if (!isFavorited) {
-        return res.json({
-          success: true,
-          message: '즐겨찾기에 없는 매장입니다',
-          storeName: storeName,
-          action: 'not_found'
-        });
-      }
-
-      await pool.query(
-        'DELETE FROM favorites WHERE user_id = $1 AND store_id = $2',
-        [userId, parseInt(storeId)]
-      );
-
-      // 매장 즐겨찾기 수 감소
-      await pool.query(`
-        UPDATE stores SET favorite_count = GREATEST(favorite_count - 1, 0) WHERE id = $1
-      `, [parseInt(storeId)]);
-
-      console.log(`✅ 사용자 ${userId}가 매장 ${storeName} 즐겨찾기 제거`);
-
-      res.json({
-        success: true,
-        message: '즐겨찾기에서 제거되었습니다',
-        storeName: storeName,
-        action: 'removed'
-      });
-
-    } else {
-      res.status(400).json({ 
-        success: false,
-        error: '잘못된 액션입니다. add 또는 remove만 허용됩니다.' 
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ 즐겨찾기 토글 실패:', error);
-    res.status(500).json({ 
-      success: false,
-      error: '즐겨찾기 설정 실패: ' + error.message 
-    });
-  }
-});
-
-// 즐겨찾기 상태 확인 API
-router.get('/users/favorite/status/:userId/:storeId', async (req, res) => {
-  try {
-    const { userId, storeId } = req.params;
-
-    console.log(`🔍 즐겨찾기 상태 확인: userId=${userId}, storeId=${storeId}`);
-
-    if (!userId || !storeId) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'userId와 storeId가 필요합니다' 
-      });
-    }
-
-    const result = await pool.query(
-      'SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2',
-      [userId, parseInt(storeId)]
-    );
-
-    const isFavorited = result.rows.length > 0;
-
-    console.log(`✅ 즐겨찾기 상태 확인 완료: ${isFavorited ? '등록됨' : '등록안됨'}`);
-
-    res.json({
-      success: true,
-      userId: userId,
-      storeId: parseInt(storeId),
-      isFavorited: isFavorited
-    });
-
-  } catch (error) {
-    console.error('❌ 즐겨찾기 상태 확인 실패:', error);
-    res.status(500).json({ 
-      success: false,
-      error: '즐겨찾기 상태 확인 실패: ' + error.message 
-    });
-  }
-});
-
-// 사용자 정보 조회 API (POST 방식 - 호환성)
-router.post('/users/info', async (req, res) => {
-  const { userId } = req.body;
-
-  console.log(`🔍 사용자 정보 조회 요청 (POST): ${userId}`);
-
-  try {
-    // 사용자 기본 정보 조회
-    const userResult = await pool.query('SELECT * FROM users WHERE user_id = $1', [userId]);
-
-    if (userResult.rows.length === 0) {
-      console.log(`❌ 사용자를 찾을 수 없음: ${userId}`);
-      return res.status(404).json({ 
-        success: false, 
-        error: '사용자를 찾을 수 없습니다' 
-      });
-    }
-
-    const user = userResult.rows[0];
-
-    // 사용자 쿠폰 정보 조회 (JOIN) - user_id로 users.id 조회 후 사용
-    const couponsResult = await pool.query(`
-      SELECT 
-        c.id as coupon_id,
-        c.name as coupon_name,
-        c.description,
-        c.discount_type,
-        c.discount_value,
-        c.min_order_price as min_order_amount,
-        c.max_discount_value as max_discount,
-        c.valid_from as starts_at,
-        c.valid_until as ends_at,
-        uc.used_at,
-        uc.status,
-        s.name as store_name
-      FROM user_coupons uc
-      JOIN coupons c ON uc.coupon_id = c.id
-      LEFT JOIN stores s ON c.store_id = s.id
-      WHERE uc.user_id = (SELECT id FROM users WHERE user_id = $1)
-      ORDER BY 
-        CASE WHEN uc.used_at IS NULL THEN 0 ELSE 1 END,
-        c.valid_until ASC
-    `, [userId]);
-
-    // 쿠폰을 사용가능/사용완료로 분류
-    const coupons = {
-      unused: [],
-      used: []
-    };
-
-    couponsResult.rows.forEach(coupon => {
-      const couponData = {
-        id: coupon.coupon_id,
-        name: coupon.coupon_name,
-        description: coupon.description,
-        discountType: coupon.discount_type,
-        discountValue: coupon.discount_value,
-        minOrderAmount: coupon.min_order_amount,
-        maxDiscount: coupon.max_discount,
-        startsAt: coupon.starts_at,
-        endsAt: coupon.ends_at,
-        storeName: coupon.store_name,
-        validUntil: coupon.ends_at ? new Date(coupon.ends_at).toLocaleDateString() : null,
-        status: coupon.status
-      };
-
-      if (coupon.used_at || coupon.status === 'USED') {
-        coupons.used.push({
-          ...couponData,
-          usedAt: coupon.used_at
-        });
-      } else {
-        // 만료되지 않은 쿠폰만 사용가능 목록에 추가
-        const now = new Date();
-        const endDate = coupon.ends_at ? new Date(coupon.ends_at) : null;
-
-        if ((!endDate || endDate > now) && coupon.status === 'AVAILABLE') {
-          coupons.unused.push(couponData);
-        } else {
-          // 만료된 쿠폰은 사용완료로 처리
-          coupons.used.push({
-            ...couponData,
-            usedAt: null,
-            expired: true
-          });
-        }
-      }
-    });
-
-    console.log(`✅ 사용자 정보 조회 성공: ${user.name} (${user.user_id}), 쿠폰 ${couponsResult.rows.length}개`);
-
-    res.json({
-      success: true,
-      user: {
-        id: user.user_id,        // 사용자 아이디 (문자열)
-        userId: user.id,         // users 테이블 PK (정수)
-        name: user.name,
-        phone: user.phone,
-        email: user.email || '',
-        address: user.address || '',
-        birth: user.birth || '',
-        gender: user.gender || '',
-        point: 0, // 포인트는 별도 테이블에서 관리
-        coupons: coupons,
-        couponStats: {
-          total: couponsResult.rows.length,
-          unused: coupons.unused.length,
-          used: coupons.used.length
-        }
-      }
-    });
-  } catch (error) {
-    console.error('❌ 사용자 정보 조회 실패:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: '사용자 정보 조회 실패' 
-    });
-  }
-});
-
-// 사용자 정보 업데이트 API
-router.put('/users/update', async (req, res) => {
-  const client = await pool.connect();
-
-  try {
-    console.log('📝 사용자 정보 업데이트 요청:', req.body);
-
-    const { 
-      userId, 
-      name, 
-      phone, 
-      email, 
-      birth, 
-      gender, 
-      address, 
-      detailAddress, 
-      notifications 
-    } = req.body;
-
-    if (!userId || !name || !phone) {
-      return res.status(400).json({
-        success: false,
-        message: '필수 필드가 누락되었습니다.'
-      });
-    }
-
-    // 전화번호 중복 검사 (자신 제외)
-    const phoneCheck = await client.query(`
-      SELECT id FROM users 
-      WHERE phone = $1 AND id != $2
-    `, [phone, userId]);
-
-    if (phoneCheck.rows.length > 0) {
-      return res.status(409).json({
-        success: false,
-        message: '이미 사용 중인 전화번호입니다.'
-      });
-    }
-
-    const updateResult = await client.query(`
-      UPDATE users 
-      SET 
-        name = $1,
-        phone = $2,
-        email = $3,
-        birth = $4,
-        gender = $5,
-        address = $6,
-        detail_address = $7,
-        email_notifications = $8,
-        sms_notifications = $9,
-        push_notifications = $10,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = $11 
-      RETURNING *
-    `, [
-      name?.trim() || null,
-      phone?.trim() || null,
-      email?.trim() || null,
-      birth || null,
-      gender || null,
-      address?.trim() || null,
-      detailAddress?.trim() || null,
-      notifications?.email === true,
-      notifications?.sms === true,
-      notifications?.push === true,
-      userId
-    ]);
-
-    if (updateResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: '사용자를 찾을 수 없습니다.'
-      });
-    }
-
-    console.log('✅ 사용자 정보 업데이트 완료:', userId);
-
-    res.json({
-      success: true,
-      message: '사용자 정보가 성공적으로 업데이트되었습니다.',
-      user: updateResult.rows[0]
-    });
-
-  } catch (error) {
-    console.error('❌ 사용자 정보 업데이트 실패:', error);
-    res.status(500).json({
-      success: false,
-      message: '서버 오류가 발생했습니다.'
-    });
-  } finally {
-    client.release();
-  }
-});
+// 즐겨찾기 상태 확인
+router.get('/users/favorite/status/:userId/:storeId', userController.getFavoriteStatus);
 
 module.exports = router;
