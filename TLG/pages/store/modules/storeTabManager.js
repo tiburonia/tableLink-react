@@ -1,22 +1,32 @@
-// 매장 탭 관리자
+/**
+ * 매장 탭 관리자 (레거시 호환 래퍼)
+ * 새로운 레이어드 아키텍처 컨트롤러로 위임
+ */
+
+// 동적 import를 통한 컨트롤러 로드
+let storeTabController = null;
+
+async function loadController() {
+  if (!storeTabController) {
+    const module = await import('../controllers/storeTabController.js');
+    storeTabController = module.storeTabController;
+  }
+  return storeTabController;
+}
+
 window.StoreTabManager = {
-  initializeTabNavigation(store) {
-    const storeNavBar = document.getElementById('storeNavBar');
-
-    if (!storeNavBar) return;
-
-    // 탭 네비 이벤트
-    storeNavBar.addEventListener('click', async (e) => {
-      const btn = e.target.closest('.nav-btn');
-      if (!btn) return;
-
-      storeNavBar.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      await this.renderStoreTab(btn.dataset.tab, store);
-    });
+  async initializeTabNavigation(store) {
+    const controller = await loadController();
+    return controller.initializeTabNavigation(store);
   },
 
   async renderStoreTab(tab, store) {
+    const controller = await loadController();
+    return controller.renderTab(tab, store);
+  },
+
+  // 레거시 메서드 (하위 호환성)
+  async renderMenuTab_LEGACY(tab, store) {
     const storeContent = document.getElementById('storeContent');
     if (!storeContent) {
       console.error('❌ storeContent 요소를 찾을 수 없습니다');
@@ -105,57 +115,14 @@ window.StoreTabManager = {
         }
         break;
 
-      case 'review':
-          console.log('📖 리뷰 탭 렌더링 시작');
-          try {
-            await (async () => {
-              let reviewHTML = '';
-              if (typeof renderReviewHTML === 'function') {
-                reviewHTML = await renderReviewHTML(store);
-                console.log('✅ 리뷰 HTML 렌더링 완료');
-              } else if (typeof window.renderReviewHTML === 'function') {
-                reviewHTML = await window.renderReviewHTML(store);
-                console.log('✅ 리뷰 HTML 렌더링 완료 (window)');
-              } else {
-                console.error('❌ renderReviewHTML 함수를 찾을 수 없습니다');
-                reviewHTML = '<div class="empty-review">리뷰 렌더링 함수를 찾을 수 없습니다.</div>';
-              }
-
-              storeContent.innerHTML = reviewHTML;
-// 더보기 버튼 이벤트 재설정
-              const seeMoreBtn = storeContent.querySelector('.see-more-btn');
-              if (seeMoreBtn) {
-                seeMoreBtn.addEventListener('click', () => {
-                  console.log('📖 리뷰 더보기 버튼 클릭됨');
-                  if (typeof renderAllReview === 'function') {
-                    renderAllReview(store);
-                  } else if (typeof window.renderAllReview === 'function') {
-                    window.renderAllReview(store);
-                  } else {
-                    console.error('❌ renderAllReview 함수를 찾을 수 없습니다');
-                  }
-                });
-                console.log('✅ 리뷰 더보기 버튼 이벤트 설정 완료');
-              }
-            })();
-          } catch (error) {
-            console.error('❌ 리뷰 렌더링 중 오류:', error);
-            storeContent.innerHTML = '<div class="empty-review">리뷰 로딩 중 오류가 발생했습니다.</div>';
-          }
-        break;
-
-      case 'photo':
-        storeContent.innerHTML = '등록된 사진이 없습니다...';
-        break;
-
-      case 'info':
-        storeContent.innerHTML = '등록된 정보가 없습니다...';
-        break;
-
       default:
-        storeContent.innerHTML = '준비 중...';
+        storeContent.innerHTML = '<div class="empty-tab">준비 중...</div>';
     }
 
-    window.StorePanelManager.adjustLayout();
+    if (window.StorePanelManager) {
+      window.StorePanelManager.adjustLayout();
+    }
   }
 };
+
+console.log('✅ StoreTabManager (레거시 래퍼) 로드 완료');
