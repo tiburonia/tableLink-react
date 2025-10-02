@@ -87,7 +87,7 @@ class ReviewRepository {
   async createReview(reviewData) {
     const result = await pool.query(`
       INSERT INTO reviews (
-        user_id, store_id, order_id, rating, review_text, created_at
+        user_id, store_id, order_id, rating, content, created_at
       ) VALUES ($1, $2, $3, $4, $5, NOW())
       RETURNING 
         id,
@@ -95,7 +95,7 @@ class ReviewRepository {
         store_id,
         order_id,
         rating,
-        review_text,
+        content,
         created_at
     `, [
       reviewData.userId,

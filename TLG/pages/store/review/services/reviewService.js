@@ -36,7 +36,7 @@ export const reviewService = {
   prepareReviewData(order, rating, content, userId) {
     // 백엔드 API 스펙에 맞는 5개 필드만 반환
     return {
-      userId: userId || window.userInfo?.id || 'user1',
+      userId: window.userInfo.userId || 'user1',
       storeId: order.store_id,
       orderId: order.id,
       rating: rating,
@@ -78,8 +78,8 @@ export const reviewService = {
   
   formatOrderInfo(order) {
     const orderData = order
-    const items = orderData.items ? 
-      orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : 
+    const items = orderData.order_items ? 
+      orderData.order_items.map(i => `${i.menu_name}(${i.quantity}개)`).join(', ') : 
       '메뉴 정보 없음';
     const storeName = orderData.store || order.store_name || '매장 정보 없음';
     const orderDate = new Date(order.order_date).toLocaleDateString();
@@ -88,7 +88,7 @@ export const reviewService = {
       items,
       storeName,
       orderDate,
-      totalAmount: (order.final_amount || order.total_amount || 0).toLocaleString() + '원'
+      totalAmount: (order.total_price || 0).toLocaleString() + '원'
     };
   }
 };
