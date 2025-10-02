@@ -65,10 +65,18 @@ class UserRepository {
       SELECT 
         f.id as favorite_id,
         f.created_at,
-        s.id, s.name, s.category, s.rating_average, s.review_count, s.is_open,
-        sa.address_full as address, sa.latitude, sa.longitude
+        s.id,
+        s.is_open,
+        si.name,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        sa.address_full as address,
+        sa.latitude,
+        sa.longitude
       FROM favorites f
       JOIN stores s ON f.store_id = s.id
+      LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN store_addresses sa ON s.id = sa.store_id
       WHERE f.user_id = $1
       ORDER BY f.created_at DESC
