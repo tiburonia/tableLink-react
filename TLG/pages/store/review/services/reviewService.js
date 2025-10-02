@@ -37,6 +37,15 @@ export const reviewService = {
     const orderData = order.order_data || {};
     const storeName = orderData.store || order.store_name || '매장 정보 없음';
 
+    // 주문 날짜 안전하게 처리
+    let orderDate = '';
+    if (order.order_date) {
+      const dateObj = new Date(order.order_date);
+      if (!isNaN(dateObj.getTime())) {
+        orderDate = dateObj.toISOString().slice(0, 10);
+      }
+    }
+
     return {
       userId: userId || window.userInfo?.id || 'user1',
       storeId: order.store_id,
@@ -44,7 +53,7 @@ export const reviewService = {
       orderId: order.id,
       rating: rating,
       reviewText: content,
-      orderDate: new Date(order.order_date).toISOString().slice(0, 10)
+      orderDate: orderDate
     };
   },
 
