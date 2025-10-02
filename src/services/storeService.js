@@ -1,6 +1,7 @@
 
 const storeRepository = require('../repositories/storeRepository');
 const tableRepository = require('../repositories/tableRepository');
+const reviewRepository = require('../repositories/reviewRepository');
 
 /**
  * 매장 서비스 - 비즈니스 로직 처리
@@ -34,8 +35,8 @@ class StoreService {
     //테이블 정보 조회
     const table = await tableRepository.getStoreTable(numericStoreId)
 
-    //매장 리뷰 조회 (ORDER BY created_at DESC) LIMIT 5)
-    const review = await storeRepository.getStoreReview(numericStoreId)
+    //매장 리뷰 조회 (최근 5개)
+    const review = await reviewRepository.getStoreReviews(numericStoreId, 5, 0)
 
     //매장 프로모션 조회 >> store_regular_levels
     const promotion = await storeRepository.getStorePromotion(numericStoreId)
@@ -178,70 +179,6 @@ class StoreService {
     const users = await storeRepository.getStoreTopUsers(numericStoreId);
     
     return users;
-  }
-
-  /**
-   * 리뷰 제출
-   */
-  async submitReview(reviewData) {
-    // 데이터 유효성 검증
-    if (!reviewData.userId || !reviewData.storeId || !reviewData.orderId) {
-      throw new Error('필수 정보가 누락되었습니다');
-    }
-
-    if (!reviewData.rating || reviewData.rating < 1 || reviewData.rating > 5) {
-      throw new Error('평점은 1~5점 사이여야 합니다');
-    }
-
-    if (!reviewData.reviewText || reviewData.reviewText.trim().length < 10) {
-      throw new Error('리뷰는 최소 10자 이상이어야 합니다');
-    }
-
-    // 이미 리뷰가 있는지 확인
-    const reviewExists = await storeRepository.checkReviewExistsByOrderId(reviewData.orderId);
-    if (reviewExists) {
-      throw new Error('이미 해당 주문에 대한 리뷰를 작성하셨습니다');
-    }
-
-    console.log(`📝 리뷰 제출: 주문 ${reviewData.orderId}, 평점 ${reviewData.rating}`);
-
-    // 리뷰 제출
-    const review = await storeRepository.submitReview({
-      userId: reviewData.userId,
-      storeId: reviewData.storeId,
-      orderId: reviewData.orderId,
-      rating: reviewData.rating,
-      reviewText: reviewData.reviewText.trim()
-    });
-
-    console.log(`✅ 리뷰 제출 완료: ID ${review.id}`);
-
-    return review;
-  }
-
-  /**
-   * 매장 전체 리뷰 조회
-   */
-  async getAllStoreReviews(storeId, page = 1, limit = 50) {
-    const numericStoreId = parseInt(storeId);
-    if (isNaN(numericStoreId) || numericStoreId <= 0) {
-      throw new Error('유효하지 않은 매장 ID입니다');
-    }
-
-    const offset = (page - 1) * limit;
-    
-    console.log(`📖 매장 ${storeId} 전체 리뷰 조회 (page: ${page}, limit: ${limit})`);
-
-    const reviews = await storeRepository.getAllStoreReviews(numericStoreId, limit, offset);
-    
-    console.log(`✅ 매장 ${storeId} 전체 리뷰 ${reviews.length}개 조회 완료`);
-
-    return {
-      reviews,
-      total: reviews.length,
-      page,
-      limit
-    };
   }
 
   /**

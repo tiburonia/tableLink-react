@@ -1,93 +1,20 @@
 
 const express = require('express');
 const router = express.Router();
-const storeController = require('../controllers/storeController');
-const { Pool } = require('pg');
+const reviewController = require('../controllers/reviewController');
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-});
+/**
+ * 리뷰 라우트 - 레이어드 아키텍처 적용
+ * Controller -> Service -> Repository 계층 분리
+ */
 
-// 매장별 전체 리뷰 조회 API
-router.get('/stores/:storeId', async (req, res) => {
-  try {
-    const { storeId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
+// 매장별 전체 리뷰 조회
+router.get('/stores/:storeId', reviewController.getStoreReviews.bind(reviewController));
 
-    console.log(`📖 GET /api/reviews/stores/${storeId} 요청 (page: ${page}, limit: ${limit})`);
+// 사용자별 리뷰 조회
+router.get('/users/:userId', reviewController.getUserReviews.bind(reviewController));
 
-    const storeService = require('../services/storeService');
-    const result = await storeService.getAllStoreReviews(storeId, parseInt(page), parseInt(limit));
-
-    res.json({
-      success: true,
-      reviews: result.reviews,
-      total: result.total,
-      page: result.page,
-      limit: result.limit
-    });
-  } catch (error) {
-    console.error('❌ 전체 리뷰 조회 실패:', error);
-    res.status(500).json({ 
-      success: false,
-      error: error.message || '리뷰 조회 실패' 
-    });
-  }
-});
-
-// 사용자별 리뷰 조회 API
-router.get('/users/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { limit = 10 } = req.query;
-
-    console.log(`📝 사용자 ${userId} 리뷰 조회`);
-
-    // reviews 테이블 실제 컬럼명 사용
-    const result = await pool.query(`
-      SELECT 
-        r.id,
-        r.rating as score,
-        r.review_text as content,
-        r.created_at,
-        r.store_id as storeId,
-        s.name as storeName,
-        TO_CHAR(r.created_at, 'YYYY.MM.DD') as date
-      FROM reviews r
-      JOIN stores s ON r.store_id = s.id
-      WHERE r.user_id = $1
-      ORDER BY r.created_at DESC
-      LIMIT $2
-    `, [userId, limit]);
-
-    const totalResult = await pool.query(`
-      SELECT COUNT(*) as total FROM reviews WHERE user_id = $1
-    `, [userId]);
-
-    res.json({
-      success: true,
-      reviews: result.rows,
-      total: parseInt(totalResult.rows[0].total)
-    });
-  } catch (error) {
-    console.error('사용자 리뷰 조회 실패:', error);
-    
-    // 테이블이 존재하지 않는 경우 빈 배열 반환
-    if (error.code === '42P01' || error.message.includes('does not exist')) {
-      console.log('⚠️ 리뷰 테이블이 존재하지 않음 - 빈 결과 반환');
-      return res.json({
-        success: true,
-        reviews: [],
-        total: 0
-      });
-    }
-    
-    res.status(500).json({ success: false, error: '리뷰 조회 실패' });
-  }
-});
-
-// 리뷰 제출 API - 레이어드 아키텍처
-router.post('/submit', storeController.submitReview.bind(storeController));
+// 리뷰 제출
+router.post('/submit', reviewController.submitReview.bind(reviewController));
 
 module.exports = router;
