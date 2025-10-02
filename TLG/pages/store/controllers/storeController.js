@@ -242,7 +242,7 @@ export const storeController = {
    */
   setupPanelHandling() {
     console.log('🔧 패널 핸들링 설정 시작...');
-    
+
     // DOM이 준비될 때까지 대기
     setTimeout(() => {
       if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
@@ -261,7 +261,7 @@ export const storeController = {
    */
   setupFallbackScrolling() {
     console.log('🔄 폴백 스크롤 설정 시작...');
-    
+
     const storePanelContainer = document.getElementById('storePanelContainer');
     if (storePanelContainer) {
       // 스크롤 설정 강제 적용
@@ -269,7 +269,7 @@ export const storeController = {
       storePanelContainer.style.overflowX = 'hidden';
       storePanelContainer.style.webkitOverflowScrolling = 'touch';
       storePanelContainer.style.height = 'calc(100% - 24px)';
-      
+
       console.log('✅ 폴백 스크롤 설정 완료');
     } else {
       console.warn('⚠️ storePanelContainer를 찾을 수 없습니다');
@@ -386,10 +386,8 @@ export const storeController = {
         storeView.updateRatingDisplay(ratingData.ratingAverage);
       }
 
-      // 리뷰 미리보기 로드
-      if (window.ReviewManager && typeof window.ReviewManager.renderTopReviews === 'function') {
-        window.ReviewManager.renderTopReviews(store);
-      }
+      // 리뷰 미리보기 설정
+      await this.setupReviewPreview(store);
     } catch (error) {
       console.warn('⚠️ 리뷰 데이터 로드 실패:', error);
     }
@@ -447,7 +445,7 @@ export const storeController = {
       // Service Layer를 통한 데이터 로딩 및 계산
       const tableService = await import('../services/tableService.js').then(m => m.tableService);
       const tableStatusView = await import('../views/modules/tableStatusView.js').then(m => m.tableStatusView);
-      
+
       setTimeout(async () => {
         const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
         tableStatusView.updateTableInfoUI(tableInfo);
@@ -482,7 +480,16 @@ export const storeController = {
     this.state.currentStore = null;
     this.state.isInitialized = false;
     this.state.activeTab = 'menu';
-  }
+  },
+
+  /**
+   * 리뷰 미리보기 설정
+   */
+  async setupReviewPreview(store) {
+    // 동적으로 reviewPreviewController 로드
+    const { reviewPreviewController } = await import('../review/controllers/reviewPreviewController.js');
+    await reviewPreviewController.renderTopReviews(store);
+  },
 };
 
 // 전역 등록
