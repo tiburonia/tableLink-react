@@ -231,10 +231,10 @@ export const storeController = {
   /**
    * 탭 네비게이션 설정
    */
-  setupTabNavigation(store) {
-    if (window.StoreTabManager && typeof window.StoreTabManager.initializeTabNavigation === 'function') {
-      window.StoreTabManager.initializeTabNavigation(store);
-    }
+  async setupTabNavigation(store) {
+    // 동적으로 storeTabController 로드
+    const { storeTabController } = await import('./storeTabController.js');
+    storeTabController.initializeTabNavigation(store);
   },
 
   /**
