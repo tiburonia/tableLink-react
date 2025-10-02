@@ -6,6 +6,12 @@ import { promotionCardHTML } from './modules/promotionCardHTML.js';
 import { topUsersHTML } from './modules/topUsersHTML.js';
 import { loyaltyLevelHTML } from './modules/loyaltyLevelHTML.js';
 
+// CSS 파일 import
+const storeCSSLink = document.createElement('link');
+storeCSSLink.rel = 'stylesheet';
+storeCSSLink.href = '/TLG/pages/store/views/storeCSS/store.css';
+document.head.appendChild(storeCSSLink);
+
 export const storeView = {
   /**
    * 메인 매장 HTML 렌더링
@@ -85,7 +91,6 @@ export const storeView = {
           <span class="order-arrow">→</span>
         </button>
       </nav>
-      ${this.getStoreStyles()}
     `;
   },
 
@@ -267,11 +272,6 @@ export const storeView = {
         </div>
       `;
     }
-  },
-
-  // UI 구성요소들 - 기존 StoreUIManager 사용 (추후 modules로 완전 분리)
-  getStoreStyles() {
-    return window.StoreUIManager ? window.StoreUIManager.getStoreStyles() : '';
   },
 
   // 유틸리티 함수들
