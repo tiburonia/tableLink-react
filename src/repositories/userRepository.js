@@ -259,11 +259,10 @@ class UserRepository {
     const result = await pool.query(`
       SELECT 
         o.id,
-        o.order_number,
         o.store_id,
         o.total_price,
-        o.status,
-        o.order_type,
+        o.session_status,
+        o.source,
         o.created_at,
         s.name as store_name,
         s.category as store_category
@@ -276,7 +275,6 @@ class UserRepository {
 
     return result.rows.map(order => ({
       id: order.id,
-      orderNumber: order.order_number,
       storeId: order.store_id,
       storeName: order.store_name,
       storeCategory: order.store_category,
