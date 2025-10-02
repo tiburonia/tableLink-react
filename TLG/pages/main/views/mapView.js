@@ -1,4 +1,12 @@
 
+// 매장 카드 CSS 임포트
+const mapStoreCardCSS = document.createElement('link');
+mapStoreCardCSS.rel = 'stylesheet';
+mapStoreCardCSS.href = '/TLG/pages/main/views/mapStoreCard.css';
+if (!document.querySelector('link[href="/TLG/pages/main/views/mapStoreCard.css"]')) {
+  document.head.appendChild(mapStoreCardCSS);
+}
+
 /**
  * 지도 UI 렌더링 뷰
  * DOM 조작과 화면 렌더링만 담당

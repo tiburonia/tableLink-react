@@ -1,0 +1,121 @@
+
+/* 지도 패널 - 매장 카드 스타일 */
+.storeCard {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: 1px solid #f1f5f9;
+}
+
+.storeCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+}
+
+.storeHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.storeMainInfo {
+  flex: 1;
+}
+
+.storeName {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 8px 0;
+}
+
+.storeRating {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.ratingStar {
+  color: #fbbf24;
+  font-size: 16px;
+}
+
+.ratingValue {
+  font-weight: 700;
+  font-size: 16px;
+  color: #1a1a1a;
+}
+
+.reviewCount {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.storeCategory {
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+  padding: 6px 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  display: inline-block;
+  width: fit-content;
+}
+
+.storeActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.actionButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.actionButton.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.actionButton.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.actionIcon {
+  font-size: 16px;
+}
+
+.actionText {
+  font-size: 13px;
+}
+
+.storeAddress {
+  padding: 0 20px 20px 20px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.storeDistance {
+  color: #3b82f6;
+  font-weight: 600;
+  margin-left: 8px;
+}
