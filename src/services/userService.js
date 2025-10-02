@@ -13,7 +13,7 @@ class UserService {
     try {
       console.log('📖 마이페이지 통합 데이터 조회 (PK):', userId);
 
-      // 병렬로 모든 데이터 조회
+      // 병렬로 모든 데이터 조회 (주문에 리뷰 존재 여부 포함)
       const [userInfo, recentOrders, reviews, favoriteStores, regularLevels] = await Promise.all([
         userRepository.getUserById(userId),
         userRepository.getUserOrders(userId, { limit: 3 }),
@@ -24,16 +24,16 @@ class UserService {
 
       // 통계 계산
       const stats = {
-        totalOrders: recentOrders.length, // 실제로는 최근 3개만 가져왔으므로 전체 개수 쿼리 추가 필요
+        totalOrders: recentOrders.length,
         totalReviews: reviews.total || 0,
         favoriteCount: favoriteStores.length
       };
 
-      console.log('✅ 마이페이지 통합 데이터 조회 완료');
+      console.log('✅ 마이페이지 통합 데이터 조회 완료 (리뷰 상태 포함)');
 
       return {
         userInfo,
-        recentOrders,
+        recentOrders, // hasReview 필드 포함
         reviews: {
           total: reviews.total || 0,
           items: reviews.reviews || []

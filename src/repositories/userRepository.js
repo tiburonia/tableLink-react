@@ -257,7 +257,7 @@ class UserRepository {
   }
 
   /**
-   * 사용자 주문 내역 조회
+   * 사용자 주문 내역 조회 (리뷰 존재 여부 포함)
    */
   async getUserOrders(userId, options = {}) {
     const limit = options.limit || 10;
@@ -271,7 +271,11 @@ class UserRepository {
         o.source,
         o.created_at,
         s.name as store_name,
-        si.category as store_category
+        si.category as store_category,
+        EXISTS(
+          SELECT 1 FROM reviews r 
+          WHERE r.order_id = o.id AND r.user_id = o.user_id
+        ) as has_review
       FROM orders o
       LEFT JOIN stores s ON o.store_id = s.id
       LEFT JOIN store_info si ON o.store_id = si.store_id
@@ -288,7 +292,8 @@ class UserRepository {
       totalPrice: order.total_price,
       status: order.session_status,
       orderType: order.source,
-      createdAt: order.created_at
+      createdAt: order.created_at,
+      hasReview: order.has_review
     }));
   }
 

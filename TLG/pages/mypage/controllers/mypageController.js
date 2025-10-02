@@ -33,11 +33,7 @@ export const mypageController = {
       // 1. 데이터 로드 (Service Layer) - window.userInfo.id는 users.id (PK)
       const userPk = window.userInfo.userId;
       console.log('👤 사용자 PK로 마이페이지 데이터 로드:', userPk);
-      const data = await mypageService.loadMypageData(userPk);
-
-      // 리뷰 상태 추가
-      const enrichedOrders = await mypageService.enrichOrdersWithReviewStatus(data.orders);
-      data.orders = enrichedOrders;
+      const data = await mypageService.loadMypageData(userPk); // hasReview 포함
 
       // 2. 스타일 주입
       mypageView.injectStyles();

@@ -48,22 +48,4 @@ export const mypageRepository = {
     }
   },
 
-  /**
-   * 주문에 대한 리뷰 존재 여부 확인
-   */
-  async checkOrderHasReview(orderId) {
-    try {
-      const response = await fetch(`/api/reviews/order/${orderId}/exists`);
-
-      if (!response.ok) {
-        return false;
-      }
-
-      const data = await response.json();
-      return data.exists || false;
-    } catch (error) {
-      console.error('❌ checkOrderHasReview 실패:', error);
-      return false;
-    }
-  }
-};
+  };

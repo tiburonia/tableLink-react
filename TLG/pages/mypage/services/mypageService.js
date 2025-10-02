@@ -14,43 +14,24 @@ export const mypageService = {
     try {
       console.log('📖 마이페이지 통합 데이터 로드 시작 (PK):', userId);
 
-      // 통합 API 한 번 호출로 모든 데이터 조회
+      // 통합 API 한 번 호출로 모든 데이터 조회 (리뷰 존재 여부 포함)
       const data = await mypageRepository.getMypageData(userId);
 
-      console.log('✅ 마이페이지 통합 데이터 로드 완료');
+      console.log('✅ 마이페이지 통합 데이터 로드 완료 (리뷰 상태 포함)');
 
       return {
         userInfo: data.userInfo,
-        orders: data.recentOrders,
+        orders: data.recentOrders, // hasReview 필드 포함
         reviews: data.reviews.items,
         reviewTotal: data.reviews.total,
         favoriteStores: data.favoriteStores,
         regularLevels: data.regularLevels,
-        storePoints: [], // 보유포인트는 보류
+        storePoints: [],
         stats: data.stats
       };
     } catch (error) {
       console.error('❌ loadMypageData 실패:', error);
       throw error;
-    }
-  },
-
-  /**
-   * 주문 데이터에 리뷰 상태 추가
-   */
-  async enrichOrdersWithReviewStatus(orders) {
-    try {
-      const reviewStatuses = await Promise.all(
-        orders.map(order => mypageRepository.checkOrderHasReview(order.id))
-      );
-
-      return orders.map((order, index) => ({
-        ...order,
-        hasReview: reviewStatuses[index]
-      }));
-    } catch (error) {
-      console.error('❌ enrichOrdersWithReviewStatus 실패:', error);
-      return orders;
     }
   },
 
