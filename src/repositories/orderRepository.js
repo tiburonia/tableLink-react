@@ -679,7 +679,7 @@ class OrderRepository {
     const queryParams = [userId];
 
     if (status) {
-      whereClause += ' AND o.status = $2';
+      whereClause += ' AND o.session_status = $2';
       queryParams.push(status);
     }
 
@@ -691,16 +691,22 @@ class OrderRepository {
         o.created_at,
         o.table_num as table_number,
         s.id as store_id, 
-        s.name as store_name, 
-        oi
-        COUNT(ot.id) as ticket_count
+        s.name as store_name,
+        COUNT(DISTINCT ot.id) as ticket_count,
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'menu_name', oi.menu_name,
+            'quantity', oi.quantity,
+            'unit_price', oi.unit_price,
+            'total_price', oi.total_price
+          )
+        ) FILTER (WHERE oi.id IS NOT NULL AND ot.paid_status = 'PAID' AND oi.item_status != 'CANCELED') as order_items
       FROM orders o
       JOIN stores s ON o.store_id = s.id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
-      LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN order_items oi ON ot.id = oi.ticket_id
       ${whereClause}
-      GROUP BY o.id, s.id, s.name, si.category
+      GROUP BY o.id, s.id, s.name
       ORDER BY o.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
