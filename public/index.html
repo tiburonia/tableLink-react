@@ -33,12 +33,27 @@
   <script src="TLG/utils/TLL.js"></script>
   <!--내 계정 화면 렌더링 함수-->
   <script src="TLG/pages/mypage/renderMyAccount.js"></script>
-  <!--마이페이지 전체 리뷰 렌더링 함수-->
-  <script src="TLG/pages/store/order/renderAllOrderHTML.js"></script>
-  <!--리뷰 작성 CSS 파일 링크 추가-->
-  <link rel="stylesheet" href="TLG/pages/store/review/views/css/reviewWrite.css">
-  <!--리뷰 작성 화면 렌더링 함수-->
-  <script src="TLG/pages/store/review/renderReviewWrite.js" type="module"></script>
+  <!-- 주문 관련 -->
+  <script src="/TLG/pages/store/views/order/renderAllOrderHTML.js"></script>
+
+  <!-- 리뷰 관련 -->
+  <script src="/TLG/pages/store/views/review/renderReviewWrite.js"></script>
+  <link rel="stylesheet" href="/TLG/pages/store/views/review/css/reviewWrite.css">
+
+  <!-- 즐겨찾기 관련 -->
+  <script src="/TLG/pages/store/views/favoriteButtonView.js"></script>
+  <script src="/TLG/pages/store/services/favoriteService.js"></script>
+
+  <!-- 리뷰 전체보기 -->
+  <script src="/TLG/pages/store/views/review/renderAllReview.js"></script>
+
+  <!-- 리뷰 관리자 및 미리보기 (레이어드 아키텍처) -->
+  <script src="/TLG/pages/store/repositories/reviewDataRepository.js"></script>
+  <script src="/TLG/pages/store/views/reviewPreviewView.js"></script>
+  <script src="/TLG/pages/store/controllers/reviewPreviewController.js"></script>
+
+  <!-- 프로모션 상세 -->
+  <script src="/TLG/pages/store/views/promotion/renderPromotionDetail.js"></script>
   <!--지도 모듈들-->
   <script src="TLG/pages/main/modules/mapPanelUI.js"></script>
   <script src="TLG/pages/main/modules/mapMarkerManager.js"></script>
