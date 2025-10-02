@@ -100,18 +100,14 @@ body {
 }
 
 #storePanel.collapsed {
-  top: 200px;
-  bottom: 70px;
   height: calc(100vh - 270px);
   border-radius: 20px 20px 0 0;
 }
 
 #storePanel.expanded {
-  top: 0;
-  bottom: 70px;
+  top: 70px;
   height: calc(100vh - 70px);
   border-radius: 0;
-  z-index: 99;
 }
 
 #panelHandle {
