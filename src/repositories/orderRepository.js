@@ -692,11 +692,13 @@ class OrderRepository {
         o.table_num as table_number,
         s.id as store_id, 
         s.name as store_name, 
+        oi
         COUNT(ot.id) as ticket_count
       FROM orders o
       JOIN stores s ON o.store_id = s.id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
       LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
       ${whereClause}
       GROUP BY o.id, s.id, s.name, si.category
       ORDER BY o.created_at DESC

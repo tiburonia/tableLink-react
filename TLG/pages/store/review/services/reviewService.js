@@ -68,10 +68,16 @@ export const reviewService = {
   },
 
   /**
-   * 주문 정보 포맷팅
+   * 주문 정보 포맷팅   
    */
+
+
+  //order
+//  {id: 245, storeId: 497, storeName: '정통 양념', storeCategory: '치킨', totalPrice: 17000, …}
+//애초에 orders만 가지고 있고 order_itmes 데이터가 존재하지 않음. 라우트에서 받아와야함.
+  
   formatOrderInfo(order) {
-    const orderData = order.order_data || {};
+    const orderData = order
     const items = orderData.items ? 
       orderData.items.map(i => `${i.name}(${i.qty}개)`).join(', ') : 
       '메뉴 정보 없음';
