@@ -10,6 +10,12 @@ async function renderReviewWrite(order) {
   try {
     console.log('📝 renderReviewWrite 호출:', order);
 
+    // order가 문자열이면 파싱 (하위 호환성)
+    if (typeof order === 'string') {
+      console.warn('⚠️ renderReviewWrite: order ID만 전달됨. order 객체 전체가 필요합니다.');
+      throw new Error('주문 정보가 올바르지 않습니다');
+    }
+
     if (!reviewWriteController) {
       throw new Error('리뷰 작성 컨트롤러를 찾을 수 없습니다');
     }

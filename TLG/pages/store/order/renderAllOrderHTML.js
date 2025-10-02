@@ -159,6 +159,13 @@ function updateOrdersList(ordersData) {
     const orderDate = new Date(order.order_date);
     const hasReview = false; // 실제로는 API 호출로 확인해야 함
 
+    // 리뷰 작성 버튼 로직 수정
+    const reviewButton = order.hasReview
+    ? `<div class="review-completed">✅ 리뷰작성 완료</div>`
+    : `<button class="review-btn" onclick="renderReviewWrite(${JSON.stringify(order).replace(/"/g, '&quot;')})">
+         리뷰 작성
+       </button>`;
+
     return `
       <div class="order-card" data-order-id="${order.id}">
         <div class="order-card-header">
@@ -186,6 +193,7 @@ function updateOrdersList(ordersData) {
             <div class="order-actions">
               ${hasReview ? 
                 `<span class="review-completed">✅ 리뷰 완료</span>` :
+                // 수정된 부분: order 객체 전체를 전달
                 `<button class="review-btn" data-order-id="${order.id}" data-order-index="${index}">
                   <span class="btn-icon">📝</span>
                   리뷰 작성

@@ -62,7 +62,7 @@ function generateOrderItemHTML(order) {
 
   const reviewButton = order.hasReview
     ? `<div class="review-completed">✅ 리뷰작성 완료</div>`
-    : `<button class="review-btn" onclick="renderReviewWrite('${order.id}', '${storeName}')">
+    : `<button class="review-btn" onclick="renderReviewWrite(${JSON.stringify(order).replace(/"/g, '&quot;')})">
          리뷰 작성
        </button>`;
 
