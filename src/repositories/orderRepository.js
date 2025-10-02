@@ -212,8 +212,8 @@ class OrderRepository {
       SELECT DISTINCT o.id, o.created_at
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND ot.paid_status = 'UNPAID'
         AND o.session_status = 'OPEN'
         AND ot.source = 'POS'
@@ -247,8 +247,8 @@ class OrderRepository {
    */
   async getMenuByName(client, storeId, menuName) {
     const result = await pool.query(`
-      SELECT id, price, cook_station 
-      FROM store_menu 
+      SELECT id, price, cook_station
+      FROM store_menu
       WHERE store_id = $1 AND name = $2
     `, [storeId, menuName]);
 
@@ -260,7 +260,7 @@ class OrderRepository {
    */
   async getTicketsForRemoval(client, orderId, menuName) {
     const result = await client.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.batch_no,
         ot.version,
@@ -271,7 +271,7 @@ class OrderRepository {
         oi.menu_id
       FROM order_tickets ot
       JOIN order_items oi ON ot.id = oi.ticket_id
-      WHERE ot.order_id = $1 
+      WHERE ot.order_id = $1
         AND oi.menu_name = $2
         AND ot.status != 'CANCELED'
         AND oi.item_status != 'CANCELED'
@@ -348,11 +348,11 @@ class OrderRepository {
    */
   async hasOtherActiveOrders(client, storeId, tableNumber, excludeOrderId) {
     const result = await client.query(`
-      SELECT COUNT(*) as count 
+      SELECT COUNT(*) as count
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND o.session_status = 'OPEN'
         AND o.id != $3
     `, [storeId, tableNumber, excludeOrderId]);
@@ -365,20 +365,20 @@ class OrderRepository {
    */
   async updateOrderTotalAmount(client, orderId) {
     const totalResult = await client.query(`
-      SELECT 
+      SELECT
         COALESCE(SUM(oi.unit_price * oi.quantity), 0) as item_total
       FROM order_items oi
       JOIN order_tickets ot ON oi.ticket_id = ot.id
-      WHERE ot.order_id = $1 
+      WHERE ot.order_id = $1
         AND oi.item_status NOT IN ('CANCELLED', 'REFUNDED')
-        AND ot.status NOT IN ('CANCELLED')
+        AND oi.status NOT IN ('CANCELLED')
     `, [orderId]);
 
     const itemTotal = parseFloat(totalResult.rows[0].item_total) || 0;
 
     await client.query(`
       UPDATE orders
-      SET 
+      SET
         total_price = $2,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = $1
@@ -395,8 +395,8 @@ class OrderRepository {
       WHERE id = $1
     `;
 
-    const result = client ? 
-      await client.query(query, [orderId]) : 
+    const result = client ?
+      await client.query(query, [orderId]) :
       await pool.query(query, [orderId]);
 
     return result.rows.length > 0 ? result.rows[0] : null;
@@ -475,7 +475,7 @@ class OrderRepository {
    */
   async getOrderTicketsBySource(orderId) {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.source,
         ot.paid_status,
@@ -502,7 +502,7 @@ class OrderRepository {
    */
   async getMixedOrderItems(orderId, tableNumber) {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         oi.id,
         oi.menu_name,
         oi.unit_price,
@@ -573,7 +573,7 @@ class OrderRepository {
    */
   async getDailyStats(storeId, date) {
     const result = await pool.query(`
-      SELECT 
+      SELECT
         COUNT(DISTINCT o.id) as total_orders,
         COALESCE(SUM(p.amount), 0) as total_revenue,
         COUNT(DISTINCT COALESCE(o.user_id, o.guest_phone)) as total_customers,
@@ -582,7 +582,7 @@ class OrderRepository {
         COUNT(CASE WHEN p.method = 'TOSS' THEN 1 END) as toss_orders
       FROM orders o
       LEFT JOIN payments p ON o.id = p.order_id
-      WHERE o.store_id = $1 
+      WHERE o.store_id = $1
         AND DATE(o.created_at) = $2
         AND o.status != 'CANCELLED'
         AND (p.status = 'completed' OR p.status IS NULL)
@@ -617,7 +617,7 @@ class OrderRepository {
     values.push(parseInt(orderId));
 
     const updateResult = await pool.query(`
-      UPDATE orders 
+      UPDATE orders
       SET ${updateFields.join(', ')}
       WHERE id = $${paramCount}
       RETURNING id, status, cooking_status, updated_at
@@ -631,7 +631,7 @@ class OrderRepository {
    */
   async getOrderWithItems(orderId) {
     const orderResult = await pool.query(`
-      SELECT 
+      SELECT
         o.*,
         s.name as store_name,
         s.category as store_category,
@@ -650,7 +650,7 @@ class OrderRepository {
 
     // 주문 항목들 조회
     const itemsResult = await pool.query(`
-      SELECT 
+      SELECT
         oi.*,
         m.name as menu_name,
         m.category as menu_category
@@ -684,32 +684,41 @@ class OrderRepository {
     }
 
     const result = await pool.query(`
-      SELECT 
-        o.id, 
-        o.total_price, 
-        COALESCE(o.session_status, 'OPEN') as session_status,
+      SELECT
+        o.id,
+        o.total_price,
+        o.session_status,
+        o.source,
         o.created_at,
         o.table_num as table_number,
-        s.id as store_id, 
+        s.id as store_id,
         s.name as store_name,
+        si.category as store_category,
         COUNT(DISTINCT ot.id) as ticket_count,
         COALESCE(
-          json_agg(
-            DISTINCT jsonb_build_object(
-              'menu_name', oi.menu_name,
-              'quantity', oi.quantity,
-              'unit_price', oi.unit_price,
-              'total_price', oi.total_price
+          (
+            SELECT json_agg(
+              jsonb_build_object(
+                'menu_name', oi2.menu_name,
+                'quantity', oi2.quantity,
+                'unit_price', oi2.unit_price,
+                'total_price', oi2.total_price
+              )
             )
-          ) FILTER (WHERE oi.id IS NOT NULL AND ot.paid_status = 'PAID' AND oi.item_status != 'CANCELED'),
+            FROM order_tickets ot2
+            JOIN order_items oi2 ON ot2.id = oi2.ticket_id
+            WHERE ot2.order_id = o.id
+              AND ot2.paid_status = 'PAID'
+              AND oi2.item_status != 'CANCELED'
+          ),
           '[]'::json
         ) as order_items
       FROM orders o
       JOIN stores s ON o.store_id = s.id
+      LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
-      LEFT JOIN order_items oi ON ot.id = oi.ticket_id
       ${whereClause}
-      GROUP BY o.id, s.id, s.name
+      GROUP BY o.id, s.id, s.name, si.category
       ORDER BY o.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
@@ -717,7 +726,7 @@ class OrderRepository {
     // null 값 필터링 및 빈 배열 처리
     return result.rows.map(row => ({
       ...row,
-      order_items: Array.isArray(row.order_items) 
+      order_items: Array.isArray(row.order_items)
         ? row.order_items.filter(item => item !== null)
         : []
     }));
@@ -752,7 +761,7 @@ class OrderRepository {
     }
 
     const result = await pool.query(`
-      SELECT 
+      SELECT
         o.*,
         COALESCE(u.name, '게스트') as customer_name,
         COALESCE(u.phone, o.guest_phone) as customer_phone,
@@ -802,7 +811,7 @@ class OrderRepository {
   async getOrderProgress(orderId) {
     // 주문 기본 정보 조회
     const orderResult = await pool.query(`
-      SELECT 
+      SELECT
         o.id,
         o.store_id,
         COALESCE(o.table_num, 1) as table_number,
@@ -825,7 +834,7 @@ class OrderRepository {
 
     // 티켓과 아이템 정보 조회
     const ticketsResult = await pool.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.order_id,
         COALESCE(ot.batch_no, 1) as batch_no,
@@ -854,15 +863,15 @@ class OrderRepository {
 
     // 결제 내역 조회
     const paymentsResult = await pool.query(`
-      SELECT 
+      SELECT
         p.id,
         COALESCE(p.method, 'UNKNOWN') as method,
         COALESCE(p.amount, 0) as amount,
         COALESCE(p.status, 'pending') as status,
         p.created_at,
         p.transaction_id as payment_key
-      FROM payments p 
-      WHERE p.order_id = $1 
+      FROM payments p
+      WHERE p.order_id = $1
       ORDER BY p.created_at DESC
     `, [orderId]);
 
@@ -916,7 +925,7 @@ class OrderRepository {
    */
   async getCurrentSession(storeId, tableNumber) {
     const sessionResult = await pool.query(`
-      SELECT 
+      SELECT
         o.id as order_id,
         o.session_status,
         o.created_at,
@@ -928,8 +937,8 @@ class OrderRepository {
       FROM orders o
       LEFT JOIN users u ON o.user_id = u.id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND o.session_status = 'OPEN'
         AND NOT COALESCE(o.session_ended, false)
       GROUP BY o.id, u.name
@@ -945,7 +954,7 @@ class OrderRepository {
 
     // 세션의 주문 아이템들 조회
     const itemsResult = await pool.query(`
-      SELECT 
+      SELECT
         oi.id as order_item_id,
         oi.menu_name,
         oi.unit_price,
@@ -978,10 +987,10 @@ class OrderRepository {
   async endOrderSession(client, orderId) {
     const updateResult = await client.query(`
       UPDATE orders
-      SET 
+      SET
         session_ended = true,
         session_ended_at = CURRENT_TIMESTAMP,
-        session_status = CASE 
+        session_status = CASE
           WHEN session_status = 'OPEN' THEN 'CLOSED'
           ELSE session_status
         END,
@@ -999,7 +1008,7 @@ class OrderRepository {
   async getKDSChanges(storeId, syncTimestamp) {
     // 업데이트된 티켓들 조회
     const updatedTicketsResult = await pool.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.status,
         ot.order_id,
@@ -1020,7 +1029,7 @@ class OrderRepository {
       FROM order_tickets ot
       JOIN orders o ON ot.order_id = o.id
       LEFT JOIN order_items oi ON ot.id = oi.ticket_id
-      WHERE o.store_id = $1 
+      WHERE o.store_id = $1
         AND ot.updated_at > $2
         AND ot.display_status != 'UNVISIBLE'
       GROUP BY ot.id, ot.status, ot.order_id, ot.batch_no, ot.updated_at, o.table_num, o.created_at
@@ -1029,12 +1038,12 @@ class OrderRepository {
 
     // 삭제된 티켓들 조회
     const deletedTicketsResult = await pool.query(`
-      SELECT 
+      SELECT
         ot.id as ticket_id,
         ot.updated_at
       FROM order_tickets ot
       JOIN orders o ON ot.order_id = o.id
-      WHERE o.store_id = $1 
+      WHERE o.store_id = $1
         AND ot.updated_at > $2
         AND ot.display_status = 'UNVISIBLE'
     `, [storeId, syncTimestamp]);
@@ -1071,7 +1080,7 @@ class OrderRepository {
 
     return parseInt(result.rows[0].count) > 0;
   }
-/**
+  /**
    * 주문에 게스트 전화번호 업데이트
    */
   async updateOrderGuestInfo(client, orderId, guestPhone) {
@@ -1113,11 +1122,11 @@ class OrderRepository {
    */
   async hasOtherActiveOrders(client, storeId, tableNumber, excludeOrderId) {
     const result = await client.query(`
-      SELECT COUNT(*) as count 
+      SELECT COUNT(*) as count
       FROM orders o
       JOIN order_tickets ot ON o.id = ot.order_id
-      WHERE o.store_id = $1 
-        AND o.table_num = $2 
+      WHERE o.store_id = $1
+        AND o.table_num = $2
         AND o.session_status = 'OPEN'
         AND o.id != $3
     `, [storeId, tableNumber, excludeOrderId]);
