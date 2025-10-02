@@ -48,7 +48,6 @@ window.StorePanelManager = {
    * 스크롤 설정 강제 적용
    */
   forceScrollSettings(container) {
-    console.log('📜 스크롤 설정 강제 적용...');
     
     container.style.cssText += `
       overflow-y: auto !important;
@@ -59,7 +58,6 @@ window.StorePanelManager = {
       will-change: scroll-position !important;
     `;
     
-    console.log('✅ 스크롤 설정 강제 적용 완료');
   },
 
   adjustLayout() {
@@ -97,14 +95,6 @@ window.StorePanelManager = {
       const minHeight = navBarOffset > 0 ? (containerHeight + navBarOffset) : 400;
       storeContent.style.minHeight = `${minHeight}px`;
     }
-
-    console.log(`📐 패널 레이아웃 조정: 높이 ${panelHeight}px, 상단 ${top}px`);
-    
-    // 스크롤 테스트
-    setTimeout(() => {
-      const canScroll = storePanelContainer.scrollHeight > storePanelContainer.clientHeight;
-      console.log(`📜 스크롤 가능 여부: ${canScroll} (scrollHeight: ${storePanelContainer.scrollHeight}, clientHeight: ${storePanelContainer.clientHeight})`);
-    }, 50);
   },
 
   setupWheelEvents(panel, storePanelContainer) {
