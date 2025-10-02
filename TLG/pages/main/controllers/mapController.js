@@ -1,4 +1,3 @@
-
 // 모듈 임포트 (조건부)
 let mapService, mapView;
 
@@ -23,10 +22,17 @@ export const mapController = {
   // 상태 관리
   state: {
     map: null,
-    currentMarkers: [],
+    userLocation: null,
+    mapCenter: null,
     searchTimeout: null,
-    locationModal: null,
-    isInitialized: false
+    userMarker: null,
+    searchClickListenerAdded: false,
+    searchClickHandler: null,
+    selectedRegion: {
+      province: null,
+      city: null,
+      district: null
+    }
   },
 
   /**
@@ -151,13 +157,21 @@ export const mapController = {
     });
 
     // 외부 클릭시 검색 결과 숨기기
-    document.addEventListener('click', (e) => {
-      if (!searchInput.contains(e.target) && 
-          !document.getElementById('searchResults').contains(e.target) && 
-          !searchBtn.contains(e.target)) {
-        mapView.hideSearchResults();
-      }
-    });
+    // 클릭 이벤트 리스너가 중복 등록되는 것을 방지
+    if (!this.state.searchClickListenerAdded) {
+      this.state.searchClickHandler = (e) => {
+        const searchResultsElement = document.getElementById('searchResults');
+        if (
+          !searchInput.contains(e.target) &&
+          (!searchResultsElement || !searchResultsElement.contains(e.target)) && // searchResultsElement가 null인 경우를 처리
+          !searchBtn.contains(e.target)
+        ) {
+          mapView.hideSearchResults();
+        }
+      };
+      document.addEventListener('click', this.state.searchClickHandler);
+      this.state.searchClickListenerAdded = true;
+    }
 
     clearBtn.style.display = 'none';
   },
@@ -236,7 +250,7 @@ export const mapController = {
    */
   setupCartEvents() {
     const cartBtn = document.getElementById('cartBtn');
-    
+
     cartBtn.addEventListener('click', () => {
       if (window.savedCart && window.savedCart.order && Object.keys(window.savedCart.order).length > 0) {
         if (typeof renderCart === 'function') {
@@ -259,7 +273,7 @@ export const mapController = {
    */
   setupNavigationEvents() {
     const renderMapBtn = document.getElementById('renderMapBtn');
-    
+
     renderMapBtn.addEventListener('click', () => {
       if (typeof renderMap === 'function') {
         renderMap();
@@ -461,11 +475,18 @@ export const mapController = {
    */
   reset() {
     console.log('🔄 지도 컨트롤러 상태 초기화');
-    
+
+    // 외부 클릭 리스너 제거
+    if (this.state.searchClickListenerAdded && this.state.searchClickHandler) {
+      document.removeEventListener('click', this.state.searchClickHandler);
+      this.state.searchClickListenerAdded = false;
+      this.state.searchClickHandler = null;
+    }
+
     this.state.map = null;
     this.state.currentMarkers = [];
     this.state.isInitialized = false;
-    
+
     if (this.state.searchTimeout) {
       clearTimeout(this.state.searchTimeout);
       this.state.searchTimeout = null;
