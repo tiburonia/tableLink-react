@@ -121,6 +121,31 @@ class StoreController {
       next(error);
     }
   }
+
+  /**
+   * 리뷰 제출
+   */
+  async submitReview(req, res, next) {
+    try {
+      const { userId, storeId, orderId, rating, reviewText } = req.body;
+
+      const review = await storeService.submitReview({
+        userId,
+        storeId,
+        orderId,
+        rating,
+        reviewText
+      });
+
+      res.json({
+        success: true,
+        message: '리뷰가 등록되었습니다',
+        review: review
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new StoreController();

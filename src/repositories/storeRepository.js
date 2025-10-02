@@ -321,6 +321,44 @@ class StoreRepository {
   }
 
   /**
+   * 리뷰 제출
+   */
+  async submitReview(reviewData) {
+    const result = await pool.query(`
+      INSERT INTO reviews (
+        user_id, store_id, order_id, rating, review_text, created_at
+      ) VALUES ($1, $2, $3, $4, $5, NOW())
+      RETURNING 
+        id,
+        user_id,
+        store_id,
+        order_id,
+        rating,
+        review_text,
+        created_at
+    `, [
+      reviewData.userId,
+      reviewData.storeId,
+      reviewData.orderId,
+      reviewData.rating,
+      reviewData.reviewText
+    ]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * 주문에 대한 리뷰 존재 여부 확인
+   */
+  async checkReviewExistsByOrderId(orderId) {
+    const result = await pool.query(`
+      SELECT id FROM reviews WHERE order_id = $1 LIMIT 1
+    `, [orderId]);
+
+    return result.rows.length > 0;
+  }
+
+  /**
    * 지역별 매장 조회
    */
   async getStoresByRegion(sido, sigungu, eupmyeondong, limit = 20) {

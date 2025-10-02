@@ -181,6 +181,45 @@ class StoreService {
   }
 
   /**
+   * 리뷰 제출
+   */
+  async submitReview(reviewData) {
+    // 데이터 유효성 검증
+    if (!reviewData.userId || !reviewData.storeId || !reviewData.orderId) {
+      throw new Error('필수 정보가 누락되었습니다');
+    }
+
+    if (!reviewData.rating || reviewData.rating < 1 || reviewData.rating > 5) {
+      throw new Error('평점은 1~5점 사이여야 합니다');
+    }
+
+    if (!reviewData.reviewText || reviewData.reviewText.trim().length < 10) {
+      throw new Error('리뷰는 최소 10자 이상이어야 합니다');
+    }
+
+    // 이미 리뷰가 있는지 확인
+    const reviewExists = await storeRepository.checkReviewExistsByOrderId(reviewData.orderId);
+    if (reviewExists) {
+      throw new Error('이미 해당 주문에 대한 리뷰를 작성하셨습니다');
+    }
+
+    console.log(`📝 리뷰 제출: 주문 ${reviewData.orderId}, 평점 ${reviewData.rating}`);
+
+    // 리뷰 제출
+    const review = await storeRepository.submitReview({
+      userId: reviewData.userId,
+      storeId: reviewData.storeId,
+      orderId: reviewData.orderId,
+      rating: reviewData.rating,
+      reviewText: reviewData.reviewText.trim()
+    });
+
+    console.log(`✅ 리뷰 제출 완료: ID ${review.id}`);
+
+    return review;
+  }
+
+  /**
    * 매장 전체 리뷰 조회
    */
   async getAllStoreReviews(storeId, page = 1, limit = 50) {

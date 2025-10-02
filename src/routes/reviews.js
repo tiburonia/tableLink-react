@@ -1,6 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
+const storeController = require('../controllers/storeController');
 const { Pool } = require('pg');
 
 const pool = new Pool({
@@ -50,6 +51,7 @@ router.get('/users/:userId', async (req, res) => {
         r.rating as score,
         r.review_text as content,
         r.created_at,
+        r.store_id as storeId,
         s.name as storeName,
         TO_CHAR(r.created_at, 'YYYY.MM.DD') as date
       FROM reviews r
@@ -85,25 +87,7 @@ router.get('/users/:userId', async (req, res) => {
   }
 });
 
-// 리뷰 작성 API
-router.post('/submit', async (req, res) => {
-  try {
-    const { storeId, userId, rating, content } = req.body;
-
-    const result = await pool.query(`
-      INSERT INTO reviews (store_id, user_id, rating, content)
-      VALUES ($1, $2, $3, $4)
-      RETURNING *
-    `, [storeId, userId, rating, content]);
-
-    res.json({
-      success: true,
-      review: result.rows[0]
-    });
-  } catch (error) {
-    console.error('리뷰 작성 실패:', error);
-    res.status(500).json({ error: '리뷰 작성 실패' });
-  }
-});
+// 리뷰 제출 API - 레이어드 아키텍처
+router.post('/submit', storeController.submitReview.bind(storeController));
 
 module.exports = router;

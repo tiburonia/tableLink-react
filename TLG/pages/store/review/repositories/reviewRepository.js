@@ -7,10 +7,16 @@ export const reviewRepository = {
    * 리뷰 제출
    */
   async submitReview(reviewData) {
-    const response = await fetch('/api/reviews/submit-from-orders', {
+    const response = await fetch('/api/reviews/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(reviewData)
+      body: JSON.stringify({
+        userId: reviewData.userId,
+        storeId: reviewData.storeId,
+        orderId: reviewData.orderId,
+        rating: reviewData.rating,
+        reviewText: reviewData.reviewText
+      })
     });
 
     if (!response.ok) {
