@@ -263,38 +263,43 @@ class UserRepository {
     const limit = options.limit || 10;
     
     const result = await pool.query(`
-      SELECT 
+      SELECT
         o.id,
-        o.store_id,
         o.total_price,
         o.session_status,
         o.source,
         o.created_at,
+        o.table_num as table_number,
+        s.id as store_id,
         s.name as store_name,
         si.category as store_category,
-        EXISTS(
-          SELECT 1 FROM reviews r 
-          WHERE r.order_id = o.id AND r.user_id = o.user_id
-        ) as has_review
+        COUNT(DISTINCT ot.id) as ticket_count,
+        json_agg(
+          DISTINCT jsonb_build_object(
+            'menu_name', oi.menu_name,
+            'quantity', oi.quantity,
+            'unit_price', oi.unit_price,
+            'total_price', oi.total_price
+          )
+        ) FILTER (
+          WHERE oi.id IS NOT NULL 
+          AND ot.paid_status = 'PAID' 
+          AND oi.item_status != 'CANCELED'
+        ) as order_items
       FROM orders o
-      LEFT JOIN stores s ON o.store_id = s.id
-      LEFT JOIN store_info si ON o.store_id = si.store_id
-      WHERE o.user_id = $1
+      JOIN stores s ON o.store_id = s.id
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id
+      LEFT JOIN order_tickets ot ON o.id = ot.order_id AND ot.paid_status = 'PAID'
+      LEFT JOIN order_items oi ON ot_paid.id = oi.ticket_id AND oi.item_status != 'CANCELED'
+      ${whereClause}
+      GROUP BY o.id, s.id, s.name, si.category
       ORDER BY o.created_at DESC
-      LIMIT $2
-    `, [userId, limit]);
+      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
+    `, [...queryParams, limit, offset]);
 
-    return result.rows.map(order => ({
-      id: order.id,
-      storeId: order.store_id,
-      storeName: order.store_name,
-      storeCategory: order.store_category,
-      totalPrice: order.total_price,
-      status: order.session_status,
-      orderType: order.source,
-      createdAt: order.created_at,
-      hasReview: order.has_review
-    }));
+
+    return result.rows
   }
 
   /**
