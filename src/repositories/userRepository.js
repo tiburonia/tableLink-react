@@ -98,13 +98,18 @@ class UserRepository {
       SELECT 
         src.id,
         src.store_id,
-        src.level_name,
+        src.level_id,
         src.visit_count,
         src.total_spent,
         src.last_visit,
-        s.name as store_name
+        s.name as store_name,
+        srl.level as level_name,
+        srl.min_orders,
+        srl.min_spent,
+        srl.benefits
       FROM store_regular_customers src
       JOIN stores s ON src.store_id = s.id
+      LEFT JOIN store_regular_levels srl ON src.level_id = srl.id
       WHERE src.user_id = $1
       ORDER BY src.visit_count DESC
       LIMIT $2
