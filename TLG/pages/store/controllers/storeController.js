@@ -238,20 +238,26 @@ export const storeController = {
   },
 
   /**
-   * 패널 핸들링 설정
+   * 패널 핸들링 설정 (레이어드 아키텍처)
    */
-  setupPanelHandling() {
-    console.log('🔧 패널 핸들링 설정 시작...');
+  async setupPanelHandling() {
+    console.log('🔧 패널 핸들링 설정 시작 (레이어드 아키텍처)...');
 
     // DOM이 준비될 때까지 대기
-    setTimeout(() => {
-      if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
-        console.log('✅ StorePanelManager 초기화 실행');
-        window.StorePanelManager.initializePanelHandling();
-      } else {
-        console.warn('⚠️ StorePanelManager를 찾을 수 없습니다');
-        // 폴백으로 기본 스크롤 설정
-        this.setupFallbackScrolling();
+    setTimeout(async () => {
+      try {
+        // 동적으로 panelController 로드
+        const { panelController } = await import('./panelController.js');
+        panelController.initializePanelHandling();
+      } catch (error) {
+        console.error('❌ 패널 컨트롤러 로드 실패:', error);
+        // 폴백으로 레거시 매니저 사용
+        if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
+          console.log('🔄 폴백: StorePanelManager 사용');
+          window.StorePanelManager.initializePanelHandling();
+        } else {
+          this.setupFallbackScrolling();
+        }
       }
     }, 100);
   },
@@ -264,7 +270,6 @@ export const storeController = {
 
     const storePanelContainer = document.getElementById('storePanelContainer');
     if (storePanelContainer) {
-      // 스크롤 설정 강제 적용
       storePanelContainer.style.overflowY = 'auto';
       storePanelContainer.style.overflowX = 'hidden';
       storePanelContainer.style.webkitOverflowScrolling = 'touch';
