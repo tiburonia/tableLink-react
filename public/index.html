@@ -48,14 +48,14 @@
   <!--알림 화면 렌더링 함수-->
   <script src="TLG/pages/main/renderNotification.js"></script>
   <!--즐겨찾기 기능 (레이어드 아키텍처)-->
-  <script type="module" src="TLG/pages/store/favoriteStore/repositories/favoriteRepository.js"></script>
-  <script type="module" src="TLG/pages/store/favoriteStore/services/favoriteService.js"></script>
-  <script type="module" src="TLG/pages/store/favoriteStore/views/favoriteButtonView.js"></script>
-  <script type="module" src="TLG/pages/store/favoriteStore/controllers/favoriteController.js"></script>
+  <script type="module" src="TLG/pages/store/favoriteRepository.js"></script>
+  <script type="module" src="TLG/pages/store/favoriteService.js"></script>
+  <script type="module" src="TLG/pages/store/favoriteButtonView.js"></script>
+  <script type="module" src="TLG/pages/store/favoriteController.js"></script>
   <!--메뉴탭 렌더링 함수-->
   <script src="TLG/pages/store/review/renderAllReview.js"></script>
   <!--매장렌더링 모듈들-->
-  <script src="/TLG/pages/store/modules/storePanelManager.js"></script>
+  <!-- storePanelManager는 더 이상 사용하지 않음 -->
   <!--패널 관리 (레이어드 아키텍처)-->
   <script type="module" src="/TLG/pages/store/repositories/panelRepository.js"></script>
   <script type="module" src="/TLG/pages/store/services/panelService.js"></script>
@@ -78,12 +78,8 @@
   <!--결제 완료 화면 렌더링 함수-->
   <script src="TLG/pages/store/pay/renderPay.js"></script>
   <script src="TLG/pages/store/pay/confirmPayF.js"></script>
-  <!--장바구니 화면 렌더링 함수-->
-  <script src="TLG/pages/store/cart/saveCart.js"></script>
-  <!--장바구니 위젯 렌더링 함수-->
-  <script src="TLG/pages/store/cart/renderCartWidget.js"></script>
-  <!--장바구니 화면 렌더링 함수-->
-  <script src="TLG/pages/store/cart/renderCart.js"></script>
+  <!--장바구니 기능 (현재 사용하지 않음)-->
+  <!-- 장바구니 관련 스크립트들은 제거됨 -->
   <!--주문 화면 렌더링 함수-->
   <script src="TLG/pages/store/renderOrderScreen.js"></script>
   <!--예약 화면 렌더링 함수-->
