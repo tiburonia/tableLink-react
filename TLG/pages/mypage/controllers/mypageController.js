@@ -31,7 +31,7 @@ export const mypageController = {
       }
 
       // 1. 데이터 로드 (Service Layer) - window.userInfo.id는 users.id (PK)
-      const userPk = window.userInfo.id;
+      const userPk = window.userInfo.userId;
       console.log('👤 사용자 PK로 마이페이지 데이터 로드:', userPk);
       const data = await mypageService.loadMypageData(userPk);
 
