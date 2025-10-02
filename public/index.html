@@ -35,7 +35,11 @@
   <script src="TLG/pages/mypage/renderMyAccount.js"></script>
   <!--마이페이지 전체 리뷰 렌더링 함수-->
   <script src="TLG/pages/store/order/renderAllOrderHTML.js"></script>
-  <!--리뷰 작성 화면 렌더링 함수-->
+  <!--리뷰 작성 모듈 (순서 중요: Repository → Service → View → Controller → Render)-->
+  <script src="TLG/pages/store/review/repositories/reviewRepository.js"></script>
+  <script src="TLG/pages/store/review/services/reviewService.js"></script>
+  <script src="TLG/pages/store/review/views/reviewWriteView.js"></script>
+  <script src="TLG/pages/store/review/controllers/reviewWriteController.js"></script>
   <script src="TLG/pages/store/review/renderReviewWrite.js"></script>
   <!--지도 모듈들-->
   <script src="TLG/pages/main/modules/mapPanelUI.js"></script>

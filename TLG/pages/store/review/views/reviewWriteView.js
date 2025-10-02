@@ -2,7 +2,7 @@
 /**
  * 리뷰 작성 뷰 - UI 렌더링
  */
-export const reviewWriteView = {
+window.reviewWriteView = {
   /**
    * 리뷰 작성 HTML 렌더링
    */
@@ -33,35 +33,31 @@ export const reviewWriteView = {
             <div class="order-details">
               <div class="store-name">${orderInfo.storeName}</div>
               <div class="order-items">${orderInfo.items}</div>
-              <div class="order-amount">결제금액: ${orderInfo.finalAmount}원</div>
+              <div class="order-amount">${orderInfo.totalAmount}</div>
             </div>
           </div>
 
           <!-- 리뷰 작성 폼 -->
           <div class="review-form-card">
+            <!-- 별점 선택 -->
             <div class="rating-section">
-              <h3 class="form-label">⭐ 평점을 선택해주세요</h3>
-              <div class="star-rating-large" id="starRating">
-                <span class="star-large" data-rating="1">★</span>
-                <span class="star-large" data-rating="2">★</span>
-                <span class="star-large" data-rating="3">★</span>
-                <span class="star-large" data-rating="4">★</span>
-                <span class="star-large" data-rating="5">★</span>
+              <h3 class="form-label">⭐ 별점을 선택해주세요</h3>
+              <div id="starRating" class="star-rating-large">
+                ${[1, 2, 3, 4, 5].map(i => `<span class="star-large" data-rating="${i}">☆</span>`).join('')}
               </div>
-              <div class="rating-text" id="ratingText">평점을 선택해주세요</div>
+              <div id="ratingText" class="rating-text">별점을 선택해주세요</div>
             </div>
 
+            <!-- 리뷰 내용 -->
             <div class="content-section">
               <h3 class="form-label">✍️ 리뷰 내용</h3>
               <textarea 
                 id="reviewTextarea" 
                 class="review-textarea-large" 
-                placeholder="음식의 맛, 서비스, 분위기 등에 대한 솔직한 후기를 작성해주세요.&#10;&#10;다른 고객들에게 도움이 되는 구체적인 리뷰를 남겨주시면 감사하겠습니다!"
+                placeholder="음식은 어떠셨나요? 서비스는 만족스러우셨나요?&#10;&#10;최소 10자 이상 작성해주세요."
                 maxlength="500"
               ></textarea>
-              <div class="char-count">
-                <span id="charCount">0</span>/500자
-              </div>
+              <div class="char-count"><span id="charCount">0</span> / 500자</div>
             </div>
 
             <!-- 리뷰 작성 팁 -->
@@ -147,5 +143,4 @@ export const reviewWriteView = {
   }
 };
 
-// 전역 등록
-window.reviewWriteView = reviewWriteView;
+console.log('✅ reviewWriteView 전역 등록 완료');
