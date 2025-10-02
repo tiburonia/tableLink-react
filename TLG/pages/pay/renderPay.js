@@ -997,12 +997,12 @@
       const modules = [
         {
           name: 'tossPayments',
-          path: '/TLG/pages/store/pay/tossPayments.js',
+          path: '/TLG/pages/pay/tossPayments.js',
           check: () => window.requestTossPayment && window.initTossPayments
         },
         {
           name: 'confirmPay',
-          path: '/TLG/pages/store/pay/confirmPayF.js',
+          path: '/TLG/pages/pay/confirmPayF.js',
           check: () => window.confirmPay
         }
       ];
