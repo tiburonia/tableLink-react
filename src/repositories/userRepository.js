@@ -246,6 +246,43 @@ class UserRepository {
   }
 
   /**
+   * 사용자 주문 내역 조회
+   */
+  async getUserOrders(userId, options = {}) {
+    const limit = options.limit || 10;
+    
+    const result = await pool.query(`
+      SELECT 
+        o.id,
+        o.order_number,
+        o.store_id,
+        o.total_price,
+        o.status,
+        o.order_type,
+        o.created_at,
+        s.name as store_name,
+        s.category as store_category
+      FROM orders o
+      LEFT JOIN stores s ON o.store_id = s.id
+      WHERE o.user_id = $1
+      ORDER BY o.created_at DESC
+      LIMIT $2
+    `, [userId, limit]);
+
+    return result.rows.map(order => ({
+      id: order.id,
+      orderNumber: order.order_number,
+      storeId: order.store_id,
+      storeName: order.store_name,
+      storeCategory: order.store_category,
+      totalPrice: order.total_price,
+      status: order.status,
+      orderType: order.order_type,
+      createdAt: order.created_at
+    }));
+  }
+
+  /**
    * 사용자 정보 업데이트
    */
   async updateUser(userId, updateData) {

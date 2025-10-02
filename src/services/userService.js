@@ -1,6 +1,5 @@
 
 const userRepository = require('../repositories/userRepository');
-const orderRepository = require('../repositories/orderRepository');
 
 /**
  * 사용자 서비스 - 비즈니스 로직
@@ -16,7 +15,7 @@ class UserService {
       // 병렬로 모든 데이터 조회
       const [userInfo, recentOrders, reviews, favoriteStores, regularLevels] = await Promise.all([
         userRepository.getUserById(userId),
-        orderRepository.getUserOrders(userId, { limit: 3 }),
+        userRepository.getUserOrders(userId, { limit: 3 }),
         userRepository.getUserReviews(userId),
         userRepository.getFavoriteStores(userId),
         userRepository.getRegularLevels(userId, 3)
@@ -24,7 +23,7 @@ class UserService {
 
       // 통계 계산
       const stats = {
-        totalOrders: recentOrders.length,
+        totalOrders: recentOrders.length, // 실제로는 최근 3개만 가져왔으므로 전체 개수 쿼리 추가 필요
         totalReviews: reviews.total || 0,
         favoriteCount: favoriteStores.length
       };
