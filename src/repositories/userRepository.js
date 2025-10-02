@@ -69,7 +69,7 @@ class UserRepository {
         sa.address_full as address, sa.latitude, sa.longitude
       FROM favorites f
       JOIN stores s ON f.store_id = s.id
-      LEFT JOIN store_address sa ON s.id = sa.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
       WHERE f.user_id = $1
       ORDER BY f.created_at DESC
     `, [userId]);
@@ -265,9 +265,10 @@ class UserRepository {
         o.source,
         o.created_at,
         s.name as store_name,
-        s.category as store_category
+        si.category as store_category
       FROM orders o
       LEFT JOIN stores s ON o.store_id = s.id
+      LEFT JOIN store_info si ON o.store_id = si.store_id
       WHERE o.user_id = $1
       ORDER BY o.created_at DESC
       LIMIT $2
@@ -279,8 +280,8 @@ class UserRepository {
       storeName: order.store_name,
       storeCategory: order.store_category,
       totalPrice: order.total_price,
-      status: order.status,
-      orderType: order.order_type,
+      status: order.session_status,
+      orderType: order.source,
       createdAt: order.created_at
     }));
   }
