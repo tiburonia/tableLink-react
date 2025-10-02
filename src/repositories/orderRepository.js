@@ -695,23 +695,26 @@ class OrderRepository {
         s.name as store_name,
         si.category as store_category,
         COUNT(DISTINCT ot.id) as ticket_count,
-        json_agg(
-          DISTINCT jsonb_build_object(
-            'menu_name', oi.menu_name,
-            'quantity', oi.quantity,
-            'unit_price', oi.unit_price,
-            'total_price', oi.total_price
-          )
-        ) FILTER (
-          WHERE oi.id IS NOT NULL 
-          AND ot.paid_status = 'PAID' 
-          AND oi.item_status != 'CANCELED'
+        COALESCE(
+          json_agg(
+            DISTINCT jsonb_build_object(
+              'menu_name', oi.menu_name,
+              'quantity', oi.quantity,
+              'unit_price', oi.unit_price,
+              'total_price', oi.total_price
+            )
+          ) FILTER (
+            WHERE oi.id IS NOT NULL 
+            AND ot_paid.paid_status = 'PAID' 
+            AND oi.item_status != 'CANCELED'
+          ),
+          '[]'::json
         ) as order_items
       FROM orders o
       JOIN stores s ON o.store_id = s.id
       LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
-      LEFT JOIN order_tickets ot ON o.id = ot.order_id AND ot.paid_status = 'PAID'
+      LEFT JOIN order_tickets ot_paid ON o.id = ot_paid.order_id AND ot_paid.paid_status = 'PAID'
       LEFT JOIN order_items oi ON ot_paid.id = oi.ticket_id AND oi.item_status != 'CANCELED'
       ${whereClause}
       GROUP BY o.id, s.id, s.name, si.category
@@ -719,7 +722,7 @@ class OrderRepository {
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
 
-    // null 값 필터링 및 빈 배열 처리
+    // null 값 필터링
     return result.rows.map(row => ({
       ...row,
       order_items: row.order_items || []
