@@ -440,11 +440,24 @@ export const storeController = {
   /**
    * 테이블 정보 로드
    */
-  loadTableInfo(store) {
-    if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
-      setTimeout(() => {
-        window.TableInfoManager.loadTableInfo(store);
+  async loadTableInfo(store) {
+    try {
+      // Service Layer를 통한 데이터 로딩 및 계산
+      const tableService = await import('../services/tableService.js').then(m => m.tableService);
+      const tableStatusView = await import('../views/modules/tableStatusView.js').then(m => m.tableStatusView);
+      
+      setTimeout(async () => {
+        const tableInfo = await tableService.loadTableInfo(store);
+        tableStatusView.updateTableInfoUI(tableInfo);
       }, 500);
+    } catch (error) {
+      console.warn('⚠️ 테이블 정보 로드 실패 - 폴백 사용:', error);
+      // 폴백: 기존 TableInfoManager 사용
+      if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
+        setTimeout(() => {
+          window.TableInfoManager.loadTableInfo(store);
+        }, 500);
+      }
     }
   },
 
