@@ -7,16 +7,21 @@ export const reviewRepository = {
    * 리뷰 제출
    */
   async submitReview(reviewData) {
+    // 백엔드 API 스펙에 맞는 필드만 전송
+    const requestBody = {
+      userId: reviewData.userId,
+      storeId: reviewData.storeId,
+      orderId: reviewData.orderId,
+      rating: reviewData.rating,
+      reviewText: reviewData.reviewText
+    };
+
+    console.log('📤 리뷰 제출 요청:', requestBody);
+
     const response = await fetch('/api/reviews/submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: reviewData.userId,
-        storeId: reviewData.storeId,
-        orderId: reviewData.orderId,
-        rating: reviewData.rating,
-        reviewText: reviewData.reviewText
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
