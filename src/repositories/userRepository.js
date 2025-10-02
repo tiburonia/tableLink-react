@@ -96,17 +96,17 @@ class UserRepository {
   async getRegularLevels(userId, limit = 3) {
     const result = await pool.query(`
       SELECT 
-        rl.id,
-        rl.store_id,
-        rl.level_name,
-        rl.visit_count,
-        rl.total_spent,
-        rl.points,
+        src.id,
+        src.store_id,
+        src.level_name,
+        src.visit_count,
+        src.total_spent,
+        src.last_visit,
         s.name as store_name
-      FROM regular_levels rl
-      JOIN stores s ON rl.store_id = s.id
-      WHERE rl.user_id = $1
-      ORDER BY rl.visit_count DESC
+      FROM store_regular_customers src
+      JOIN stores s ON src.store_id = s.id
+      WHERE src.user_id = $1
+      ORDER BY src.visit_count DESC
       LIMIT $2
     `, [userId, limit]);
 
