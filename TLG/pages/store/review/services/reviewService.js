@@ -2,14 +2,8 @@
 /**
  * 리뷰 서비스 - 비즈니스 로직
  */
-let reviewRepository;
 
-try {
-  const repoModule = await import('../repositories/reviewRepository.js');
-  reviewRepository = repoModule.reviewRepository;
-} catch (error) {
-  console.warn('⚠️ reviewRepository 모듈 임포트 실패:', error);
-}
+import { reviewRepository } from '../repositories/reviewRepository.js';
 
 export const reviewService = {
   /**
@@ -92,10 +86,12 @@ export const reviewService = {
       items,
       storeName,
       orderDate,
-      finalAmount: (order.final_amount || order.total_amount || 0).toLocaleString()
+      totalAmount: (order.final_amount || order.total_amount || 0).toLocaleString() + '원'
     };
   }
 };
 
-// 전역 등록
+// 전역 등록 (호환성)
 window.reviewService = reviewService;
+
+console.log('✅ reviewService 모듈 로드 완료');

@@ -2,7 +2,8 @@
 /**
  * 리뷰 작성 뷰 - UI 렌더링
  */
-window.reviewWriteView = {
+
+export const reviewWriteView = {
   /**
    * 리뷰 작성 HTML 렌더링
    */
@@ -143,4 +144,7 @@ window.reviewWriteView = {
   }
 };
 
-console.log('✅ reviewWriteView 전역 등록 완료');
+// 전역 등록 (호환성)
+window.reviewWriteView = reviewWriteView;
+
+console.log('✅ reviewWriteView 모듈 로드 완료');

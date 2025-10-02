@@ -1,21 +1,14 @@
+
 /**
  * 리뷰 작성 화면 렌더링 (레이어드 아키텍처)
  */
 
-// Controller 동적 로드 및 렌더링
+import { reviewWriteController } from './controllers/reviewWriteController.js';
+
+// Controller를 통한 렌더링
 async function renderReviewWrite(order) {
   try {
     console.log('📝 renderReviewWrite 호출:', order);
-
-    // Controller 모듈 동적 로드
-    let reviewWriteController;
-    try {
-      const controllerModule = await import('./controllers/reviewWriteController.js');
-      reviewWriteController = controllerModule.reviewWriteController;
-    } catch (error) {
-      console.warn('⚠️ reviewWriteController 모듈 임포트 실패:', error);
-      reviewWriteController = window.reviewWriteController;
-    }
 
     if (!reviewWriteController) {
       throw new Error('리뷰 작성 컨트롤러를 찾을 수 없습니다');
@@ -67,8 +60,8 @@ function showReviewWriteError() {
 
 // 뒤로가기 함수
 function goBackFromReview() {
-  if (window.reviewWriteController) {
-    window.reviewWriteController.goBack();
+  if (reviewWriteController) {
+    reviewWriteController.goBack();
   } else {
     if (window.previousScreen === 'renderAllOrderHTML') {
       if (typeof renderAllOrderHTML === 'function') {

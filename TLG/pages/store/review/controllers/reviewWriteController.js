@@ -3,8 +3,11 @@
  * 리뷰 작성 컨트롤러 - 이벤트 처리 및 흐름 제어
  */
 
-// 전역 컨트롤러 정의
-window.reviewWriteController = {
+import { reviewService } from '../services/reviewService.js';
+import { reviewWriteView } from '../views/reviewWriteView.js';
+
+// 컨트롤러 정의
+export const reviewWriteController = {
   // 상태 관리
   state: {
     currentOrder: null,
@@ -23,24 +26,16 @@ window.reviewWriteController = {
         throw new Error('주문 정보가 없습니다');
       }
 
-      // Service와 View 확인
-      if (!window.reviewService) {
-        throw new Error('reviewService를 찾을 수 없습니다');
-      }
-      if (!window.reviewWriteView) {
-        throw new Error('reviewWriteView를 찾을 수 없습니다');
-      }
-
       // 상태 초기화
       this.state.currentOrder = order;
       this.state.selectedRating = 0;
       this.state.reviewContent = '';
 
       // 주문 정보 포맷팅
-      const orderInfo = window.reviewService.formatOrderInfo(order);
+      const orderInfo = reviewService.formatOrderInfo(order);
 
       // View를 통한 UI 렌더링
-      window.reviewWriteView.renderHTML(orderInfo);
+      reviewWriteView.renderHTML(orderInfo);
 
       // 이벤트 리스너 설정
       this.setupEventListeners();
@@ -48,7 +43,7 @@ window.reviewWriteController = {
       console.log('✅ 리뷰 작성 화면 렌더링 완료');
     } catch (error) {
       console.error('❌ 리뷰 작성 화면 렌더링 실패:', error);
-      window.reviewWriteView?.showError(error.message);
+      reviewWriteView?.showError(error.message);
     }
   },
 
@@ -136,7 +131,7 @@ window.reviewWriteController = {
    */
   async handleSubmit(submitBtn) {
     // 검증
-    const validation = window.reviewService.validateReviewData(
+    const validation = reviewService.validateReviewData(
       this.state.selectedRating,
       this.state.reviewContent
     );
@@ -152,21 +147,21 @@ window.reviewWriteController = {
       submitBtn.innerHTML = '<span class="btn-icon">⏳</span> 등록 중...';
 
       // 리뷰 데이터 준비
-      const reviewData = window.reviewService.prepareReviewData(
+      const reviewData = reviewService.prepareReviewData(
         this.state.currentOrder,
         this.state.selectedRating,
         this.state.reviewContent.trim()
       );
 
       // 리뷰 제출
-      const result = await window.reviewService.submitReview(reviewData);
+      const result = await reviewService.submitReview(reviewData);
 
       if (!result.success) {
         throw new Error(result.error || '리뷰 등록에 실패했습니다');
       }
 
       // 성공 메시지 표시
-      window.reviewWriteView.showSuccessMessage();
+      reviewWriteView.showSuccessMessage();
       
       // 2초 후 이전 화면으로 이동
       setTimeout(() => {
@@ -228,4 +223,7 @@ window.reviewWriteController = {
   }
 };
 
-console.log('✅ reviewWriteController 전역 등록 완료');
+// 전역 등록 (호환성)
+window.reviewWriteController = reviewWriteController;
+
+console.log('✅ reviewWriteController 모듈 로드 완료');
