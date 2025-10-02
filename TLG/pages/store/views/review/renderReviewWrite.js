@@ -3,7 +3,7 @@
  * 리뷰 작성 화면 렌더링 (레이어드 아키텍처)
  */
 
-import { reviewWriteController } from './controllers/reviewWriteController.js';
+import { reviewWriteController } from '../../controllers/reviewWriteController.js';
 
 // Controller를 통한 렌더링
 async function renderReviewWrite(order) {

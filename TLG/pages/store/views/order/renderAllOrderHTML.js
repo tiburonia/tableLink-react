@@ -737,7 +737,7 @@ async function loadReviewWriteScript() {
   try {
     console.log('🔄 renderReviewWrite 스크립트 로드 시작');
     const script = document.createElement('script');
-    script.src = '/TLG/pages/store/review/renderReviewWrite.js';
+    script.src = '/TLG/pages/store/views/review/renderReviewWrite.js';
 
     await new Promise((resolve, reject) => {
       script.onload = () => {
