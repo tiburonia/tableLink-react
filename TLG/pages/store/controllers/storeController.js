@@ -331,10 +331,10 @@ export const storeController = {
     const manualRefreshBtn = document.getElementById('manualRefreshBtn');
     if (manualRefreshBtn && !manualRefreshBtn.hasAttribute('data-event-set')) {
       manualRefreshBtn.setAttribute('data-event-set', 'true');
-      manualRefreshBtn.addEventListener('click', () => {
-        if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
-          window.TableInfoManager.loadTableInfo(this.state.currentStore);
-        }
+      manualRefreshBtn.addEventListener('click', async () => {
+        console.log('🔄 테이블 수동 새로고침 버튼 클릭');
+        // forceRefresh=true로 API 강제 호출
+        await this.loadTableInfo(this.state.currentStore, true);
       });
     }
   },
@@ -439,15 +439,17 @@ export const storeController = {
 
   /**
    * 테이블 정보 로드 (레이어드 아키텍처)
+   * @param {Object} store - 매장 객체
+   * @param {boolean} forceRefresh - 강제 새로고침 여부
    */
-  async loadTableInfo(store) {
+  async loadTableInfo(store, forceRefresh = false) {
     try {
       // Service Layer를 통한 데이터 로딩 및 계산
       const tableService = await import('../services/tableService.js').then(m => m.tableService);
       const tableStatusView = await import('../views/modules/tableStatusView.js').then(m => m.tableStatusView);
       
       setTimeout(async () => {
-        const tableInfo = await tableService.loadTableInfo(store);
+        const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
         tableStatusView.updateTableInfoUI(tableInfo);
       }, 500);
     } catch (error) {

@@ -7,10 +7,12 @@ import { tableRepository } from '../repositories/tableRepository.js';
 export const tableService = {
   /**
    * 테이블 정보 로드 및 통계 계산
+   * @param {Object} store - 매장 객체 (tables 배열 포함)
+   * @param {boolean} forceRefresh - true일 경우 API 강제 호출
    */
-  async loadTableInfo(store) {
+  async loadTableInfo(store, forceRefresh = false) {
     try {
-      console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중...`);
+      console.log(`🔍 매장 ${store.name} (ID: ${store.id}) 테이블 정보 조회 중... (강제새로고침: ${forceRefresh})`);
 
       // 매장이 운영중지 상태면 기본 데이터 반환
       if (store.isOpen === false) {
@@ -18,8 +20,17 @@ export const tableService = {
         return this.getClosedStoreData();
       }
 
-      // Repository를 통한 데이터 조회
-      const tables = await tableRepository.fetchTableData(store.id);
+      let tables;
+
+      // 강제 새로고침이 아니면 store 객체의 tables 배열 우선 사용
+      if (!forceRefresh && Array.isArray(store.tables) && store.tables.length > 0) {
+        console.log(`✅ store 객체에서 ${store.tables.length}개 테이블 데이터 로드 (API 호출 생략)`);
+        tables = store.tables;
+      } else {
+        // 새로고침이거나 store에 tables가 없으면 API 호출
+        console.log(`🔄 테이블 API 호출 중...`);
+        tables = await tableRepository.fetchTableData(store.id);
+      }
 
       if (tables.length === 0) {
         console.warn(`⚠️ 매장 ${store.name}에 테이블 데이터가 없습니다`);
