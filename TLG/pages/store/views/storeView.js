@@ -3,6 +3,8 @@
 import { tableStatusHTML } from './modules/tableStatusHTML.js';
 import { reviewPreviewHTML } from './modules/reviewPreviewHTML.js';
 import { promotionCardHTML } from './modules/promotionCardHTML.js';
+import { topUsersHTML } from './modules/topUsersHTML.js';
+import { loyaltyLevelHTML } from './modules/loyaltyLevelHTML.js';
 
 export const storeView = {
   /**
@@ -95,8 +97,8 @@ export const storeView = {
     
     // 직접 import한 모듈들 사용
     components += reviewPreviewHTML.renderReviewPreviewHTML();
-    components += this.renderTopUsersHTML(store);
-    components += this.renderLoyaltyLevelHTML();
+    components += topUsersHTML.renderTopUsersHTML(store);
+    components += loyaltyLevelHTML.renderLoyaltyLevelHTML();
     components += promotionCardHTML.renderPromotionCardHTML(store);
     components += tableStatusHTML.renderTableStatusHTML(store);
 
@@ -268,14 +270,6 @@ export const storeView = {
   },
 
   // UI 구성요소들 - 기존 StoreUIManager 사용 (추후 modules로 완전 분리)
-  renderTopUsersHTML(store) {
-    return window.StoreUIManager ? window.StoreUIManager.renderTopUsersHTML(store) : '';
-  },
-
-  renderLoyaltyLevelHTML() {
-    return window.StoreUIManager ? window.StoreUIManager.renderLoyaltyLevelHTML() : '';
-  },
-
   getStoreStyles() {
     return window.StoreUIManager ? window.StoreUIManager.getStoreStyles() : '';
   },
