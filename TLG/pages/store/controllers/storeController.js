@@ -438,7 +438,7 @@ export const storeController = {
   },
 
   /**
-   * 테이블 정보 로드
+   * 테이블 정보 로드 (레이어드 아키텍처)
    */
   async loadTableInfo(store) {
     try {
@@ -451,13 +451,8 @@ export const storeController = {
         tableStatusView.updateTableInfoUI(tableInfo);
       }, 500);
     } catch (error) {
-      console.warn('⚠️ 테이블 정보 로드 실패 - 폴백 사용:', error);
-      // 폴백: 기존 TableInfoManager 사용
-      if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
-        setTimeout(() => {
-          window.TableInfoManager.loadTableInfo(store);
-        }, 500);
-      }
+      console.error('❌ 테이블 정보 로드 실패:', error);
+      throw error;
     }
   },
 

@@ -67,15 +67,11 @@ async function renderStore(storeData) {
 }
 
 /**
- * 테이블 배치도 렌더링
+ * 테이블 배치도 렌더링 (향후 구현 예정)
  */
 async function renderTableLayout(store) {
-  // TableInfoManager가 존재하고 renderTableLayout 함수가 있다면 호출합니다.
-  if (window.TableInfoManager && typeof window.TableInfoManager.renderTableLayout === 'function') {
-    await window.TableInfoManager.renderTableLayout(store);
-  } else {
-    console.warn('⚠️ TableInfoManager를 찾을 수 없습니다');
-  }
+  console.log('🗺️ 테이블 배치도 기능 (개발 예정)');
+  alert('테이블 배치도 기능은 곧 업데이트됩니다.');
 }
 
 /**
