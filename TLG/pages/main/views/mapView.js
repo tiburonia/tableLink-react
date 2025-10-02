@@ -254,7 +254,9 @@ export const mapView = {
    */
   hideSearchResults() {
     const searchResults = document.getElementById('searchResults');
-    searchResults.classList.add('hidden');
+    if (searchResults) {
+      searchResults.classList.add('hidden');
+    }
   },
 
   /**
