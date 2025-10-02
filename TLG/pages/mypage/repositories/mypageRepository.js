@@ -25,7 +25,8 @@ export const mypageRepository = {
   },
 
   /**
-   * 사용자 정보 조회
+   * 사용자 정보 조회 (레거시 - 사용하지 않음)
+   * @deprecated getMypageData 통합 API 사용
    */
   async getUserInfo(userId) {
     try {

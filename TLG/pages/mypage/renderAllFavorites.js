@@ -1,7 +1,10 @@
 // 즐겨찾기 매장 전체보기 렌더링 함수
 async function renderAllFavorites(userInfo) {
   try {
-    console.log('💖 즐겨찾기 매장 전체보기 화면 렌더링');
+    console.log('⭐ 즐겨찾기 매장 전체보기 렌더링');
+
+    // userInfo.id는 users.id (PK)
+    const userId = userInfo.id;
 
     const main = document.getElementById('main');
 

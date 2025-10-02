@@ -1,8 +1,10 @@
-
 // 단골 레벨 전체보기 렌더링 함수
 async function renderAllRegularLevels(userInfo) {
   try {
-    console.log('🏆 단골 레벨 전체보기 화면 렌더링');
+    console.log('👑 단골 매장 전체보기 렌더링 (PK):', userInfo.id);
+
+    // userInfo.id는 users.id (PK)
+    const userId = userInfo.id;
 
     const main = document.getElementById('main');
 
@@ -178,7 +180,7 @@ function updateLevelsList(regularStores) {
         spent: storeData.totalSpent || 0,
         visits: storeData.visitCount || 0
       };
-      
+
       const required = {
         points: storeData.nextLevel.requiredPoints || 0,
         spent: storeData.nextLevel.requiredTotalSpent || 0,
@@ -271,7 +273,7 @@ function updateLevelsList(regularStores) {
                 <span class="next-level-info">다음: ${progressData.nextLevelName}</span>
                 <span class="overall-progress">${progressData.overallProgress}%</span>
               </div>
-              
+
               <div class="progress-details">
                 ${progressData.required.points > 0 ? `
                   <div class="progress-item">
@@ -285,7 +287,7 @@ function updateLevelsList(regularStores) {
                     ${progressData.needed.points > 0 ? `<div class="progress-needed">${progressData.needed.points.toLocaleString()}P 더 필요</div>` : '<div class="progress-completed">✅ 달성</div>'}
                   </div>
                 ` : ''}
-                
+
                 ${progressData.required.spent > 0 ? `
                   <div class="progress-item">
                     <div class="progress-item-header">
@@ -298,7 +300,7 @@ function updateLevelsList(regularStores) {
                     ${progressData.needed.spent > 0 ? `<div class="progress-needed">${progressData.needed.spent.toLocaleString()}원 더 필요</div>` : '<div class="progress-completed">✅ 달성</div>'}
                   </div>
                 ` : ''}
-                
+
                 ${progressData.required.visits > 0 ? `
                   <div class="progress-item">
                     <div class="progress-item-header">
@@ -312,7 +314,7 @@ function updateLevelsList(regularStores) {
                   </div>
                 ` : ''}
               </div>
-              
+
               <div class="eval-policy-info">
                 <span class="policy-badge ${progressData.evalPolicy.toLowerCase()}">${progressData.evalPolicy === 'OR' ? '조건 중 하나만 만족' : '모든 조건을 만족'}</span>
               </div>

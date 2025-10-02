@@ -234,6 +234,12 @@ function usePoints(storeId, points) {
   alert(`${points.toLocaleString()}P 포인트 사용 기능은 준비중입니다.`);
 }
 
+// 포인트 데이터 로드 (userInfo.id는 PK 사용)
+async function loadPointsData(userInfo) {
+  console.log('💰 포인트 데이터 로드 (PK):', userInfo.id);
+  // 추후 구현
+}
+
 // 에러 상태 표시
 function showPointsErrorState() {
   const main = document.getElementById('main');

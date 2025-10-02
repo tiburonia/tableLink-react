@@ -1,7 +1,7 @@
-// 내 리뷰 전체보기 렌더링 함수 (renamed to renderMyReviews)
-async function renderMyReviews(userId, userInfo) { // Modified to accept userId
+// 내 리뷰 전체보기 렌더링 함수
+async function renderMyReviews(userId, userInfo) { // userId는 users.id (PK)
   try {
-    console.log('⭐ 내 리뷰 전체보기 화면 렌더링');
+    console.log('⭐ 내 리뷰 전체보기 화면 렌더링 (PK):', userId);
 
     const main = document.getElementById('main');
 
