@@ -181,6 +181,31 @@ class StoreService {
   }
 
   /**
+   * 매장 전체 리뷰 조회
+   */
+  async getAllStoreReviews(storeId, page = 1, limit = 50) {
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    const offset = (page - 1) * limit;
+    
+    console.log(`📖 매장 ${storeId} 전체 리뷰 조회 (page: ${page}, limit: ${limit})`);
+
+    const reviews = await storeRepository.getAllStoreReviews(numericStoreId, limit, offset);
+    
+    console.log(`✅ 매장 ${storeId} 전체 리뷰 ${reviews.length}개 조회 완료`);
+
+    return {
+      reviews,
+      total: reviews.length,
+      page,
+      limit
+    };
+  }
+
+  /**
    * 매장 데이터 포맷팅
    */
   formatStoreData(store) {

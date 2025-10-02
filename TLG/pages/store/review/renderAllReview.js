@@ -94,9 +94,9 @@ async function renderAllReview(store) {
 
     console.log('👤 현재 사용자 정보:', currentUserId ? `사용자 ${currentUserId}` : '비로그인');
 
-    // 서버에서 리뷰 데이터 가져오기
-    console.log('🌐 서버에서 리뷰 데이터 가져오는 중...');
-    const response = await fetch(`/api/stores/${store.id}/reviews`);
+    // 서버에서 전체 리뷰 데이터 가져오기 (API 호출)
+    console.log('🌐 서버에서 전체 리뷰 데이터 가져오는 중...');
+    const response = await fetch(`/api/reviews/stores/${store.id}`);
     if (!response.ok) {
       throw new Error('리뷰 데이터 조회 실패');
     }
@@ -104,7 +104,7 @@ async function renderAllReview(store) {
     const reviewData = await response.json();
     const reviews = reviewData.reviews || [];
 
-    console.log('📖 가져온 리뷰 데이터:', reviews);
+    console.log('📖 가져온 전체 리뷰 데이터:', reviews.length, '개');
 
     const total = reviews.length;
     const avgScore = total

@@ -1,21 +1,36 @@
 
 // 리뷰 관리자
 window.ReviewManager = {
-  // 매장 리뷰 미리보기 렌더링 (상위 2개)
+  // 매장 리뷰 미리보기 렌더링 (랜덤 2개)
   async renderTopReviews(store) {
     try {
       console.log(`🔍 매장 ${store.id} 리뷰 미리보기 로딩 중...`);
       
-      const response = await fetch(`/api/stores/${store.id}/reviews?limit=2`);
-      if (!response.ok) {
-        console.error(`❌ 리뷰 API 응답 실패: ${response.status} ${response.statusText}`);
-        throw new Error(`Failed to fetch reviews: ${response.status}`);
+      // store 객체에서 reviews 배열 추출 (API 호출 없음)
+      const allReviews = store.reviews || [];
+      
+      // 랜덤으로 2개 선택
+      let reviews = [];
+      if (allReviews.length <= 2) {
+        reviews = allReviews;
+      } else {
+        // 랜덤 셔플 후 2개 선택
+        const shuffled = [...allReviews].sort(() => 0.5 - Math.random());
+        reviews = shuffled.slice(0, 2);
       }
       
-      const data = await response.json();
-      const reviews = data.reviews || [];
+      // 데이터 형식 통일 (rating -> score, user_name -> user)
+      reviews = reviews.map(review => ({
+        id: review.id,
+        score: review.rating || review.score,
+        content: review.content,
+        created_at: review.created_at,
+        userId: review.user_id || review.userId,
+        user: review.user_name || review.user || '익명',
+        date: review.created_at
+      }));
       
-      console.log(`📖 리뷰 미리보기 데이터:`, reviews);
+      console.log(`📖 리뷰 미리보기 데이터 (랜덤 ${reviews.length}개):`, reviews);
 
       const reviewPreviewContent = document.getElementById('reviewPreviewContent');
       if (reviewPreviewContent) {
@@ -107,12 +122,12 @@ window.ReviewManager = {
     }
   },
 
-  // 전체 리뷰 조회
+  // 전체 리뷰 조회 (API 호출)
   async loadAllReviews(storeId) {
     try {
       console.log(`🔍 매장 ${storeId} 전체 리뷰 조회 중...`);
       
-      const response = await fetch(`/api/stores/${storeId}/reviews`);
+      const response = await fetch(`/api/reviews/stores/${storeId}`);
       if (!response.ok) {
         throw new Error(`리뷰 조회 실패: ${response.status}`);
       }

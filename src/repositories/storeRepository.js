@@ -165,6 +165,54 @@ class StoreRepository {
       user_name: review.user_name || '익명'
     }));
   }
+
+  /**
+   * 매장 전체 리뷰 조회 (페이지네이션 지원)
+   */
+  async getAllStoreReviews(storeId, limit = null, offset = 0) {
+    let query = `
+      SELECT 
+        r.id,
+        r.order_id,
+        r.store_id,
+        r.rating,
+        r.content,
+        r.images,
+        r.status,
+        r.created_at,
+        r.updated_at,
+        r.user_id,
+        u.name as user_name
+      FROM reviews r
+      LEFT JOIN users u ON r.user_id = u.id
+      WHERE r.store_id = $1 
+        AND r.status = 'VISIBLE'
+      ORDER BY r.created_at DESC
+    `;
+
+    const params = [storeId];
+    
+    if (limit !== null) {
+      query += ` LIMIT $2 OFFSET $3`;
+      params.push(limit, offset);
+    }
+
+    const result = await pool.query(query, params);
+
+    return result.rows.map(review => ({
+      id: review.id,
+      order_id: review.order_id,
+      store_id: review.store_id,
+      score: review.rating, // score로 매핑
+      content: review.content || '내용 없음',
+      images: review.images || [],
+      status: review.status,
+      created_at: review.created_at,
+      updated_at: review.updated_at,
+      userId: review.user_id, // userId로 매핑
+      user: review.user_name || '익명' // user로 매핑
+    }));
+  }
   /**
    * 매장 프로모션 조회
    */

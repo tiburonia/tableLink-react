@@ -8,36 +8,30 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
 
-// 매장별 리뷰 조회 API
+// 매장별 전체 리뷰 조회 API
 router.get('/stores/:storeId', async (req, res) => {
   try {
     const { storeId } = req.params;
-    const { page = 1, limit = 10 } = req.query;
-    
-    const offset = (page - 1) * limit;
+    const { page = 1, limit = 50 } = req.query;
 
-    const result = await pool.query(`
-      SELECT 
-        r.id,
-        r.user_id,
-        r.rating,
-        r.content,
-        r.created_at,
-        u.name as user_name
-      FROM reviews r
-      LEFT JOIN users u ON r.user_id = u.id
-      WHERE r.store_id = $1
-      ORDER BY r.created_at DESC
-      LIMIT $2 OFFSET $3
-    `, [storeId, limit, offset]);
+    console.log(`📖 GET /api/reviews/stores/${storeId} 요청 (page: ${page}, limit: ${limit})`);
+
+    const storeService = require('../services/storeService');
+    const result = await storeService.getAllStoreReviews(storeId, parseInt(page), parseInt(limit));
 
     res.json({
       success: true,
-      reviews: result.rows
+      reviews: result.reviews,
+      total: result.total,
+      page: result.page,
+      limit: result.limit
     });
   } catch (error) {
-    console.error('리뷰 조회 실패:', error);
-    res.status(500).json({ error: '리뷰 조회 실패' });
+    console.error('❌ 전체 리뷰 조회 실패:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message || '리뷰 조회 실패' 
+    });
   }
 });
 
