@@ -3,8 +3,6 @@
  * 레이어드 아키텍처 기반 마이페이지
  */
 
-import { mypageController } from './controllers/mypageController.js';
-
 /**
  * 마이페이지 렌더링 메인 함수
  */
@@ -12,6 +10,8 @@ async function renderMyPage() {
   try {
     console.log('🏠 renderMyPage 호출 (레이어드 아키텍처)');
 
+    // 동적 import로 컨트롤러 로드
+    const { mypageController } = await import('./controllers/mypageController.js');
     await mypageController.renderMyPage();
 
   } catch (error) {
@@ -38,11 +38,6 @@ async function renderMyPage() {
   }
 }
 
-// 전역 함수 등록
-try {
-  console.log('🔧 renderMyPage 전역 함수 등록 중...');
-  window.renderMyPage = renderMyPage;
-  console.log('✅ renderMyPage 전역 등록 완료 (레이어드 아키텍처)');
-} catch (error) {
-  console.error('❌ renderMyPage 전역 등록 실패:', error);
-}
+// 즉시 전역 함수 등록
+window.renderMyPage = renderMyPage;
+console.log('✅ renderMyPage 전역 등록 완료 (레이어드 아키텍처)');
