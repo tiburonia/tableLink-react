@@ -299,7 +299,7 @@ export const mypageController = {
         await this.loadScript('/TLG/pages/mypage/renderAllReview.js');
         if (typeof renderMyReviews === 'function') {
           window.previousScreen = 'renderMyPage';
-          renderMyReviews(window.userInfo.id, window.userInfo);
+          renderMyReviews(window.userInfo.userId, window.userInfo);
         }
       });
     }

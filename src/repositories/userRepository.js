@@ -71,7 +71,6 @@ class UserRepository {
         si.category,
         si.rating_average,
         si.review_count,
-        sa.address_full as address,
         sa.latitude,
         sa.longitude
       FROM favorites f
@@ -87,7 +86,6 @@ class UserRepository {
       favoriteId: store.favorite_id,
       name: store.name,
       category: store.category,
-      address: store.address || '주소 정보 없음',
       ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
       reviewCount: store.review_count || 0,
       isOpen: store.is_open !== false,
