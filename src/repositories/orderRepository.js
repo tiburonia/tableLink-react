@@ -696,8 +696,9 @@ class OrderRepository {
       FROM orders o
       JOIN stores s ON o.store_id = s.id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
+      LEFT JOIN store_info si ON s.id = si.store_id
       ${whereClause}
-      GROUP BY o.id, s.id, s.name, s.category
+      GROUP BY o.id, s.id, s.name, si.category
       ORDER BY o.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);
