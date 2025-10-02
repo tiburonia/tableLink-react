@@ -130,9 +130,20 @@ export const storeController = {
         }
       });
 
-      if (typeof initializeFavoriteButton === 'function') {
-        initializeFavoriteButton(store);
-      }
+      // 즐겨찾기 버튼 초기화
+      this.initializeFavoriteButton(store);
+    }
+  },
+
+  /**
+   * 즐겨찾기 버튼 초기화
+   */
+  async initializeFavoriteButton(store) {
+    try {
+      const { favoriteController } = await import('../favoriteStore/controllers/favoriteController.js');
+      await favoriteController.initializeFavoriteButton(store);
+    } catch (error) {
+      console.warn('⚠️ 즐겨찾기 컨트롤러 로드 실패:', error);
     }
   },
 
