@@ -25,26 +25,23 @@ export const storeController = {
     console.log('🏪 storeController.renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
 
     try {
-      let finalStoreData;
+      let store;
 
-      if (storeData && storeData.store_id ) {
-        const storeId =  storeData.store_id;
-        finalStoreData = await this.fetchStoreData(storeId);
+      if (storeData && storeData.store_id) {
+        const storeId = storeData.store_id;
+        // API 응답이 이미 표준화되어 있으므로 그대로 사용
+        store = await this.fetchStoreData(storeId);
       } else {
-        // 데이터가 없는 경우 에러
         throw new Error('매장 ID 또는 매장 데이터가 필요합니다');
       }
 
-      // 매장 데이터 표준화
-      const normalizedStore = await storeService.normalizeStoreData(finalStoreData);
-
       // View를 통한 UI 렌더링
-      storeView.renderStoreHTML(normalizedStore);
+      storeView.renderStoreHTML(store);
 
       // 추가 데이터 로드 및 업데이트 (비동기)
-      this.loadAdditionalData(normalizedStore);
+      this.loadAdditionalData(store);
 
-      console.log('✅ 매장 렌더링 완료:', normalizedStore.name);
+      console.log('✅ 매장 렌더링 완료:', store.name);
 
     } catch (error) {
       console.error('❌ 매장 렌더링 실패:', error);
