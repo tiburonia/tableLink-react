@@ -133,7 +133,7 @@ body {
   box-sizing: border-box;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 0 20px 100px 20px;
+  padding: 0 20px 90px 20px;
   scroll-behavior: smooth;
   will-change: scroll-position;
 }
@@ -2481,8 +2481,8 @@ body {
 
 /* 바텀바 스타일 */
 #storeBottomBar {
-  position: fixed;
-  bottom: 0;
+  position: fixed !important;
+  bottom: 0 !important;
   left: 50%;
   transform: translateX(-50%);
   width: 100%;
@@ -2497,7 +2497,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  z-index: 1000;
+  z-index: 9999 !important;
   padding: 0 20px;
   box-sizing: border-box;
   backdrop-filter: blur(20px);
