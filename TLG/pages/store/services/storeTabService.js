@@ -63,6 +63,74 @@ export const storeTabService = {
       console.error('❌ 리뷰 데이터 로드 실패:', error);
       return [];
     }
+  },
+
+  /**
+   * 프로모션 데이터 가져오기
+   */
+  async getPromotions(storeId) {
+    if (!storeId) {
+      console.warn('⚠️ storeId가 없습니다. 빈 배열 반환');
+      return [];
+    }
+
+    try {
+      // 실제 API 호출
+      const response = await fetch(`/api/stores/${storeId}/promotions`);
+      
+      if (!response.ok) {
+        throw new Error('프로모션 데이터 조회 실패');
+      }
+
+      const data = await response.json();
+      const promotions = data.promotions || [];
+
+      console.log(`✅ 프로모션 데이터 로드 완료: ${promotions.length}개`);
+      return promotions;
+    } catch (error) {
+      console.error('❌ 프로모션 데이터 로드 실패:', error);
+      
+      // 폴백: 더미 데이터 반환
+      console.log('📦 더미 프로모션 데이터 사용');
+      return [
+        {
+          id: 1,
+          name: "신규 고객 웰컴 할인",
+          description: "첫 방문 고객에게 드리는 특별한 혜택입니다.",
+          type: "할인",
+          discountRate: "15%",
+          minOrderAmount: "10,000원",
+          maxDiscount: "5,000원",
+          startDate: "2025-01-01",
+          endDate: "2025-12-31",
+          isActive: true
+        },
+        {
+          id: 2,
+          name: "점심 특가 메뉴",
+          description: "평일 점심시간 한정 특가 메뉴입니다.",
+          type: "할인",
+          discountRate: "30%",
+          minOrderAmount: "8,000원",
+          maxDiscount: "3,000원",
+          startDate: "2025-01-01",
+          endDate: "2025-12-30",
+          isActive: true
+        },
+        {
+          id: 3,
+          name: "단골 고객 적립 혜택",
+          description: "방문할 때마다 포인트가 쌓입니다.",
+          type: "적립",
+          discountRate: "5% 적립",
+          minOrderAmount: "5,000원",
+          maxDiscount: "무제한",
+          startDate: "2025-01-01",
+          endDate: "2025-12-31",
+          isActive: true
+        }
+      ];
+    }
   }
 };
 
