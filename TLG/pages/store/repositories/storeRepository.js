@@ -1,4 +1,3 @@
-
 // 매장 레포지토리 - 데이터 접근 계층
 export const storeRepository = {
   /**
@@ -6,13 +5,13 @@ export const storeRepository = {
    */
   async fetchStoreRating(storeId) {
     const response = await fetch(`/api/stores/${storeId}/rating`);
-    
+
     if (!response.ok) {
       throw new Error(`매장 평점 조회 실패: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || '매장 평점 조회 실패');
     }
@@ -28,13 +27,13 @@ export const storeRepository = {
    */
   async fetchPromotions(storeId) {
     const response = await fetch(`/api/stores/${storeId}/promotions`);
-    
+
     if (!response.ok) {
       throw new Error(`프로모션 데이터 조회 실패: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || '프로모션 데이터 조회 실패');
     }
@@ -47,13 +46,13 @@ export const storeRepository = {
    */
   async fetchTopUsers(storeId) {
     const response = await fetch(`/api/stores/${storeId}/top-users`);
-    
+
     if (!response.ok) {
       throw new Error(`상위 사용자 데이터 조회 실패: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || '상위 사용자 데이터 조회 실패');
     }
@@ -66,13 +65,13 @@ export const storeRepository = {
    */
   async fetchStoreDetail(storeId) {
     const response = await fetch(`/api/stores/${storeId}`);
-    
+
     if (!response.ok) {
       throw new Error(`매장 상세 정보 조회 실패: ${response.status}`);
     }
 
     const data = await response.json();
-    
+
     if (!data.success) {
       throw new Error(data.error || '매장 상세 정보 조회 실패');
     }
@@ -85,16 +84,12 @@ export const storeRepository = {
    */
   async fetchStoreMenu(storeId) {
     const response = await fetch(`/api/stores/${storeId}/menu`);
-    
+
     if (!response.ok) {
       throw new Error(`매장 메뉴 조회 실패: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || '매장 메뉴 조회 실패');
-    }
 
     return data.menu || [];
   },
@@ -104,18 +99,99 @@ export const storeRepository = {
    */
   async fetchStoreReviews(storeId, limit = 10) {
     const response = await fetch(`/api/stores/${storeId}/reviews?limit=${limit}`);
-    
+
     if (!response.ok) {
       throw new Error(`매장 리뷰 조회 실패: ${response.status}`);
     }
 
     const data = await response.json();
-    
-    if (!data.success) {
-      throw new Error(data.error || '매장 리뷰 조회 실패');
-    }
 
     return data.reviews || [];
+  },
+
+  /**
+   * 매장 목록 조회 (지도용)
+   */
+  async fetchStoresInBounds(bounds) {
+    try {
+      const params = new URLSearchParams({
+        minLat: bounds.minLat,
+        maxLat: bounds.maxLat,
+        minLng: bounds.minLng,
+        maxLng: bounds.maxLng
+      });
+
+      const response = await fetch(`/api/stores/bounds?${params}`);
+      if (!response.ok) {
+        throw new Error('매장 목록 조회 실패');
+      }
+
+      const data = await response.json();
+      return data.stores || [];
+    } catch (error) {
+      console.error('❌ 매장 목록 조회 실패:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 매장 메뉴 조회
+   */
+  async fetchStoreMenu(storeId) {
+    try {
+      const response = await fetch(`/api/stores/${storeId}/menu`);
+
+      if (!response.ok) {
+        console.warn('⚠️ 메뉴 조회 실패, 매장 데이터에서 추출');
+        // 폴백: 매장 정보에서 메뉴 추출
+        const storeData = await this.fetchStoreById(storeId);
+        return storeData.menu || [];
+      }
+
+      const data = await response.json();
+      return data.menu || data.data || [];
+    } catch (error) {
+      console.error('❌ 메뉴 조회 오류:', error);
+      return [];
+    }
+  },
+
+  /**
+   * 매장 리뷰 조회
+   */
+  async fetchStoreReviews(storeId) {
+    try {
+      const response = await fetch(`/api/reviews/stores/${storeId}`);
+
+      if (!response.ok) {
+        throw new Error('리뷰 조회 실패');
+      }
+
+      const data = await response.json();
+      return data.reviews || [];
+    } catch (error) {
+      console.error('❌ 리뷰 조회 오류:', error);
+      return [];
+    }
+  },
+
+  /**
+   * 매장 프로모션 조회
+   */
+  async fetchStorePromotions(storeId) {
+    try {
+      const response = await fetch(`/api/stores/${storeId}/promotions`);
+
+      if (!response.ok) {
+        throw new Error('프로모션 조회 실패');
+      }
+
+      const data = await response.json();
+      return data.promotions || [];
+    } catch (error) {
+      console.error('❌ 프로모션 조회 오류:', error);
+      throw error;
+    }
   }
 };
 

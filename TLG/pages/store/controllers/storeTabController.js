@@ -159,17 +159,26 @@ export const storeTabController = {
   async renderReviewTab(store, container) {
     console.log('📖 리뷰 탭 렌더링 시작');
 
-    // 1. 리뷰 데이터 가져오기
-    const reviewData = store.reviews
+    try {
+      // 1. 서비스를 통해 리뷰 데이터 가져오기
+      const reviewData = await storeTabService.getReviewData(store.id);
 
-    // 2. 뷰 렌더링
-    const reviewHTML = reviewTabView.render(store, reviewData);
-    container.innerHTML = reviewHTML;
+      // 2. 뷰 렌더링
+      const reviewHTML = reviewTabView.render(store, reviewData);
+      container.innerHTML = reviewHTML;
 
-    // 3. 이벤트 리스너 설정
-    reviewTabView.attachEventListeners(store);
+      // 3. 이벤트 리스너 설정
+      reviewTabView.attachEventListeners(store);
 
-    console.log('✅ 리뷰 탭 렌더링 완료');
+      console.log('✅ 리뷰 탭 렌더링 완료');
+    } catch (error) {
+      console.error('❌ 리뷰 탭 렌더링 실패:', error);
+      container.innerHTML = `
+        <div class="error-tab">
+          <p>리뷰를 불러오는 중 오류가 발생했습니다.</p>
+        </div>
+      `;
+    }
   },
 
 
@@ -181,11 +190,17 @@ export const storeTabController = {
     console.log('🍽️ 메뉴 탭 렌더링 시작');
 
     try {
+      // 서비스를 통해 메뉴 데이터 가져오기
+      const menuData = await storeTabService.getMenuData(store.id);
+      
+      // 메뉴 데이터를 store 객체에 추가
+      const storeWithMenu = { ...store, menu: menuData };
+
       // menuTabView 모듈 동적 로드
       const { menuTabView } = await import('../views/tabs/menuTabView.js');
       
       // 메뉴 탭 HTML 렌더링
-      const menuHTML = menuTabView.render(store);
+      const menuHTML = menuTabView.render(storeWithMenu);
       container.innerHTML = menuHTML;
 
       console.log('✅ 메뉴 탭 렌더링 완료');
