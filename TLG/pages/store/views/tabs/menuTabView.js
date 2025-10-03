@@ -10,7 +10,7 @@ export const homeTabView = {
   render(store) {
     return `
       <div class="home-tab-container">
-        ${this.renderStoreHours()}
+        ${this.renderWaitingTimes()}
         ${this.renderTableStatus()}
         ${this.renderFacilities()}
         ${this.renderMenu(store)}
@@ -21,43 +21,90 @@ export const homeTabView = {
   },
 
   /**
-   * 영업시간 섹션 (더미 데이터)
+   * 요일별 대기시간 통계
    */
-  renderStoreHours() {
-    const hours = [
-      { day: '월요일', time: '10:00 - 22:00', isToday: false },
-      { day: '화요일', time: '10:00 - 22:00', isToday: false },
-      { day: '수요일', time: '10:00 - 22:00', isToday: true },
-      { day: '목요일', time: '10:00 - 22:00', isToday: false },
-      { day: '금요일', time: '10:00 - 23:00', isToday: false },
-      { day: '토요일', time: '10:00 - 23:00', isToday: false },
-      { day: '일요일', time: '11:00 - 21:00', isToday: false }
-    ];
+   renderWaitingTimes() {
+    // 요일별 더미 데이터
+    const weeklyData = {
+      "월": [ { hour:"12시", value:40 }, { hour:"13시", value:30 }, { hour:"14시", value:20 }, { hour:"15시", value:10 } ],
+      "화": [ { hour:"12시", value:59 }, { hour:"13시", value:39 }, { hour:"14시", value:31 }, { hour:"15시", value:22 }, { hour:"16시", value:23 }, { hour:"17시", value:18 }, { hour:"18시", value:15 }, { hour:"19시", value:1 }, { hour:"20시", value:0 } ],
+      "수": [ { hour:"12시", value:20 }, { hour:"13시", value:10 }, { hour:"14시", value:15 }, { hour:"15시", value:5 } ],
+      "목": [ { hour:"12시", value:25 }, { hour:"13시", value:30 }, { hour:"14시", value:18 }, { hour:"15시", value:8 } ],
+      "금": [ { hour:"12시", value:50 }, { hour:"13시", value:45 }, { hour:"14시", value:40 }, { hour:"15시", value:35 } ],
+      "토": [ { hour:"12시", value:70 }, { hour:"13시", value:60 }, { hour:"14시", value:50 }, { hour:"15시", value:40 } ],
+      "일": [ { hour:"12시", value:10 }, { hour:"13시", value:15 }, { hour:"14시", value:20 }, { hour:"15시", value:5 } ],
+    };
+
+    // 초기 선택 요일 (화요일)
+    const initialDay = "화";
+    const maxValue = Math.max(...weeklyData[initialDay].map(d => d.value));
+
+    const barsHTML = weeklyData[initialDay].map(d => {
+      const barHeight = (d.value / maxValue) * 150;
+      return `
+        <div class="waiting-bar">
+          <div class="value-label">${d.value}분</div>
+          <div class="bar" style="height:${barHeight}px"></div>
+          <div class="time-label">${d.hour}</div>
+        </div>
+      `;
+    }).join("");
 
     return `
-      <section class="home-section store-hours-section">
+      <section class="home-section waiting-times-section">
         <div class="section-header">
           <h3 class="section-title">
-            <span class="section-icon">🕐</span>
-            영업시간
+            <span class="section-icon">⏰</span>
+            요일별 대기시간
           </h3>
         </div>
-        <div class="hours-list">
-          ${hours.map(h => `
-            <div class="hour-item ${h.isToday ? 'today' : ''}">
-              <span class="day-label">${h.day}</span>
-              <span class="time-label">${h.time}</span>
-            </div>
-          `).join('')}
-        </div>
-        <div class="hours-notice">
-          <span class="notice-icon">ℹ️</span>
-          <span class="notice-text">공휴일은 영업시간이 변경될 수 있습니다</span>
+
+        <!-- 요일 선택 네비게이션 -->
+        <nav class="day-nav">
+          ${Object.keys(weeklyData).map(day => `
+            <button class="day-btn ${day === initialDay ? 'active' : ''}" data-day="${day}">${day}</button>
+          `).join("")}
+        </nav>
+
+        <!-- 그래프 -->
+        <div id="waitingTimesGrid" class="waiting-times-grid">
+          ${barsHTML}
         </div>
       </section>
-    `;
-  },
 
+      
+
+      <script>
+        (function(){
+          const weeklyData = ${JSON.stringify(weeklyData)};
+          const grid = document.getElementById("waitingTimesGrid");
+          const buttons = document.querySelectorAll(".day-btn");
+
+          buttons.forEach(btn => {
+            btn.addEventListener("click", () => {
+              buttons.forEach(b => b.classList.remove("active"));
+              btn.classList.add("active");
+              const day = btn.dataset.day;
+              const maxValue = Math.max(...weeklyData[day].map(d => d.value));
+
+              grid.innerHTML = weeklyData[day].map(d => {
+                const barHeight = (d.value / maxValue) * 150;
+                return \`
+                  <div class="waiting-bar">
+                    <div class="value-label">\${d.value}분</div>
+                    <div class="bar" style="height:\${barHeight}px"></div>
+                    <div class="time-label">\${d.hour}</div>
+                  </div>
+                \`;
+              }).join("");
+            });
+          });
+        })();
+      </script>
+    `;
+  }
+
+,
   /**
    * 테이블 상태 섹션 (기존 모듈 활용)
    */
@@ -185,6 +232,74 @@ export const homeTabView = {
 
         .section-icon {
           font-size: 20px;
+        }
+
+        /* 요일별 대기시간 스타일 */
+
+        .waiting-times-section {
+          padding: 20px;
+          font-family: Arial, sans-serif;
+        }
+
+        .day-nav {
+          display: flex;
+          justify-content: space-between;
+          margin: 10px 0 20px;
+        }
+
+        .day-btn {
+          flex: 1;
+          padding: 6px 0;
+          margin: 0 2px;
+          border: none;
+          border-radius: 6px;
+          background: #f3f4f6;
+          color: #374151;
+          font-size: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .day-btn.active {
+          background: #2563eb;
+          color: white;
+          font-weight: 600;
+        }
+
+        .waiting-times-grid {
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          height: 200px;
+          padding: 10px 0;
+          border-bottom: 1px solid #e5e7eb;
+        }
+
+        .waiting-bar {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 6px;
+        }
+
+        .bar {
+          width: 20px;
+          border-radius: 6px;
+          background: #60a5fa;
+          transition: height 0.3s;
+        }
+
+        .time-label {
+          font-size: 12px;
+          color: #6b7280;
+        }
+
+        .value-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #374151;
         }
 
         /* 영업시간 스타일 */
