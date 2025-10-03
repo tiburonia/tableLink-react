@@ -54,7 +54,7 @@ async function createStoreHoursDummy() {
           if (dow === closedDay) {
             // 휴무일
             await client.query(`
-              INSERT INTO store_hours (store_id, dow, open_time, close_time, is_closed)
+              INSERT INTO store_hours (store_id, day_of_week, open_time, close_time, is_closed)
               VALUES ($1, $2, NULL, NULL, true)
             `, [storeId, dow]);
           } else if (dow === 0 || dow === 6) {
