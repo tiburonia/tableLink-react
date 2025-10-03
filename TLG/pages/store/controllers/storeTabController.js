@@ -4,7 +4,7 @@
  */
 
 import { storeTabService } from '../services/storeTabService.js';
-import { menuTabView } from '../views/tabs/menuTabView.js';
+import { homeTabView } from '../views/tabs/menuTabView.js';
 import { reviewTabView } from '../views/tabs/reviewTabView.js';
 
 export const storeTabController = {

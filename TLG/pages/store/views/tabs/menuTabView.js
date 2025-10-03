@@ -5,7 +5,7 @@
 
 export const homeTabView = {
   /**
-   * 메뉴 탭 렌더링
+   * 홈 탭 렌더링
    */
   render(store, menuData) {
     if (!menuData || menuData.length === 0) {
@@ -261,6 +261,6 @@ export const homeTabView = {
 };
 
 // 전역 등록
-window.menuTabView = menuTabView;
+window.homeTabView = homeTabView;
 
-console.log('✅ menuTabView 모듈 로드 완료');
+console.log('✅ homeTabView 모듈 로드 완료');

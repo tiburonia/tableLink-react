@@ -5,7 +5,7 @@ import { reviewPreviewHTML } from './modules/reviewPreviewHTML.js';
 import { promotionCardHTML } from './modules/promotionCardHTML.js';
 import { topUsersHTML } from './modules/topUsersHTML.js';
 import { loyaltyLevelHTML } from './modules/loyaltyLevelHTML.js';
-import { menuTabView } from './tabs/menuTabView.js';
+import { homeTabView } from './tabs/menuTabView.js';
 
 // CSS 파일 import
 const storeCSSLink = document.createElement('link');
@@ -80,7 +80,7 @@ export const storeView = {
                   <span class="nav-label">정보</span>
                 </button>
               </div>
-              <div id="storeContent">${menuTabView.render(store, store.menu)}</div>
+              <div id="storeContent">${homeTabView.render(store, store.menu)}</div>
 
 
         </div>
