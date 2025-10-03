@@ -4,7 +4,6 @@ import { reviewPreviewHTML } from "./modules/reviewPreviewHTML.js";
 import { promotionCardHTML } from "./modules/promotionCardHTML.js";
 import { topUsersHTML } from "./modules/topUsersHTML.js";
 import { loyaltyLevelHTML } from "./modules/loyaltyLevelHTML.js";
-import { homeTabView } from "./tabs/menuTabView.js";
 import { menuHTML } from "./modules/menuHTML.js";
 
 // CSS 파일 import
@@ -97,7 +96,8 @@ export const storeView = {
         </div>
 
         <div id="storeContent">
-          ${homeTabView.render(store)}
+          <!-- 초기 로딩 스켈레톤 또는 빈 상태 -->
+          <div class="home-tab-loading">로딩 중...</div>
         </div>
 
       </div>

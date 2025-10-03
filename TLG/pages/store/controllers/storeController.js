@@ -52,6 +52,13 @@ export const storeController = {
       // View를 통한 UI 렌더링
       storeView.renderStoreHTML(store);
 
+      // 홈 탭 초기 렌더링 (storeTabController 사용)
+      const { storeTabController } = await import('./storeTabController.js');
+      const storeContent = document.getElementById('storeContent');
+      if (storeContent && storeTabController) {
+        await storeTabController.renderHomeTab(store, storeContent);
+      }
+
       // 추가 데이터 로드 및 업데이트 (비동기)
       this.loadAdditionalData(store);
 
