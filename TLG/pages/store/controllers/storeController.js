@@ -1,13 +1,24 @@
 // 매장 컨트롤러 - 이벤트 처리 및 흐름 제어
 let storeService, storeView;
 
-try {
-  const serviceModule = await import('../services/storeService.js');
-  const viewModule = await import('../views/storeView.js');
-  storeService = serviceModule.storeService;
-  storeView = viewModule.storeView;
-} catch (error) {
-  console.warn('⚠️ Store 모듈 임포트 실패:', error);
+async function ensureModulesLoaded() {
+  if (!storeService || !storeView) {
+    try {
+      const serviceModule = await import('../services/storeService.js');
+      const viewModule = await import('../views/storeView.js');
+      storeService = serviceModule.storeService;
+      storeView = viewModule.storeView;
+      
+      if (!storeService || !storeView) {
+        throw new Error('모듈 로드 후에도 storeService 또는 storeView가 undefined입니다');
+      }
+      
+      console.log('✅ Store 모듈 로드 완료:', { hasService: !!storeService, hasView: !!storeView });
+    } catch (error) {
+      console.error('❌ Store 모듈 임포트 실패:', error);
+      throw error;
+    }
+  }
 }
 
 export const storeController = {
@@ -25,6 +36,9 @@ export const storeController = {
     console.log('🏪 storeController.renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
 
     try {
+      // 모듈 로드 확인
+      await ensureModulesLoaded();
+      
       let store;
 
       if (storeData && storeData.store_id) {
@@ -45,7 +59,30 @@ export const storeController = {
 
     } catch (error) {
       console.error('❌ 매장 렌더링 실패:', error);
-      storeView.showError(error.message);
+      
+      // storeView가 없는 경우 직접 에러 표시
+      if (storeView && typeof storeView.showError === 'function') {
+        storeView.showError(error.message);
+      } else {
+        const main = document.getElementById('main');
+        if (main) {
+          main.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #666;">
+              <h2>🚫 매장을 불러올 수 없습니다</h2>
+              <p style="color: #999; margin: 10px 0;">${error.message}</p>
+              <button onclick="renderMap()" style="
+                padding: 10px 20px;
+                background: #297efc;
+                color: white;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 16px;
+              ">지도로 돌아가기</button>
+            </div>
+          `;
+        }
+      }
     }
   },
 
