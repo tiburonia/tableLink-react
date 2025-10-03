@@ -303,7 +303,7 @@ export const homeTabView = {
           display: flex;
           gap: 8px;
           margin: 16px 0 24px;
-          overflow-x: auto;
+          overflow-x: scroll;
           padding: 4px 0;
           scrollbar-width: none;
         }

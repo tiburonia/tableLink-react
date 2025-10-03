@@ -83,17 +83,21 @@ export const storeView = {
             <span class="nav-ico">🏠</span>
             <span class="nav-label">홈</span>
           </button>
+          <button class="nav-btn" data-tab="regular">
+            <span class="nav-ico">🍽️</span>
+            <span class="nav-label">단골혜택</span>
+          </button>
+          <button class="nav-btn" data-tab="menu">
+            <span class="nav-ico">🍽️</span>
+            <span class="nav-label">메뉴</span>
+          </button>
           <button class="nav-btn" data-tab="review">
             <span class="nav-ico">💬</span>
             <span class="nav-label">리뷰</span>
           </button>
-          <button class="nav-btn" data-tab="photo">
-            <span class="nav-ico">📸</span>
-            <span class="nav-label">사진</span>
-          </button>
           <button class="nav-btn" data-tab="info">
             <span class="nav-ico">ℹ️</span>
-            <span class="nav-label">정보</span>
+            <span class="nav-label">매장정보</span>
           </button>
         </div>
 

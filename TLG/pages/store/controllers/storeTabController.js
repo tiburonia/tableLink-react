@@ -165,7 +165,24 @@ export const storeTabController = {
     reviewTabView.attachEventListeners(store);
 
     console.log('✅ 리뷰 탭 렌더링 완료');
+  },
+
+
+
+  /**
+   * 메뉴 탭 렌더링
+   */
+  async renderMenuTab(store, container) {
+    
+  },
+
+  /**
+   * 매장정보 탭 렌더링
+   */
+  async renderStoreInfoTab(store, container) {
+    
   }
+  
 };
 
 // 전역 등록 (하위 호환성)
