@@ -1,6 +1,8 @@
 
 const tableRepository = require('../repositories/tableRepository');
 const orderRepository = require('../repositories/orderRepository');
+const storeRepository = require('../repositories/storeRepository');
+const pool = require('../db/pool');
 
 /**
  * 테이블 서비스 - 테이블 상태 관리
@@ -50,6 +52,223 @@ class TableService {
       updated_at: table.updated_at,
       isTLLMixedOrder: finalTLLMixedStatus
     };
+  }
+
+  /**
+   * 매장별 테이블 정보 조회
+   */
+  async getStoreTablesInfo(storeId) {
+    const parsedStoreId = parseInt(storeId);
+    if (isNaN(parsedStoreId)) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    // 매장 존재 여부 확인
+    const store = await storeRepository.getStoreById(parsedStoreId);
+    if (!store) {
+      throw new Error('매장을 찾을 수 없습니다');
+    }
+
+    // store_tables 조회
+    const storeTables = await tableRepository.getStoreTable(parsedStoreId);
+    console.log(`📊 매장 ${storeId} store_tables에서 ${storeTables.length}개 테이블 발견`);
+
+    // 활성 주문 조회
+    const activeOrders = await this.getActiveOrders(parsedStoreId);
+    console.log(`📊 매장 ${storeId} 활성 주문 ${activeOrders.length}개`);
+
+    // 테이블 목록 구성
+    const tables = this.buildTablesList(storeTables, activeOrders);
+
+    console.log(`✅ 매장 ${store.name} (${storeId}) 테이블 ${tables.length}개 조회 완료`);
+    console.log(`📊 사용중: ${tables.filter(t => t.isOccupied).length}개, 빈 테이블: ${tables.filter(t => !t.isOccupied).length}개`);
+
+    return {
+      tables,
+      store: {
+        id: parsedStoreId,
+        name: store.name
+      }
+    };
+  }
+
+  /**
+   * 활성 주문 조회
+   */
+  async getActiveOrders(storeId) {
+    try {
+      const result = await pool.query(`
+        SELECT 
+          o.table_num as table_number,
+          o.created_at as opened_at,
+          o.user_id,
+          o.guest_phone
+        FROM orders o
+        WHERE o.store_id = $1 
+          AND o.session_status = 'OPEN'
+          AND NOT COALESCE(o.session_ended, false)
+        ORDER BY o.table_num ASC
+      `, [storeId]);
+
+      return result.rows;
+    } catch (error) {
+      console.warn(`⚠️ 활성 주문 조회 실패, 빈 배열로 처리:`, error.message);
+      return [];
+    }
+  }
+
+  /**
+   * 테이블 목록 구성
+   */
+  buildTablesList(storeTables, activeOrders) {
+    if (storeTables.length > 0) {
+      // store_tables 기반 테이블 생성
+      return storeTables.map(storeTable => {
+        const tableNumber = storeTable.id;
+        const activeOrder = activeOrders.find(order => order.table_number === tableNumber);
+
+        return {
+          id: tableNumber,
+          tableNumber: tableNumber,
+          tableName: storeTable.table_name || `${tableNumber}번`,
+          seats: storeTable.capacity || 4,
+          isOccupied: !!activeOrder,
+          occupiedSince: activeOrder ? activeOrder.opened_at : null,
+          occupiedBy: activeOrder ? (activeOrder.user_id || activeOrder.guest_phone) : null
+        };
+      });
+    } else {
+      // 기본 5개 테이블 생성
+      console.warn(`⚠️ store_tables 데이터가 없어 기본 5개 테이블 생성`);
+      return Array.from({ length: 5 }, (_, i) => {
+        const tableNumber = i + 1;
+        const activeOrder = activeOrders.find(order => order.table_number === tableNumber);
+
+        return {
+          id: tableNumber,
+          tableNumber: tableNumber,
+          tableName: `${tableNumber}번`,
+          seats: 4,
+          isOccupied: !!activeOrder,
+          occupiedSince: activeOrder ? activeOrder.opened_at : null,
+          occupiedBy: activeOrder ? (activeOrder.user_id || activeOrder.guest_phone) : null
+        };
+      });
+    }
+  }
+
+  /**
+   * TLL 연동 상태 확인
+   */
+  async checkTLLStatus(storeId, tableNumber) {
+    // 현재는 모든 테이블을 TLL 미연동으로 처리
+    // 실제 환경에서는 테이블별 TLL 연동 설정 확인 필요
+    const hasTLLIntegration = false;
+
+    return {
+      hasTLLIntegration,
+      message: hasTLLIntegration ? 'TLL 연동 테이블' : 'TLL 미연동 테이블 (비회원 POS 주문 가능)'
+    };
+  }
+
+  /**
+   * 테이블 점유 처리
+   */
+  async occupyTable({ storeId, tableNumber, userId, guestPhone, duration }) {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // 이미 오픈된 체크 확인
+      const existingCheck = await client.query(`
+        SELECT id FROM checks 
+        WHERE store_id = $1 AND table_number = $2 AND status = 'open'
+      `, [storeId, tableNumber]);
+
+      if (existingCheck.rows.length > 0) {
+        throw new Error('이미 사용중인 테이블입니다');
+      }
+
+      // 새 체크 생성
+      const checkResult = await client.query(`
+        INSERT INTO checks (
+          store_id, 
+          table_number, 
+          user_id, 
+          guest_phone, 
+          status, 
+          opened_at,
+          subtotal,
+          tax_amount,
+          service_charge,
+          discount_amount,
+          final_amount
+        ) VALUES ($1, $2, $3, $4, 'open', NOW(), 0, 0, 0, 0, 0)
+        RETURNING id, opened_at
+      `, [storeId, tableNumber, userId || null, guestPhone || null]);
+
+      const newCheck = checkResult.rows[0];
+
+      await client.query('COMMIT');
+
+      console.log(`✅ 테이블 ${tableNumber} 점유 완료 - 체크 ID: ${newCheck.id}`);
+
+      return {
+        checkId: newCheck.id,
+        occupiedSince: newCheck.opened_at
+      };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('❌ 테이블 점유 실패:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * 테이블 해제 처리
+   */
+  async releaseTable(storeId, tableNumber) {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // 오픈된 체크 조회
+      const checkResult = await client.query(`
+        SELECT id FROM checks 
+        WHERE store_id = $1 AND table_number = $2 AND status = 'open'
+      `, [storeId, tableNumber]);
+
+      if (checkResult.rows.length === 0) {
+        throw new Error('점유중인 체크를 찾을 수 없습니다');
+      }
+
+      const checkId = checkResult.rows[0].id;
+
+      // 체크 상태를 closed로 변경
+      await client.query(`
+        UPDATE checks 
+        SET status = 'closed', closed_at = NOW()
+        WHERE id = $1
+      `, [checkId]);
+
+      await client.query('COMMIT');
+
+      console.log(`✅ 테이블 ${tableNumber} 해제 완료 - 체크 ID: ${checkId}`);
+
+      return { checkId };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('❌ 테이블 해제 실패:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }
 
