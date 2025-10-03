@@ -87,7 +87,7 @@ export const homeTabView = {
         <!-- 안내 문구 -->
         <div class="waiting-notice">
           <span class="notice-icon">💡</span>
-          <span class="notice-text">시간대별 평균 대기시간입니다</span>
+          <span class="waiting-notice-text">시간대별 평균 대기시간입니다</span>
         </div>
       </section>
     `;
@@ -425,7 +425,7 @@ export const homeTabView = {
           font-size: 18px;
         }
 
-        .notice-text {
+        .waiting-notice-text {
           font-size: 13px;
           color: #78350f;
           font-weight: 500;
