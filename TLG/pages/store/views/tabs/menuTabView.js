@@ -23,7 +23,7 @@ export const homeTabView = {
   /**
    * 요일별 대기시간 통계
    */
-   renderWaitingTimes() {
+  renderWaitingTimes() {
     // 요일별 더미 데이터
     const weeklyData = {
       "월": [ { hour:"12시", value:40 }, { hour:"13시", value:30 }, { hour:"14시", value:20 }, { hour:"15시", value:10 } ],
@@ -40,7 +40,7 @@ export const homeTabView = {
     const maxValue = Math.max(...weeklyData[initialDay].map(d => d.value));
 
     const barsHTML = weeklyData[initialDay].map(d => {
-      const barHeight = (d.value / maxValue) * 150;
+      const barHeight = (d.value / maxValue) * 120;
       return `
         <div class="waiting-bar">
           <div class="value-label">${d.value}분</div>
@@ -50,6 +50,11 @@ export const homeTabView = {
       `;
     }).join("");
 
+    // 이벤트 리스너를 DOM 로드 후 설정
+    setTimeout(() => {
+      this.initWaitingTimesEvents(weeklyData);
+    }, 0);
+
     return `
       <section class="home-section waiting-times-section">
         <div class="section-header">
@@ -57,51 +62,82 @@ export const homeTabView = {
             <span class="section-icon">⏰</span>
             요일별 대기시간
           </h3>
+          <div class="waiting-info">
+            <span class="info-badge">실시간 업데이트</span>
+          </div>
         </div>
 
         <!-- 요일 선택 네비게이션 -->
         <nav class="day-nav">
           ${Object.keys(weeklyData).map(day => `
-            <button class="day-btn ${day === initialDay ? 'active' : ''}" data-day="${day}">${day}</button>
+            <button class="day-btn ${day === initialDay ? 'active' : ''}" data-day="${day}">
+              <span class="day-text">${day}</span>
+            </button>
           `).join("")}
         </nav>
 
         <!-- 그래프 -->
-        <div id="waitingTimesGrid" class="waiting-times-grid">
-          ${barsHTML}
+        <div class="waiting-times-container">
+          <div id="waitingTimesGrid" class="waiting-times-grid">
+            ${barsHTML}
+          </div>
+        </div>
+
+        <!-- 안내 문구 -->
+        <div class="waiting-notice">
+          <span class="notice-icon">💡</span>
+          <span class="notice-text">시간대별 평균 대기시간입니다</span>
         </div>
       </section>
-
-      
-
-      <script>
-        (function(){
-          const weeklyData = ${JSON.stringify(weeklyData)};
-          const grid = document.getElementById("waitingTimesGrid");
-          const buttons = document.querySelectorAll(".day-btn");
-
-          buttons.forEach(btn => {
-            btn.addEventListener("click", () => {
-              buttons.forEach(b => b.classList.remove("active"));
-              btn.classList.add("active");
-              const day = btn.dataset.day;
-              const maxValue = Math.max(...weeklyData[day].map(d => d.value));
-
-              grid.innerHTML = weeklyData[day].map(d => {
-                const barHeight = (d.value / maxValue) * 150;
-                return \`
-                  <div class="waiting-bar">
-                    <div class="value-label">\${d.value}분</div>
-                    <div class="bar" style="height:\${barHeight}px"></div>
-                    <div class="time-label">\${d.hour}</div>
-                  </div>
-                \`;
-              }).join("");
-            });
-          });
-        })();
-      </script>
     `;
+  },
+
+  /**
+   * 대기시간 이벤트 초기화
+   */
+  initWaitingTimesEvents(weeklyData) {
+    const grid = document.getElementById("waitingTimesGrid");
+    const buttons = document.querySelectorAll(".day-btn");
+
+    if (!grid || buttons.length === 0) {
+      console.warn('⚠️ 대기시간 요소를 찾을 수 없습니다');
+      return;
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        // 모든 버튼 비활성화
+        buttons.forEach(b => b.classList.remove("active"));
+        
+        // 클릭한 버튼 활성화
+        btn.classList.add("active");
+        
+        const day = btn.dataset.day;
+        const dayData = weeklyData[day];
+        
+        if (!dayData) return;
+
+        const maxValue = Math.max(...dayData.map(d => d.value));
+
+        // 애니메이션을 위해 그리드를 비우고 재렌더링
+        grid.style.opacity = '0';
+        
+        setTimeout(() => {
+          grid.innerHTML = dayData.map(d => {
+            const barHeight = (d.value / maxValue) * 120;
+            return `
+              <div class="waiting-bar">
+                <div class="value-label">${d.value}분</div>
+                <div class="bar" style="height:${barHeight}px"></div>
+                <div class="time-label">${d.hour}</div>
+              </div>
+            `;
+          }).join("");
+          
+          grid.style.opacity = '1';
+        }, 150);
+      });
+    });
   }
 
 ,
@@ -235,44 +271,94 @@ export const homeTabView = {
         }
 
         /* 요일별 대기시간 스타일 */
-
         .waiting-times-section {
           padding: 20px;
-          font-family: Arial, sans-serif;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          position: relative;
+        }
+
+        .waiting-times-section .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+        }
+
+        .waiting-info {
+          display: flex;
+          gap: 8px;
+        }
+
+        .info-badge {
+          padding: 4px 12px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border-radius: 12px;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 0.3px;
         }
 
         .day-nav {
           display: flex;
-          justify-content: space-between;
-          margin: 10px 0 20px;
+          gap: 8px;
+          margin: 16px 0 24px;
+          overflow-x: auto;
+          padding: 4px 0;
+          scrollbar-width: none;
+        }
+
+        .day-nav::-webkit-scrollbar {
+          display: none;
         }
 
         .day-btn {
           flex: 1;
-          padding: 6px 0;
-          margin: 0 2px;
-          border: none;
-          border-radius: 6px;
-          background: #f3f4f6;
-          color: #374151;
-          font-size: 14px;
+          min-width: 46px;
+          padding: 10px 12px;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          background: white;
+          color: #6b7280;
+          font-size: 15px;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+        }
+
+        .day-btn:hover {
+          border-color: #c7d2fe;
+          background: #f5f7ff;
+          transform: translateY(-2px);
         }
 
         .day-btn.active {
-          background: #2563eb;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-color: #667eea;
           color: white;
-          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+          transform: translateY(-2px);
+        }
+
+        .day-text {
+          display: block;
+        }
+
+        .waiting-times-container {
+          position: relative;
+          margin: 20px 0;
         }
 
         .waiting-times-grid {
           display: flex;
           align-items: flex-end;
-          gap: 12px;
-          height: 200px;
-          padding: 10px 0;
-          border-bottom: 1px solid #e5e7eb;
+          gap: 8px;
+          min-height: 180px;
+          padding: 20px 12px 12px;
+          background: linear-gradient(to top, #f8f9fa 0%, transparent 100%);
+          border-radius: 12px;
+          transition: opacity 0.3s ease;
         }
 
         .waiting-bar {
@@ -281,25 +367,90 @@ export const homeTabView = {
           flex-direction: column;
           align-items: center;
           justify-content: flex-end;
-          gap: 6px;
-        }
-
-        .bar {
-          width: 20px;
-          border-radius: 6px;
-          background: #60a5fa;
-          transition: height 0.3s;
-        }
-
-        .time-label {
-          font-size: 12px;
-          color: #6b7280;
+          gap: 8px;
+          min-width: 40px;
         }
 
         .value-label {
-          font-size: 12px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1e293b;
+          padding: 2px 6px;
+          background: white;
+          border-radius: 6px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+          white-space: nowrap;
+        }
+
+        .bar {
+          width: 100%;
+          max-width: 32px;
+          min-height: 4px;
+          border-radius: 8px 8px 4px 4px;
+          background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%);
+          transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          box-shadow: 0 4px 8px rgba(96, 165, 250, 0.3);
+        }
+
+        .bar::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 30%;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.4) 0%, transparent 100%);
+          border-radius: 8px 8px 0 0;
+        }
+
+        .time-label {
+          font-size: 11px;
           font-weight: 600;
-          color: #374151;
+          color: #64748b;
+          margin-top: 4px;
+        }
+
+        .waiting-notice {
+          margin-top: 16px;
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .notice-icon {
+          font-size: 18px;
+        }
+
+        .notice-text {
+          font-size: 13px;
+          color: #78350f;
+          font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+          .waiting-times-grid {
+            gap: 6px;
+            padding: 20px 8px 12px;
+          }
+
+          .value-label {
+            font-size: 11px;
+            padding: 2px 4px;
+          }
+
+          .time-label {
+            font-size: 10px;
+          }
+
+          .day-btn {
+            min-width: 42px;
+            padding: 8px 10px;
+            font-size: 14px;
+          }
         }
 
         /* 영업시간 스타일 */
