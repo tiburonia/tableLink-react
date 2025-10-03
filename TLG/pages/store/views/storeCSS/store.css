@@ -885,21 +885,17 @@ body {
 
 /* 프리미엄 리뷰 프리뷰 카드 */
 .premium-review-card {
-  background: white;
-  border-radius: 16px;
-  padding: 16px;
-  margin: 16px 0;
+  position: relative;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 20px;
+  padding: 20px;
+  margin-bottom: 16px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     0 2px 8px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.8);
   overflow: hidden;
-}
-
-#storeContent .premium-review-card {
-  margin: 16px;
-  max-width: 100%;
 }
 
 .premium-review-card .card-gradient-bg {
@@ -914,14 +910,12 @@ body {
 }
 
 .review-header-section {
+  position: relative;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 16px;
-}
-
-#storeContent .review-header-section {
-  margin-bottom: 12px;
+  margin-bottom: 20px;
 }
 
 .review-title-section {
@@ -1123,29 +1117,22 @@ body {
 }
 
 .review-footer {
-  margin-top: 16px;
-  padding-top: 16px;
   border-top: 1px solid #f1f5f9;
-}
-
-#storeContent .review-footer {
-  margin-top: 12px;
-  padding-top: 12px;
+  padding-top: 16px;
+  position: relative;
+  z-index: 1;
 }
 
 /* 실제 리뷰 아이템 스타일 (데이터 로드 후) */
 .premium-review-item {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: white;
+  border: 1.5px solid #f1f5f9;
   border-radius: 12px;
   padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid #e2e8f0;
+  margin-bottom: 10px;
   transition: all 0.2s ease;
-}
-
-#storeContent .premium-review-item {
-  padding: 12px;
-  margin-bottom: 8px;
+  position: relative;
+  overflow: hidden;
 }
 
 .premium-review-item:hover {

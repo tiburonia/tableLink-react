@@ -80,10 +80,7 @@ export const storeView = {
               <span class="nav-label">정보</span>
             </button>
           </div>
-          <div id="storeContent">
-            ${menuTabView.render(store, store.menu)}
-            ${reviewPreviewHTML.renderReviewPreviewHTML()}
-          </div>
+          <div id="storeContent">${menuTabView.render(store, store.menu)}</div>
         </div>
       </div>
       <nav id="storeBottomBar">
