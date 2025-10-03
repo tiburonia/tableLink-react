@@ -245,7 +245,18 @@ export const storeController = {
   async setupTabNavigation(store) {
     // 동적으로 storeTabController 로드
     const { storeTabController } = await import('./storeTabController.js');
+
+    // 1. 먼저 탭 네비게이션 초기화 (이벤트 리스너 설정)
     storeTabController.initializeTabNavigation(store);
+
+    // 2. 초기 리뷰 탭 활성화
+    setTimeout(async () => {
+      const reviewBtn = document.querySelector('.nav-btn[data-tab="review"]');
+      if (reviewBtn) {
+        reviewBtn.classList.add('active');
+        await storeTabController.renderReviewTab(store, document.getElementById('storeContent'));
+      }
+    }, 100);
   },
 
   /**
