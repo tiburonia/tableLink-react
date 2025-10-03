@@ -6,7 +6,7 @@ export const reviewTabView = {
   /**
    * 리뷰 탭 렌더링
    */
-  async render(store, reviewData) {
+  render(store, reviewData) {
     if (!reviewData || reviewData.length === 0) {
       return this.renderEmptyState();
     }

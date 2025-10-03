@@ -108,7 +108,7 @@ export const storeTabController = {
     const reviewData = store.reviews
 
     // 2. 뷰 렌더링
-    const reviewHTML = await reviewTabView.render(store, reviewData);
+    const reviewHTML = reviewTabView.render(store, reviewData);
     container.innerHTML = reviewHTML;
 
     // 3. 이벤트 리스너 설정
