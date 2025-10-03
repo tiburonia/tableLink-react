@@ -63,7 +63,6 @@ export const storeTabController = {
 
         case 'menu':
           await this.renderMenuTab(store, storeContent)
-         
           break;
 
         case 'regular':
@@ -204,6 +203,12 @@ export const storeTabController = {
    * 매장정보 탭 렌더링
    */
   async renderStoreInfoTab(store, container) {
+    
+  },
+  /**
+   * 단골혜택 탭 렌더링
+   */
+  async renderRegularTab(store, container) {
     
   }
   

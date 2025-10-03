@@ -421,7 +421,7 @@ export const homeTabView = {
           gap: 10px;
         }
 
-        .notice-icon {
+        .waiting-notice-icon {
           font-size: 18px;
         }
 
