@@ -52,8 +52,8 @@ export const tableService = {
   calculateTableStats(tables, storeName) {
     const totalTables = tables.length;
     const totalSeats = tables.reduce((sum, table) => sum + (table.capacity || 4), 0);
-    const occupiedTables = tables.filter(t => t.status == OCCUPIED);
-    const availableTables = tables.filter(t => t.status == AVAILABLE);
+    const occupiedTables = tables.filter(t => t.status == 'OCCUPIED');
+    const availableTables = tables.filter(t => t.status == 'AVAILABLE');
     const occupiedSeats = occupiedTables.reduce((sum, table) => sum + (table.capacity || 4), 0);
     const availableSeats = totalSeats - occupiedSeats;
     const occupancyRate = totalSeats > 0 ? Math.round((occupiedSeats / totalSeats) * 100) : 0;
