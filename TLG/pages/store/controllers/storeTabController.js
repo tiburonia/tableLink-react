@@ -66,12 +66,12 @@ export const storeTabController = {
           break;
 
         case 'regular':
-          storeContent.innerHTML = '<div class="empty-tab">등록된 단골정보가 없습니다...</div>';
+          await this.renderRegularTab(store, storeContent);
           break;
+
         case 'info':
-          storeContent.innerHTML = '<div class="empty-tab">준비 중...</div>';
-          
-          
+          await this.renderStoreInfoTab(store, storeContent);
+          break;
 
         default:
           storeContent.innerHTML = '<div class="empty-tab">준비 중...</div>';
@@ -203,13 +203,69 @@ export const storeTabController = {
    * 매장정보 탭 렌더링
    */
   async renderStoreInfoTab(store, container) {
-    
+    console.log('ℹ️ 매장정보 탭 렌더링 시작');
+
+    try {
+      // storeInfoTabView 모듈 동적 로드
+      const { storeInfoTabView } = await import('../views/tabs/storeInfoTabView.js');
+      
+      // 매장 추가 정보 가져오기
+      const { storeInfoService } = await import('../services/storeInfoService.js');
+      const additionalInfo = await storeInfoService.getStoreAdditionalInfo(store);
+
+      // 매장정보 탭 HTML 렌더링
+      const storeInfoHTML = storeInfoTabView.render(store, additionalInfo);
+      container.innerHTML = storeInfoHTML;
+
+      console.log('✅ 매장정보 탭 렌더링 완료');
+    } catch (error) {
+      console.error('❌ 매장정보 탭 렌더링 실패:', error);
+      container.innerHTML = `
+        <div class="error-tab">
+          <p>매장 정보를 불러오는 중 오류가 발생했습니다.</p>
+        </div>
+      `;
+    }
   },
+
   /**
    * 단골혜택 탭 렌더링
    */
   async renderRegularTab(store, container) {
-    
+    console.log('👑 단골혜택 탭 렌더링 시작');
+
+    try {
+      // regularTabView 모듈 동적 로드
+      const { regularTabView } = await import('../views/tabs/regularTabView.js');
+      
+      // 프로모션 데이터 가져오기
+      const promotions = await storeTabService.getPromotions(store.id);
+
+      // 단골혜택 탭 HTML 렌더링
+      const regularHTML = regularTabView.render(store, promotions);
+      container.innerHTML = regularHTML;
+
+      // promotionCardHTML 모듈 로드 및 삽입
+      const { promotionCardHTML } = await import('../views/modules/promotionCardHTML.js');
+      const promotionSection = document.getElementById('promotionSection');
+      if (promotionSection) {
+        promotionSection.innerHTML = promotionCardHTML.renderPromotionCardHTML(store);
+        
+        // 프로모션 데이터 업데이트
+        if (window.storeView && typeof window.storeView.updatePromotionUI === 'function') {
+          window.storeView.updatePromotionUI(promotions);
+        }
+      }
+
+      console.log('✅ 단골혜택 탭 렌더링 완료');
+    } catch (error) {
+      console.error('❌ 단골혜택 탭 렌더링 실패:', error);
+      container.innerHTML = `
+        <div class="error-tab">
+          <p>단골 혜택을 불러오는 중 오류가 발생했습니다.</p>
+        </div>
+      `;
+    }
   }
   
 };
