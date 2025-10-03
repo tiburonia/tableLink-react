@@ -4,8 +4,9 @@
  */
 
 import { storeTabService } from '../services/storeTabService.js';
-import { homeTabView } from '../views/tabs/menuTabView.js';
+import { homeTabView } from '../views/tabs/homeTabView.js';
 import { reviewTabView } from '../views/tabs/reviewTabView.js';
+import { menuTabView } from '../views/tabs/menuTabView.js'
 
 export const storeTabController = {
   currentStore: null,
@@ -60,13 +61,18 @@ export const storeTabController = {
           await this.renderReviewTab(store, storeContent);
           break;
 
-        case 'photo':
-          storeContent.innerHTML = '<div class="empty-tab">등록된 사진이 없습니다...</div>';
+        case 'menu':
+          await this.renderMenuTab(store, storeContent)
+         
           break;
 
-        case 'info':
-          storeContent.innerHTML = '<div class="empty-tab">등록된 정보가 없습니다...</div>';
+        case 'regular':
+          storeContent.innerHTML = '<div class="empty-tab">등록된 단골정보가 없습니다...</div>';
           break;
+        case 'info':
+          storeContent.innerHTML = '<div class="empty-tab">준비 중...</div>';
+          
+          
 
         default:
           storeContent.innerHTML = '<div class="empty-tab">준비 중...</div>';
