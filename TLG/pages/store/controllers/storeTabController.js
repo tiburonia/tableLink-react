@@ -173,7 +173,25 @@ export const storeTabController = {
    * 메뉴 탭 렌더링
    */
   async renderMenuTab(store, container) {
-    
+    console.log('🍽️ 메뉴 탭 렌더링 시작');
+
+    try {
+      // menuTabView 모듈 동적 로드
+      const { menuTabView } = await import('../views/tabs/menuTabView.js');
+      
+      // 메뉴 탭 HTML 렌더링
+      const menuHTML = menuTabView.render(store);
+      container.innerHTML = menuHTML;
+
+      console.log('✅ 메뉴 탭 렌더링 완료');
+    } catch (error) {
+      console.error('❌ 메뉴 탭 렌더링 실패:', error);
+      container.innerHTML = `
+        <div class="error-tab">
+          <p>메뉴를 불러오는 중 오류가 발생했습니다.</p>
+        </div>
+      `;
+    }
   },
 
   /**
