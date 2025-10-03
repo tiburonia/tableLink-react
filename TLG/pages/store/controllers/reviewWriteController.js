@@ -4,7 +4,7 @@
  */
 
 import { reviewService } from '../services/reviewService.js';
-import { reviewWriteView } from '../views/reviewWriteView.js';
+import { reviewWriteView } from '../views/modules/reviewWriteView.js';
 
 // 컨트롤러 정의
 export const reviewWriteController = {

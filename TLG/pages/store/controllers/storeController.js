@@ -140,7 +140,7 @@ export const storeController = {
    */
   async initializeFavoriteButton(store) {
     try {
-      const { favoriteController } = await import('../favoriteStore/controllers/favoriteController.js');
+      const { favoriteController } = await import('./favoriteController.js');
       await favoriteController.initializeFavoriteButton(store);
     } catch (error) {
       console.warn('⚠️ 즐겨찾기 컨트롤러 로드 실패:', error);
@@ -460,7 +460,7 @@ export const storeController = {
     try {
       // Service Layer를 통한 데이터 로딩 및 계산
       const tableService = await import('../services/tableService.js').then(m => m.tableService);
-      const tableStatusView = await import('../views/modules/tableStatusView.js').then(m => m.tableStatusView);
+      const tableStatusView = await import('../views/tableStatusView.js').then(m => m.tableStatusView);
 
       setTimeout(async () => {
         const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
@@ -503,7 +503,7 @@ export const storeController = {
    */
   async setupReviewPreview(store) {
     // 동적으로 reviewPreviewController 로드
-    const { reviewPreviewController } = await import('../review/controllers/reviewPreviewController.js');
+    const { reviewPreviewController } = await import('./reviewPreviewController.js');
     await reviewPreviewController.renderTopReviews(store);
   },
 };

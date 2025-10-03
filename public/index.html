@@ -37,20 +37,20 @@
   <script src="/TLG/pages/store/views/order/renderAllOrderHTML.js"></script>
 
   <!-- 리뷰 관련 -->
-  <script src="/TLG/pages/store/views/review/renderReviewWrite.js"></script>
+  <script type="module" src="/TLG/pages/store/views/review/renderReviewWrite.js"></script>
   <link rel="stylesheet" href="/TLG/pages/store/views/review/css/reviewWrite.css">
 
   <!-- 즐겨찾기 관련 -->
-  <script src="/TLG/pages/store/views/favoriteButtonView.js"></script>
-  <script src="/TLG/pages/store/services/favoriteService.js"></script>
+  <script type="module" src="/TLG/pages/store/views/favoriteButtonView.js"></script>
+  <script type="module" src="/TLG/pages/store/services/favoriteService.js"></script>
 
   <!-- 리뷰 전체보기 -->
   <script src="/TLG/pages/store/views/review/renderAllReview.js"></script>
 
   <!-- 리뷰 관리자 및 미리보기 (레이어드 아키텍처) -->
-  <script src="/TLG/pages/store/repositories/reviewDataRepository.js"></script>
-  <script src="/TLG/pages/store/views/reviewPreviewView.js"></script>
-  <script src="/TLG/pages/store/controllers/reviewPreviewController.js"></script>
+  <script type="module" src="/TLG/pages/store/repositories/reviewDataRepository.js"></script>
+  <script type="module" src="/TLG/pages/store/views/reviewPreviewView.js"></script>
+  <script type="module" src="/TLG/pages/store/controllers/reviewPreviewController.js"></script>
 
   <!-- 프로모션 상세 -->
   <script src="/TLG/pages/store/views/promotion/renderPromotionDetail.js"></script>
@@ -62,13 +62,9 @@
   <script src="TLG/pages/main/renderSearch.js"></script>
   <!--알림 화면 렌더링 함수-->
   <script src="TLG/pages/main/renderNotification.js"></script>
-  <!--즐겨찾기 기능 (레이어드 아키텍처)-->
+  <!--즐겨찾기 기능 (레이어드 아키텍처) - 위에서 이미 로드됨, 중복 제거-->
   <script type="module" src="TLG/pages/store/repositories/favoriteRepository.js"></script>
-  <script type="module" src="TLG/pages/store/review/services/favoriteService.js"></script>
-  <script type="module" src="TLG/pages/store/review/favoriteButtonView.js"></script>
   <script type="module" src="TLG/pages/store/controllers/favoriteController.js"></script>
-  <!--메뉴탭 렌더링 함수-->
-  <script src="TLG/pages/store/review/renderAllReview.js"></script>
   <!--매장렌더링 모듈들-->
   <!-- storePanelManager는 더 이상 사용하지 않음 -->
   <!--패널 관리 (레이어드 아키텍처)-->
@@ -76,11 +72,8 @@
   <script type="module" src="/TLG/pages/store/services/panelService.js"></script>
   <script type="module" src="/TLG/pages/store/views/modules/panelView.js"></script>
   <script type="module" src="/TLG/pages/store/controllers/panelController.js"></script>
-  <!--리뷰 프리뷰 (레이어드 아키텍처)-->
-  <script type="module" src="/TLG/pages/store/review/repositories/reviewDataRepository.js"></script>
-  <script type="module" src="/TLG/pages/store/review/services/reviewDataService.js"></script>
-  <script type="module" src="/TLG/pages/store/review/views/reviewPreviewView.js"></script>
-  <script type="module" src="/TLG/pages/store/review/controllers/reviewPreviewController.js"></script>
+  <!--리뷰 프리뷰 (레이어드 아키텍처) - 위에서 이미 로드됨, 중복 제거-->
+  <script type="module" src="/TLG/pages/store/services/reviewDataService.js"></script>
   <!--매장 탭 뷰 (레이어드 아키텍처)-->
   <script type="module" src="/TLG/pages/store/views/tabs/menuTabView.js"></script>
   <script type="module" src="/TLG/pages/store/views/tabs/reviewTabView.js"></script>
@@ -102,8 +95,7 @@
   <script src="TLG/utils/storeCache.js"></script>
   <script src="/TLG/utils/globalKeyboardEvents.js"></script>
   <script src="/TLG/utils/regularLevelManager.js"></script>
-  <!-- 혜택 상세보기 스크립트 추가 -->
-  <script src="../TLG/pages/store/promotion/renderPromotionDetail.js"></script>
+  <!-- 혜택 상세보기 스크립트 - 위에서 이미 로드됨, 중복 제거 -->
   <!-- 서브 메인 화면 렌더링 함수 추가 -->
   <script src="TLG/pages/main/renderSubMain.js"></script>
 
