@@ -96,6 +96,7 @@ export const storeAdditionalInfoHTML = {
     return `
       <style>
         .store-additional-info-card {
+          margin-top: 30px;
           background: white;
           border-radius: 12px;
           padding: 16px;
