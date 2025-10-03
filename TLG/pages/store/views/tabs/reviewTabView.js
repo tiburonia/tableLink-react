@@ -55,7 +55,7 @@ export const reviewTabView = {
         </div>
 
         <!-- 더보기 버튼 -->
-        ${totalReviews > 3 ? `
+        ${totalReviews > 0 ? `
           <button class="see-more-reviews-btn" onclick="if(typeof renderAllReview === 'function') { renderAllReview(${JSON.stringify(store).replace(/"/g, '&quot;')}); } else { alert('리뷰 전체보기 기능을 불러올 수 없습니다.'); }">
             <span class="btn-content">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
