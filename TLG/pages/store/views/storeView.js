@@ -5,6 +5,7 @@ import { reviewPreviewHTML } from './modules/reviewPreviewHTML.js';
 import { promotionCardHTML } from './modules/promotionCardHTML.js';
 import { topUsersHTML } from './modules/topUsersHTML.js';
 import { loyaltyLevelHTML } from './modules/loyaltyLevelHTML.js';
+import { menuTabView } from './tabs/menuTabView.js';
 
 // CSS 파일 import
 const storeCSSLink = document.createElement('link');
@@ -79,7 +80,7 @@ export const storeView = {
               <span class="nav-label">정보</span>
             </button>
           </div>
-          <div id="storeContent"></div>
+          <div id="storeContent">${reviewTabView.render(store, store.reviews)}</div>
         </div>
       </div>
       <nav id="storeBottomBar">
@@ -101,14 +102,14 @@ export const storeView = {
     let components = '';
     
     // 직접 import한 모듈들 사용
-    components += reviewPreviewHTML.renderReviewPreviewHTML();
     components += topUsersHTML.renderTopUsersHTML(store);
-    components += loyaltyLevelHTML.renderLoyaltyLevelHTML();
     components += promotionCardHTML.renderPromotionCardHTML(store);
     components += tableStatusHTML.renderTableStatusHTML(store);
 
     return components;
   },
+
+
 
   /**
    * 평점 표시 업데이트

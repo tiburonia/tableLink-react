@@ -131,8 +131,9 @@ class TableService {
           id: tableNumber,
           tableNumber: tableNumber,
           tableName: storeTable.table_name || `${tableNumber}번`,
-          seats: storeTable.capacity || 4,
+          capacity: storeTable.capacity || 4,
           isOccupied: !!activeOrder,
+          status: storeTable.status,
           occupiedSince: activeOrder ? activeOrder.opened_at : null,
           occupiedBy: activeOrder ? (activeOrder.user_id || activeOrder.guest_phone) : null
         };

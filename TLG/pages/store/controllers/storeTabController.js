@@ -89,7 +89,7 @@ export const storeTabController = {
     console.log('🍽️ 메뉴 탭 렌더링 시작');
 
     // 1. 메뉴 데이터 가져오기
-    const menuData = await storeTabService.getMenuData(store);
+    const menuData = store.menu
 
     // 2. 뷰 렌더링
     const menuHTML = menuTabView.render(store, menuData);
@@ -105,7 +105,7 @@ export const storeTabController = {
     console.log('📖 리뷰 탭 렌더링 시작');
 
     // 1. 리뷰 데이터 가져오기
-    const reviewData = await storeTabService.getReviewData(store);
+    const reviewData = store.reviews
 
     // 2. 뷰 렌더링
     const reviewHTML = await reviewTabView.render(store, reviewData);
