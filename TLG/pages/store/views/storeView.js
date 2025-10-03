@@ -82,10 +82,8 @@ export const storeView = {
                 </button>
               </div>
               <div id="storeContent">${homeTabView.render(store)}</div>
-
-
         </div>
-      </div>  
+      </div>
       <nav id="storeBottomBar">
         <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
           <span class="btm-btn-ico">📞</span>
