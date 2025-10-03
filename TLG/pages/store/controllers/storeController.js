@@ -411,6 +411,12 @@ export const storeController = {
     // 이벤트 리스너 설정
     this.setupEventListeners(store);
 
+    // 매장 추가 정보 로드
+    this.loadStoreAdditionalInfo(store).catch(error => console.warn('⚠️ 매장 추가 정보 로드 실패:', error));
+
+    // 공지사항 로드
+    this.loadStoreNotices(store).catch(error => console.warn('⚠️ 공지사항 로드 실패:', error));
+
     // 리뷰 데이터 로드
     this.loadReviewData(store).catch(error => console.warn('⚠️ 리뷰 데이터 로드 실패:', error));
 
@@ -549,6 +555,46 @@ export const storeController = {
     // 동적으로 reviewPreviewController 로드
     const { reviewPreviewController } = await import('./reviewPreviewController.js');
     await reviewPreviewController.renderTopReviews(store);
+  },
+
+  /**
+   * 매장 추가 정보 로드
+   */
+  async loadStoreAdditionalInfo(store) {
+    try {
+      const { storeInfoService } = await import('../services/storeInfoService.js');
+      const { storeAdditionalInfoHTML } = await import('../views/modules/storeAdditionalInfoHTML.js');
+
+      const additionalInfo = await storeInfoService.getStoreAdditionalInfo(store);
+      
+      const container = document.querySelector('.store-additional-info-section');
+      if (container) {
+        container.innerHTML = storeAdditionalInfoHTML.render(additionalInfo);
+        console.log('✅ 매장 추가 정보 렌더링 완료');
+      }
+    } catch (error) {
+      console.error('❌ 매장 추가 정보 로드 실패:', error);
+    }
+  },
+
+  /**
+   * 공지사항 로드
+   */
+  async loadStoreNotices(store) {
+    try {
+      const { storeInfoService } = await import('../services/storeInfoService.js');
+      const { storeNoticeHTML } = await import('../views/modules/storeNoticeHTML.js');
+
+      const notices = await storeInfoService.getStoreNotices(store);
+      
+      const container = document.getElementById('storeNoticeContainer');
+      if (container) {
+        container.innerHTML = storeNoticeHTML.render(notices);
+        console.log('✅ 공지사항 렌더링 완료');
+      }
+    } catch (error) {
+      console.error('❌ 공지사항 로드 실패:', error);
+    }
   },
 };
 
