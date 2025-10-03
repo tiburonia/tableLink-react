@@ -10,12 +10,51 @@ export const homeTabView = {
   render(store) {
     return `
       <div class="home-tab-container">
+        ${this.renderStoreHours()}
         ${this.renderTableStatus()}
         ${this.renderFacilities()}
         ${this.renderMenu(store)}
         ${this.renderReviewPreview()}
       </div>
       ${this.getStyles()}
+    `;
+  },
+
+  /**
+   * 영업시간 섹션 (더미 데이터)
+   */
+  renderStoreHours() {
+    const hours = [
+      { day: '월요일', time: '10:00 - 22:00', isToday: false },
+      { day: '화요일', time: '10:00 - 22:00', isToday: false },
+      { day: '수요일', time: '10:00 - 22:00', isToday: true },
+      { day: '목요일', time: '10:00 - 22:00', isToday: false },
+      { day: '금요일', time: '10:00 - 23:00', isToday: false },
+      { day: '토요일', time: '10:00 - 23:00', isToday: false },
+      { day: '일요일', time: '11:00 - 21:00', isToday: false }
+    ];
+
+    return `
+      <section class="home-section store-hours-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">🕐</span>
+            영업시간
+          </h3>
+        </div>
+        <div class="hours-list">
+          ${hours.map(h => `
+            <div class="hour-item ${h.isToday ? 'today' : ''}">
+              <span class="day-label">${h.day}</span>
+              <span class="time-label">${h.time}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="hours-notice">
+          <span class="notice-icon">ℹ️</span>
+          <span class="notice-text">공휴일은 영업시간이 변경될 수 있습니다</span>
+        </div>
+      </section>
     `;
   },
 
@@ -146,6 +185,58 @@ export const homeTabView = {
 
         .section-icon {
           font-size: 20px;
+        }
+
+        /* 영업시간 스타일 */
+        .hours-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .hour-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          border-radius: 8px;
+          background: #f8f9fa;
+          transition: background 0.2s;
+        }
+
+        .hour-item.today {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          font-weight: 600;
+        }
+
+        .day-label {
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .time-label {
+          font-size: 14px;
+          font-weight: 600;
+        }
+
+        .hours-notice {
+          margin-top: 12px;
+          padding: 10px;
+          background: #fff3cd;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .notice-icon {
+          font-size: 16px;
+        }
+
+        .notice-text {
+          font-size: 12px;
+          color: #856404;
         }
 
         /* 시설정보 스타일 */
