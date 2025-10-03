@@ -86,16 +86,14 @@ export const storeTabController = {
    * 메뉴 탭 렌더링
    */
   async renderHomeTab(store, container) {
-    console.log('🍽️ 메뉴 탭 렌더링 시작');
+    console.log('🍽️ 홈 탭 렌더링 시작');
 
-    // 1. 메뉴 데이터 가져오기
-    const menuData = store.menu
 
     // 2. 뷰 렌더링
-    const menuHTML = homeTabView.render(store, menuData);
+    const menuHTML = homeTabView.render(store);
     container.innerHTML = menuHTML;
 
-    console.log('✅ 메뉴 탭 렌더링 완료');
+    console.log('✅ 홈 탭 렌더링 완료');
   },
 
   /**
