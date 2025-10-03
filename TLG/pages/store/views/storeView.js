@@ -85,15 +85,17 @@ export const storeView = {
               <div id="storeContent">${homeTabView.render(store)}</div>
         </div>
       </div>
-      <nav id="storeBottomBar">
-        <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
-          <span class="btm-btn-ico">📞</span>
-        </button>
-        <button id="order" class="btm-btn order-btn">
-          <span class="order-text">포장·예약하기</span>
-          <span class="order-arrow">→</span>
-        </button>
-      </nav>
+      <footer id="storeBottomBarWrapper">
+        <nav id="storeBottomBar">
+          <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
+            <span class="btm-btn-ico">📞</span>
+          </button>
+          <button id="order" class="btm-btn order-btn">
+            <span class="order-text">포장·예약하기</span>
+            <span class="order-arrow">→</span>
+          </button>
+        </nav>
+      </footer>
     `;
   },
 
