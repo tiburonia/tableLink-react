@@ -1,17 +1,16 @@
-
 // 매장 뷰 - UI 렌더링 전담 (직접 모듈 import)
-import { tableStatusHTML } from './modules/tableStatusHTML.js';
-import { reviewPreviewHTML } from './modules/reviewPreviewHTML.js';
-import { promotionCardHTML } from './modules/promotionCardHTML.js';
-import { topUsersHTML } from './modules/topUsersHTML.js';
-import { loyaltyLevelHTML } from './modules/loyaltyLevelHTML.js';
-import { homeTabView } from './tabs/menuTabView.js';
-import { menuHTML } from './modules/menuHTML.js';
+import { tableStatusHTML } from "./modules/tableStatusHTML.js";
+import { reviewPreviewHTML } from "./modules/reviewPreviewHTML.js";
+import { promotionCardHTML } from "./modules/promotionCardHTML.js";
+import { topUsersHTML } from "./modules/topUsersHTML.js";
+import { loyaltyLevelHTML } from "./modules/loyaltyLevelHTML.js";
+import { homeTabView } from "./tabs/menuTabView.js";
+import { menuHTML } from "./modules/menuHTML.js";
 
 // CSS 파일 import
-const storeCSSLink = document.createElement('link');
-storeCSSLink.rel = 'stylesheet';
-storeCSSLink.href = '/TLG/pages/store/views/storeCSS/store.css';
+const storeCSSLink = document.createElement("link");
+storeCSSLink.rel = "stylesheet";
+storeCSSLink.href = "/TLG/pages/store/views/storeCSS/store.css";
 document.head.appendChild(storeCSSLink);
 
 export const storeView = {
@@ -19,8 +18,10 @@ export const storeView = {
    * 메인 매장 HTML 렌더링
    */
   renderStoreHTML(store) {
-    const main = document.getElementById('main');
-    const displayRating = store.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
+    const main = document.getElementById("main");
+    const displayRating = store.ratingAverage
+      ? parseFloat(store.ratingAverage).toFixed(1)
+      : "0.0";
 
     // 직접 import한 모듈들을 사용하여 렌더링
     main.innerHTML = `
@@ -53,8 +54,8 @@ export const storeView = {
                   </div>
                   <h2 id="storeName">${store.name}</h2>
                   <div class="store-status-container">
-                    <span class="store-status ${store.isOpen ? 'open' : 'closed'}">
-                      ${store.isOpen ? '🟢 운영중' : '🔴 운영중지'}
+                    <span class="store-status ${store.isOpen ? "open" : "closed"}">
+                      ${store.isOpen ? "🟢 운영중" : "🔴 운영중지"}
                     </span>
                     <span class="store-category-tag">음식점</span>
                   </div>
@@ -94,15 +95,14 @@ export const storeView = {
         </button>
       </nav>
     `;
-
   },
 
   /**
    * 모듈식 컴포넌트들 렌더링
    */
   renderModularComponents(store) {
-    let components = '';
-    
+    let components = "";
+
     // 직접 import한 모듈들 사용
     components += topUsersHTML.renderTopUsersHTML(store);
     components += promotionCardHTML.renderPromotionCardHTML(store);
@@ -111,28 +111,26 @@ export const storeView = {
     return components;
   },
 
-
-
   /**
    * 평점 표시 업데이트
    */
   updateRatingDisplay(rating) {
-    const reviewScoreElement = document.getElementById('reviewScore');
+    const reviewScoreElement = document.getElementById("reviewScore");
     if (reviewScoreElement) {
       const displayRating = parseFloat(rating).toFixed(1);
 
       // 기존 텍스트 노드 업데이트
       const textNode = reviewScoreElement.firstChild;
       if (textNode && textNode.nodeType === Node.TEXT_NODE) {
-        textNode.textContent = displayRating + '\u00A0';
+        textNode.textContent = displayRating + "\u00A0";
       } else {
         reviewScoreElement.innerHTML = `${displayRating}&nbsp;<span id="reviewLink" class="review-link">리뷰 보기</span>`;
 
         // 새로 생성된 리뷰 링크에 이벤트 리스너 설정
-        const newReviewLink = document.getElementById('reviewLink');
+        const newReviewLink = document.getElementById("reviewLink");
         if (newReviewLink) {
-          newReviewLink.addEventListener('click', () => {
-            if (typeof renderAllReview === 'function') {
+          newReviewLink.addEventListener("click", () => {
+            if (typeof renderAllReview === "function") {
               renderAllReview(window.currentStore);
             }
           });
@@ -145,7 +143,7 @@ export const storeView = {
    * 프로모션 UI 업데이트
    */
   updatePromotionUI(promotions) {
-    const promotionContainer = document.querySelector('.promotion-content');
+    const promotionContainer = document.querySelector(".promotion-content");
     if (!promotionContainer) return;
 
     if (!promotions || promotions.length === 0) {
@@ -160,8 +158,10 @@ export const storeView = {
 
     const displayPromotions = promotions.slice(0, 2);
     promotionContainer.innerHTML = `
-      ${displayPromotions.map((promotion, index) => `
-        <div class="benefit-item-modern ${index === 0 ? 'featured' : ''}">
+      ${displayPromotions
+        .map(
+          (promotion, index) => `
+        <div class="benefit-item-modern ${index === 0 ? "featured" : ""}">
           <div class="benefit-icon-modern">${this.getBenefitIcon(promotion.type)}</div>
           <div class="benefit-content-modern">
             <div class="benefit-name-modern">${promotion.name}</div>
@@ -169,15 +169,21 @@ export const storeView = {
           </div>
           <div class="benefit-value-modern">${this.formatDiscountValue(promotion)}</div>
         </div>
-      `).join('')}
-      ${promotions.length > 2 ? `
+      `,
+        )
+        .join("")}
+      ${
+        promotions.length > 2
+          ? `
         <div class="benefits-expand-modern">
           <button class="promotion-detail-btn modern-outline-btn">
             <span class="btn-icon">➕</span>
             <span class="btn-text">더 보기 (${promotions.length - 2}개)</span>
           </button>
         </div>
-      ` : ''}
+      `
+          : ""
+      }
     `;
   },
 
@@ -185,7 +191,7 @@ export const storeView = {
    * 단골 레벨 UI 업데이트
    */
   updateLoyaltyUI(levelData, store) {
-    const loyaltyContainer = document.querySelector('.loyalty-levels-grid');
+    const loyaltyContainer = document.querySelector(".loyalty-levels-grid");
     if (!loyaltyContainer) return;
 
     if (!levelData) {
@@ -200,7 +206,7 @@ export const storeView = {
    * 상위 사용자 UI 업데이트
    */
   updateTopUsersUI(users) {
-    const topUsersContainer = document.querySelector('.top-users-content');
+    const topUsersContainer = document.querySelector(".top-users-content");
     if (!topUsersContainer) return;
 
     if (!users || users.length === 0) {
@@ -215,20 +221,23 @@ export const storeView = {
 
     const displayUsers = users.slice(0, 3);
     topUsersContainer.innerHTML = `
-      ${displayUsers.map((user, index) => {
-        const rank = index + 1;
-        const avatarColor = this.getAvatarColor(user.name || user.user_name);
-        const initial = (user.name || user.user_name || '?').charAt(0).toUpperCase();
+      ${displayUsers
+        .map((user, index) => {
+          const rank = index + 1;
+          const avatarColor = this.getAvatarColor(user.name || user.user_name);
+          const initial = (user.name || user.user_name || "?")
+            .charAt(0)
+            .toUpperCase();
 
-        return `
+          return `
           <div class="top-user-item rank-${rank}">
             <div class="rank-badge rank-${rank}">${rank}</div>
             <div class="user-avatar" style="background: ${avatarColor};">
               ${initial}
             </div>
             <div class="user-info">
-              <div class="user-name">${user.name || user.user_name || '익명'}</div>
-              <div class="user-level">${user.level_name || '브론즈'} 등급</div>
+              <div class="user-name">${user.name || user.user_name || "익명"}</div>
+              <div class="user-level">${user.level_name || "브론즈"} 등급</div>
             </div>
             <div class="user-stats">
               <div class="user-stat">
@@ -242,14 +251,19 @@ export const storeView = {
             </div>
           </div>
         `;
-      }).join('')}
-      ${users.length > 3 ? `
+        })
+        .join("")}
+      ${
+        users.length > 3
+          ? `
         <div class="users-expand">
-          <button class="top-users-detail-btn" onclick="showAllTopUsers(${JSON.stringify(window.currentStore).replace(/"/g, '&quot;')})">
+          <button class="top-users-detail-btn" onclick="showAllTopUsers(${JSON.stringify(window.currentStore).replace(/"/g, "&quot;")})">
             더 보기 (+${users.length - 3}명)
           </button>
         </div>
-      ` : ''}
+      `
+          : ""
+      }
     `;
   },
 
@@ -257,7 +271,7 @@ export const storeView = {
    * 오류 메시지 표시
    */
   showError(message) {
-    const main = document.getElementById('main');
+    const main = document.getElementById("main");
     if (main) {
       main.innerHTML = `
         <div style="padding: 20px; text-align: center; color: #666;">
@@ -280,13 +294,13 @@ export const storeView = {
   // 유틸리티 함수들
   getBenefitIcon(type) {
     const iconMap = {
-      'discount': '🏷️',
-      'point': '⭐',
-      'free_delivery': '🚚',
-      'new_customer': '🎁',
-      'loyalty': '👑'
+      discount: "🏷️",
+      point: "⭐",
+      free_delivery: "🚚",
+      new_customer: "🎁",
+      loyalty: "👑",
     };
-    return iconMap[type] || '🎉';
+    return iconMap[type] || "🎉";
   },
 
   formatDiscountValue(promotion) {
@@ -294,23 +308,23 @@ export const storeView = {
       return `${promotion.discount_percent}%`;
     } else if (promotion.discount_amount) {
       return `${promotion.discount_amount.toLocaleString()}원`;
-    } else if (promotion.type === 'point') {
+    } else if (promotion.type === "point") {
       return `${promotion.point_rate}% 적립`;
     }
-    return '혜택';
+    return "혜택";
   },
 
   getAvatarColor(name) {
     const colors = [
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+      "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+      "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+      "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
     ];
 
-    const hash = name.split('').reduce((a, b) => {
-      a = ((a << 5) - a) + b.charCodeAt(0);
+    const hash = name.split("").reduce((a, b) => {
+      a = (a << 5) - a + b.charCodeAt(0);
       return a & a;
     }, 0);
 
@@ -346,8 +360,8 @@ export const storeView = {
     return `
       <div class="loyalty-card premium">
         <div class="loyalty-header">
-          <span class="loyalty-icon">${levelData.level?.icon || '👑'}</span>
-          <span class="loyalty-title">${levelData.level?.name || '단골 고객'}</span>
+          <span class="loyalty-icon">${levelData.level?.icon || "👑"}</span>
+          <span class="loyalty-title">${levelData.level?.name || "단골 고객"}</span>
         </div>
         <div class="loyalty-stats">
           <div class="stat">방문: ${levelData.stats?.visitCount || 0}회</div>
@@ -355,7 +369,7 @@ export const storeView = {
         </div>
       </div>
     `;
-  }
+  },
 };
 
 // 전역 등록
