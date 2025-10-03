@@ -26,7 +26,7 @@ export const OrderView = {
   renderHeader(store, tableName) {
     return `
       <div class="tll-header">
-        <button class="back-btn" onclick="TLL()">
+        <button class="back-btn" id="backBtn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
             <path d="M19 12H5m7-7l-7 7 7 7"/>
           </svg>
@@ -36,7 +36,7 @@ export const OrderView = {
           <h1>${store.name}</h1>
           <p>${tableName}</p>
         </div>
-        <div class="cart-indicator" onclick="toggleCart()">
+        <div class="cart-indicator" id="cartIndicator">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
             <path d="M7 18c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM1 2v2h2l3.6 7.59-1.35 2.41C5.08 14.42 5.37 15 6 15h12v-2H6l1.1-2h7.45c.75 0 1.42-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
           </svg>
@@ -68,7 +68,6 @@ export const OrderView = {
 
     return categories.map((category, index) => `
       <button class="category-tab ${index === 0 ? 'active' : ''}" 
-              onclick="switchCategory('${category}')" 
               data-category="${category}">
         ${category}
       </button>
@@ -92,16 +91,17 @@ export const OrderView = {
     
     return `
       <div class="menu-item" 
-           data-menu-id="${menuId}" 
-           data-cook-station="${cookStation}"
-           onclick="addToCart('${menuId}', '${this.escapeHtml(item.name)}', ${itemPrice})">
+           data-menu-id="${menuId}"
+           data-menu-name="${this.escapeHtml(item.name)}"
+           data-menu-price="${itemPrice}"
+           data-cook-station="${cookStation}">
         <div class="menu-info">
           <h4>${this.escapeHtml(item.name)}</h4>
           <p>${this.escapeHtml(item.description || '')}</p>
           <div class="menu-price">${itemPrice.toLocaleString()}원</div>
           <div class="cook-station-badge">${cookStation}</div>
         </div>
-        <button class="add-btn" onclick="event.stopPropagation(); addToCart('${menuId}', '${this.escapeHtml(item.name)}', ${itemPrice});">+</button>
+        <button class="add-btn">+</button>
       </div>
     `;
   },
@@ -109,7 +109,7 @@ export const OrderView = {
   renderCartPanel() {
     return `
       <div class="cart-panel" id="cartPanel">
-        <div class="cart-handle" onclick="toggleCart()">
+        <div class="cart-handle" id="cartHandle">
           <div class="handle-bar"></div>
         </div>
         <div class="cart-content" id="cartContent">
@@ -120,7 +120,7 @@ export const OrderView = {
           <div class="cart-items" id="cartItems">
             ${this.renderEmptyCart()}
           </div>
-          <button class="order-btn" id="orderBtn" disabled onclick="proceedToPayment()">
+          <button class="order-btn" id="orderBtn" disabled>
             주문하기
           </button>
         </div>
@@ -129,7 +129,7 @@ export const OrderView = {
   },
 
   renderOverlay() {
-    return `<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>`;
+    return `<div class="cart-overlay" id="cartOverlay"></div>`;
   },
 
   renderEmptyCart() {
@@ -174,10 +174,10 @@ export const OrderView = {
           <div class="item-price">${item.price.toLocaleString()}원 × ${item.quantity} = ${itemTotal.toLocaleString()}원</div>
         </div>
         <div class="quantity-controls">
-          <button class="qty-btn" onclick="updateQuantity('${item.id}', -1)">−</button>
+          <button class="qty-btn qty-decrease" data-action="decrease">−</button>
           <span class="quantity">${item.quantity}</span>
-          <button class="qty-btn" onclick="updateQuantity('${item.id}', 1)">+</button>
-          <button class="remove-btn" onclick="removeFromCart('${item.id}')">×</button>
+          <button class="qty-btn qty-increase" data-action="increase">+</button>
+          <button class="remove-btn" data-action="remove">×</button>
         </div>
       </div>
     `;
