@@ -91,10 +91,7 @@ export const OrderView = {
     
     return `
       <div class="menu-item" 
-           data-menu-id="${menuId}"
-           data-menu-name="${this.escapeHtml(item.name)}"
-           data-menu-price="${itemPrice}"
-           data-cook-station="${cookStation}">
+           data-menu-id="${menuId}">
         <div class="menu-info">
           <h4>${this.escapeHtml(item.name)}</h4>
           <p>${this.escapeHtml(item.description || '')}</p>

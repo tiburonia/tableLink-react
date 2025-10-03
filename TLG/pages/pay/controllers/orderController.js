@@ -104,9 +104,7 @@ export class OrderController {
         const menuItem = e.target.closest('.menu-item');
         if (menuItem && !e.target.classList.contains('add-btn')) {
           const menuId = menuItem.dataset.menuId;
-          const menuName = menuItem.dataset.menuName;
-          const menuPrice = menuItem.dataset.menuPrice;
-          this.addToCart(menuId, menuName, menuPrice);
+          this.addToCartById(menuId);
         }
         
         if (e.target.classList.contains('add-btn')) {
@@ -114,9 +112,7 @@ export class OrderController {
           const menuItem = e.target.closest('.menu-item');
           if (menuItem) {
             const menuId = menuItem.dataset.menuId;
-            const menuName = menuItem.dataset.menuName;
-            const menuPrice = menuItem.dataset.menuPrice;
-            this.addToCart(menuId, menuName, menuPrice);
+            this.addToCartById(menuId);
           }
         }
       });
@@ -187,6 +183,26 @@ export class OrderController {
 
   closeCart() {
     OrderView.closeCart();
+  }
+
+  addToCartById(menuId) {
+    if (!window.currentMenuData || !Array.isArray(window.currentMenuData)) {
+      console.error('❌ 메뉴 데이터가 없습니다');
+      alert('메뉴 데이터 로드 오류입니다.');
+      return;
+    }
+
+    const menuItem = window.currentMenuData.find(item => 
+      parseInt(item.id) === parseInt(menuId) || parseInt(item.menuId) === parseInt(menuId)
+    );
+
+    if (!menuItem) {
+      console.error('❌ 메뉴를 찾을 수 없습니다:', menuId);
+      alert('메뉴 정보를 찾을 수 없습니다.');
+      return;
+    }
+
+    this.addToCart(menuId, menuItem.name, menuItem.price);
   }
 
   addToCart(menuId, menuName, price) {
