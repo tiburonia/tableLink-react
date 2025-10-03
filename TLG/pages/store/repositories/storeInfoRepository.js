@@ -49,11 +49,6 @@ export const storeInfoRepository = {
   getDummyStoreInfo() {
     return {
       description: '신선한 재료로 정성껏 만든 음식을 제공하는 맛집입니다. 가족 단위 고객과 회식 모임에 최적화된 공간을 제공합니다.',
-      operatingHours: {
-        weekday: '10:00 - 22:00',
-        weekend: '10:00 - 23:00',
-        holiday: '11:00 - 21:00'
-      },
       facilities: [
         { name: '주차', available: true, icon: '🅿️' },
         { name: 'WiFi', available: true, icon: '📶' },

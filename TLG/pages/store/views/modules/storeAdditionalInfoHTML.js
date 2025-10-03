@@ -13,7 +13,6 @@ export const storeAdditionalInfoHTML = {
         ${this.renderInfoRow('📍', '주소', additionalInfo.address)}
         ${this.renderInfoRow('⭐', '평점', `${additionalInfo.rating.average} (${additionalInfo.rating.count.toLocaleString()} 리뷰)`)}
         ${this.renderInfoRow('📝', '소개', additionalInfo.description)}
-        ${this.renderOperatingHours(additionalInfo.operatingHours)}
         ${this.renderFacilities(additionalInfo.facilities)}
         ${this.renderPaymentMethods(additionalInfo.payment)}
         ${this.renderInfoRow('📞', '연락처', additionalInfo.contact)}
@@ -31,21 +30,6 @@ export const storeAdditionalInfoHTML = {
         <span class="info-icon">${icon}</span>
         <span class="info-label">${label}</span>
         <span class="info-value">${value}</span>
-      </div>
-    `;
-  },
-
-  /**
-   * 영업시간 행
-   */
-  renderOperatingHours(hours) {
-    return `
-      <div class="info-row">
-        <span class="info-icon">🕐</span>
-        <span class="info-label">영업시간</span>
-        <span class="info-value">
-          평일 ${hours.weekday} / 주말 ${hours.weekend}
-        </span>
       </div>
     `;
   },
