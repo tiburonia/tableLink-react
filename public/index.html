@@ -118,6 +118,9 @@
           if (typeof renderLogin === 'function') {
             console.log('🔄 폴백: renderLogin 함수 실행');
             renderLogin();
+
+  <script type="module" src="/TLG/pages/store/views/modules/menuHTML.js"></script>
+
           } else {
             console.error('❌ renderLogin 함수도 찾을 수 없습니다');
             document.getElementById('main').innerHTML = '<div style="padding: 20px; text-align: center;">앱을 로딩하는 중...</div>';

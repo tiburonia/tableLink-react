@@ -83,15 +83,67 @@ export const storeTabController = {
   },
 
   /**
-   * 메뉴 탭 렌더링
+   * 홈 탭 렌더링
    */
   async renderHomeTab(store, container) {
     console.log('🍽️ 홈 탭 렌더링 시작');
 
+    // 1. 기본 뷰 렌더링
+    const homeHTML = homeTabView.render(store);
+    container.innerHTML = homeHTML;
 
-    // 2. 뷰 렌더링
-    const menuHTML = homeTabView.render(store);
-    container.innerHTML = menuHTML;
+    // 2. 테이블 상태 모듈 로드 및 렌더링
+    try {
+      const { tableStatusHTML } = await import('../views/modules/tableStatusHTML.js');
+      const tableStatusContainer = document.getElementById('home-table-status');
+      if (tableStatusContainer) {
+        tableStatusContainer.innerHTML = tableStatusHTML.renderTableStatusHTML(store);
+        
+        // 테이블 상태 업데이트
+        if (window.storeController && typeof window.storeController.loadTableInfo === 'function') {
+          await window.storeController.loadTableInfo(store);
+        }
+      }
+    } catch (error) {
+      console.error('❌ 테이블 상태 모듈 로드 실패:', error);
+    }
+
+    // 3. 메뉴 모듈 로드 및 렌더링
+    try {
+      const { menuHTML } = await import('../views/modules/menuHTML.js');
+      const menuContainer = document.getElementById('home-menu-section');
+      if (menuContainer && store.menu && store.menu.length > 0) {
+        menuContainer.innerHTML = `
+          <div class="section-header">
+            <h3 class="section-title">
+              <span class="section-icon">🍽️</span>
+              메뉴
+            </h3>
+          </div>
+          ${menuHTML.renderMenuHTML(store)}
+        `;
+      }
+    } catch (error) {
+      console.error('❌ 메뉴 모듈 로드 실패:', error);
+    }
+
+    // 4. 리뷰 프리뷰 모듈 로드 및 렌더링
+    try {
+      const { reviewPreviewHTML } = await import('../views/modules/reviewPreviewHTML.js');
+      const { reviewPreviewController } = await import('./reviewPreviewController.js');
+      
+      const reviewContainer = document.getElementById('home-review-preview');
+      if (reviewContainer) {
+        reviewContainer.innerHTML = reviewPreviewHTML.renderReviewPreviewHTML();
+        
+        // 리뷰 데이터 로드
+        if (reviewPreviewController && typeof reviewPreviewController.renderTopReviews === 'function') {
+          await reviewPreviewController.renderTopReviews(store);
+        }
+      }
+    } catch (error) {
+      console.error('❌ 리뷰 프리뷰 모듈 로드 실패:', error);
+    }
 
     console.log('✅ 홈 탭 렌더링 완료');
   },

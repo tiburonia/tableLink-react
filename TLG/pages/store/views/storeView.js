@@ -6,6 +6,7 @@ import { promotionCardHTML } from './modules/promotionCardHTML.js';
 import { topUsersHTML } from './modules/topUsersHTML.js';
 import { loyaltyLevelHTML } from './modules/loyaltyLevelHTML.js';
 import { homeTabView } from './tabs/menuTabView.js';
+import { menuHTML } from './modules/menuHTML.js';
 
 // CSS 파일 import
 const storeCSSLink = document.createElement('link');
