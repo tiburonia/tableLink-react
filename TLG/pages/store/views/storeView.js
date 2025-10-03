@@ -68,6 +68,8 @@ export const storeView = {
 
               </div>
             </div>
+            <div class="store-additional-info-section">
+            <div>
           </div>
         </div>
 

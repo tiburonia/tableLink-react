@@ -31,7 +31,7 @@ export const panelRepository = {
     if (!container) return;
 
     container.style.cssText += `
-      overflow-y: auto !important;
+      overflow-y: scroll
       overflow-x: hidden !important;
       -webkit-overflow-scrolling: touch !important;
       overscroll-behavior: contain !important;
