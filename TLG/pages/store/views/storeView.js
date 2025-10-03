@@ -25,77 +25,97 @@ export const storeView = {
 
     // 직접 import한 모듈들을 사용하여 렌더링
     main.innerHTML = `
-      <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
-        <span class="header-btn-ico">⬅️</span>
-      </button>
-      <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL().catch(console.error)">
-        <span class="header-btn-ico">📱</span>
-      </button>
-      <header id="storeHeader">
-        <div class="imgWrapper">
-          <img src="TableLink.png" alt="메뉴이미지" />
-          <div class="header-overlay"></div>
-        </div>
-      </header>
-      <div id="storePanel" class="collapsed">
-        <div id="panelHandle"></div>
-        <div id="storePanelContainer">
-          <div id="storeInfoContainer">
-            <div class="storeInfo">
-              <div class="store-header-section">
-                <div class="store-main-info">
-                  <div class="score-row">
-                    <div class="rating-container">
-                      <span id="reviewStar">★</span>
-                      <span id="reviewScore">${displayRating}</span>
-                      <span id="reviewLink" class="review-link">리뷰 보기</span>
-                    </div>
-                    <button id="favoriteBtn" class="favorite-btn">♡</button>
+    <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
+      <span class="header-btn-ico">⬅️</span>
+    </button>
+
+    <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL().catch(console.error)">
+      <span class="header-btn-ico">📱</span>
+    </button>
+
+    <header id="storeHeader">
+      <div class="imgWrapper">
+        <img src="TableLink.png" alt="메뉴이미지" />
+        <div class="header-overlay"></div>
+      </div>
+    </header>
+
+    <div id="storePanel" class="collapsed">
+      <div id="panelHandle"></div>
+      <div id="storePanelContainer">
+
+        <div id="storeInfoContainer">
+          <div class="storeInfo">
+            <div class="store-header-section">
+              <div class="store-main-info">
+
+                <div class="score-row">
+                  <div class="rating-container">
+                    <span id="reviewStar">★</span>
+                    <span id="reviewScore">${displayRating}</span>
+                    <span id="reviewLink" class="review-link">리뷰 보기</span>
                   </div>
-                  <h2 id="storeName">${store.name}</h2>
-                  <div class="store-status-container">
-                    <span class="store-status ${store.isOpen ? "open" : "closed"}">
-                      ${store.isOpen ? "🟢 운영중" : "🔴 운영중지"}
-                    </span>
-                    <span class="store-category-tag">음식점</span>
-                  </div>
+                  <button id="favoriteBtn" class="favorite-btn">♡</button>
                 </div>
+
+                <h2 id="storeName">${store.name}</h2>
+
+                <div class="store-status-container">
+                  <span class="store-status ${store.isOpen ? "open" : "closed"}">
+                    ${store.isOpen ? "🟢 운영중" : "🔴 운영중지"}
+                  </span>
+                  <span class="store-category-tag">음식점</span>
+                </div>
+
               </div>
             </div>
-          <div id="storeNoticeContainer"><div>  <!-- 공지사항 영역 -->
-          </div>  
-              <div id="storeNavBar" class="modern-nav">
-                <button class="nav-btn" data-tab="home">
-                  <span class="nav-ico">🏠</span>
-                  <span class="nav-label">홈</span>
-                </button>
-                <button class="nav-btn" data-tab="review">
-                  <span class="nav-ico">💬</span>
-                  <span class="nav-label">리뷰</span>
-                </button>
-                <button class="nav-btn" data-tab="photo">
-                  <span class="nav-ico">📸</span>
-                  <span class="nav-label">사진</span>
-                </button>
-                <button class="nav-btn" data-tab="info">
-                  <span class="nav-ico">ℹ️</span>
-                  <span class="nav-label">정보</span>
-                </button>
-              </div>
-              <div id="storeContent">${homeTabView.render(store)}</div>
+          </div>
         </div>
+
+        <!-- 공지사항 영역 -->
+        <div id="storeNoticeContainer">
+          <div></div>
+        </div>
+
+        <div id="storeNavBar" class="modern-nav">
+          <button class="nav-btn" data-tab="home">
+            <span class="nav-ico">🏠</span>
+            <span class="nav-label">홈</span>
+          </button>
+          <button class="nav-btn" data-tab="review">
+            <span class="nav-ico">💬</span>
+            <span class="nav-label">리뷰</span>
+          </button>
+          <button class="nav-btn" data-tab="photo">
+            <span class="nav-ico">📸</span>
+            <span class="nav-label">사진</span>
+          </button>
+          <button class="nav-btn" data-tab="info">
+            <span class="nav-ico">ℹ️</span>
+            <span class="nav-label">정보</span>
+          </button>
+        </div>
+
+        <div id="storeContent">
+          ${homeTabView.render(store)}
+        </div>
+
       </div>
-      <footer id="storeBottomBarWrapper">
-        <nav id="storeBottomBar">
-          <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
-            <span class="btm-btn-ico">📞</span>
-          </button>
-          <button id="order" class="btm-btn order-btn">
-            <span class="order-text">포장·예약하기</span>
-            <span class="order-arrow">→</span>
-          </button>
-        </nav>
-      </footer>
+    </div>
+
+    <footer id="storeBottomBarWrapper">
+      <nav id="storeBottomBar">
+        <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
+          <span class="btm-btn-ico">📞</span>
+        </button>
+        <button id="order" class="btm-btn order-btn">
+          <span class="order-text">포장·예약하기</span>
+          <span class="order-arrow">→</span>
+        </button>
+      </nav>
+    </footer>
+
+      
     `;
   },
 
