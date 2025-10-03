@@ -456,6 +456,10 @@ async function renderAllReview(store) {
   }
 }
 
+// 전역 함수 등록
+window.renderAllReview = renderAllReview;
+console.log('✅ renderAllReview 전역 함수 등록 완료');
+
 // 스타일 함수
 function getAllReviewStyles() {
   return `

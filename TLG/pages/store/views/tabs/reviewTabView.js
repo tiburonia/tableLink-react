@@ -56,7 +56,7 @@ export const reviewTabView = {
 
         <!-- 더보기 버튼 -->
         ${totalReviews > 3 ? `
-          <button class="see-more-reviews-btn">
+          <button class="see-more-reviews-btn" onclick="if(typeof renderAllReview === 'function') { renderAllReview(${JSON.stringify(store).replace(/"/g, '&quot;')}); } else { alert('리뷰 전체보기 기능을 불러올 수 없습니다.'); }">
             <span class="btn-content">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                 <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -188,7 +188,7 @@ export const reviewTabView = {
           </div>
           <h3 class="empty-title">아직 리뷰가 없습니다</h3>
           <p class="empty-description">이 매장의 첫 번째 리뷰를 남겨주세요!<br/>소중한 의견이 다른 고객에게 큰 도움이 됩니다.</p>
-          <button class="write-first-review-btn">
+          <button class="write-first-review-btn" onclick="if(typeof renderReviewWrite === 'function') { renderReviewWrite(${JSON.stringify(store).replace(/"/g, '&quot;')}); } else { alert('리뷰 작성 기능은 준비 중입니다.'); }">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
