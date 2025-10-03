@@ -60,29 +60,31 @@ export const storeView = {
                 </div>
               </div>
             </div>
-            ${this.renderModularComponents(store)}
-          </div>
-          <div id="storeNavBar" class="modern-nav">
-            <button class="nav-btn" data-tab="menu">
-              <span class="nav-ico">🍽️</span>
-              <span class="nav-label">메뉴</span>
-            </button>
-            <button class="nav-btn" data-tab="review">
-              <span class="nav-ico">💬</span>
-              <span class="nav-label">리뷰</span>
-            </button>
-            <button class="nav-btn" data-tab="photo">
-              <span class="nav-ico">📸</span>
-              <span class="nav-label">사진</span>
-            </button>
-            <button class="nav-btn" data-tab="info">
-              <span class="nav-ico">ℹ️</span>
-              <span class="nav-label">정보</span>
-            </button>
-          </div>
-          <div id="storeContent">${menuTabView.render(store, store.menu)}</div>
+          <div id="storeNoticeContainer"><div>  <!-- 공지사항 영역 -->
+          </div>  
+              <div id="storeNavBar" class="modern-nav">
+                <button class="nav-btn" data-tab="home">
+                  <span class="nav-ico">🏠</span>
+                  <span class="nav-label">홈</span>
+                </button>
+                <button class="nav-btn" data-tab="review">
+                  <span class="nav-ico">💬</span>
+                  <span class="nav-label">리뷰</span>
+                </button>
+                <button class="nav-btn" data-tab="photo">
+                  <span class="nav-ico">📸</span>
+                  <span class="nav-label">사진</span>
+                </button>
+                <button class="nav-btn" data-tab="info">
+                  <span class="nav-ico">ℹ️</span>
+                  <span class="nav-label">정보</span>
+                </button>
+              </div>
+              <div id="storeContent">${menuTabView.render(store, store.menu)}</div>
+
+
         </div>
-      </div>
+      </div>  
       <nav id="storeBottomBar">
         <button id="telephone" class="btm-btn phone-btn" aria-label="전화">
           <span class="btm-btn-ico">📞</span>
@@ -93,6 +95,7 @@ export const storeView = {
         </button>
       </nav>
     `;
+
   },
 
   /**

@@ -52,8 +52,8 @@ export const storeTabController = {
 
     try {
       switch (tabName) {
-        case 'menu':
-          await this.renderMenuTab(store, storeContent);
+        case 'home':
+          await this.renderHomeTab(store, storeContent);
           break;
 
         case 'review':
@@ -85,14 +85,14 @@ export const storeTabController = {
   /**
    * 메뉴 탭 렌더링
    */
-  async renderMenuTab(store, container) {
+  async renderHomeTab(store, container) {
     console.log('🍽️ 메뉴 탭 렌더링 시작');
 
     // 1. 메뉴 데이터 가져오기
     const menuData = store.menu
 
     // 2. 뷰 렌더링
-    const menuHTML = menuTabView.render(store, menuData);
+    const menuHTML = homeTabView.render(store, menuData);
     container.innerHTML = menuHTML;
 
     console.log('✅ 메뉴 탭 렌더링 완료');

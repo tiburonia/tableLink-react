@@ -3,7 +3,7 @@
  * 메뉴 탭 뷰 - UI 렌더링
  */
 
-export const menuTabView = {
+export const homeTabView = {
   /**
    * 메뉴 탭 렌더링
    */
