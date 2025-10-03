@@ -1,6 +1,5 @@
-
 /**
- * 매장 추가 정보 HTML 모듈
+ * 매장 추가 정보 HTML 모듈 (Compact 버전)
  */
 export const storeAdditionalInfoHTML = {
   /**
@@ -10,149 +9,82 @@ export const storeAdditionalInfoHTML = {
     if (!additionalInfo) return '';
 
     return `
-      <div class="store-additional-info">
-        ${this.renderAddressSection(additionalInfo.address)}
-        ${this.renderRatingSection(additionalInfo.rating)}
-        ${this.renderDescriptionSection(additionalInfo.description)}
+      <div class="store-additional-info-card">
+        ${this.renderInfoRow('📍', '주소', additionalInfo.address)}
+        ${this.renderInfoRow('⭐', '평점', `${additionalInfo.rating.average} (${additionalInfo.rating.count.toLocaleString()} 리뷰)`)}
+        ${this.renderInfoRow('📝', '소개', additionalInfo.description)}
         ${this.renderOperatingHours(additionalInfo.operatingHours)}
         ${this.renderFacilities(additionalInfo.facilities)}
         ${this.renderPaymentMethods(additionalInfo.payment)}
-        ${this.renderContact(additionalInfo.contact)}
+        ${this.renderInfoRow('📞', '연락처', additionalInfo.contact)}
       </div>
       ${this.getStyles()}
     `;
   },
 
   /**
-   * 주소 섹션
+   * 기본 정보 행 렌더링
    */
-  renderAddressSection(address) {
+  renderInfoRow(icon, label, value) {
     return `
-      <div class="info-item address-item">
-        <div class="info-icon">📍</div>
-        <div class="info-content">
-          <div class="info-label">주소</div>
-          <div class="info-value">${address}</div>
-        </div>
+      <div class="info-row">
+        <span class="info-icon">${icon}</span>
+        <span class="info-label">${label}</span>
+        <span class="info-value">${value}</span>
       </div>
     `;
   },
 
   /**
-   * 평점 섹션
-   */
-  renderRatingSection(rating) {
-    return `
-      <div class="info-item rating-item">
-        <div class="info-icon">⭐</div>
-        <div class="info-content">
-          <div class="info-label">고객 평가</div>
-          <div class="info-value">
-            <span class="rating-score">${rating.average}</span>
-            <span class="rating-count">(${rating.count.toLocaleString()}개의 리뷰)</span>
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  /**
-   * 설명 섹션
-   */
-  renderDescriptionSection(description) {
-    return `
-      <div class="info-item description-item">
-        <div class="info-icon">📝</div>
-        <div class="info-content">
-          <div class="info-label">매장 소개</div>
-          <div class="info-value description-text">${description}</div>
-        </div>
-      </div>
-    `;
-  },
-
-  /**
-   * 영업시간
+   * 영업시간 행
    */
   renderOperatingHours(hours) {
     return `
-      <div class="info-item hours-item">
-        <div class="info-icon">🕐</div>
-        <div class="info-content">
-          <div class="info-label">영업시간</div>
-          <div class="info-value hours-list">
-            <div class="hours-row">
-              <span class="hours-day">평일</span>
-              <span class="hours-time">${hours.weekday}</span>
-            </div>
-            <div class="hours-row">
-              <span class="hours-day">주말</span>
-              <span class="hours-time">${hours.weekend}</span>
-            </div>
-            <div class="hours-row">
-              <span class="hours-day">공휴일</span>
-              <span class="hours-time">${hours.holiday}</span>
-            </div>
-          </div>
-        </div>
+      <div class="info-row">
+        <span class="info-icon">🕐</span>
+        <span class="info-label">영업시간</span>
+        <span class="info-value">
+          평일 ${hours.weekday} / 주말 ${hours.weekend}
+        </span>
       </div>
     `;
   },
 
   /**
-   * 편의시설
+   * 편의시설 행
    */
   renderFacilities(facilities) {
     if (!facilities || facilities.length === 0) return '';
 
+    const facilitiesText = facilities
+      .filter(f => f.available)
+      .map(f => f.name)
+      .join(', ');
+
+    if (!facilitiesText) return '';
+
     return `
-      <div class="info-item facilities-item">
-        <div class="info-icon">🏪</div>
-        <div class="info-content">
-          <div class="info-label">편의시설</div>
-          <div class="info-value facilities-grid">
-            ${facilities.map(f => `
-              <div class="facility-tag ${f.available ? 'available' : 'unavailable'}">
-                <span class="facility-icon">${f.icon}</span>
-                <span class="facility-name">${f.name}</span>
-              </div>
-            `).join('')}
-          </div>
-        </div>
+      <div class="info-row">
+        <span class="info-icon">🏪</span>
+        <span class="info-label">편의시설</span>
+        <span class="info-value">${facilitiesText}</span>
       </div>
     `;
   },
 
   /**
-   * 결제 수단
+   * 결제 수단 행
    */
   renderPaymentMethods(payment) {
     if (!payment || payment.length === 0) return '';
 
-    return `
-      <div class="info-item payment-item">
-        <div class="info-icon">💳</div>
-        <div class="info-content">
-          <div class="info-label">결제 수단</div>
-          <div class="info-value payment-list">
-            ${payment.map(p => `<span class="payment-tag">${p}</span>`).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-  },
+    const paymentText = payment.join(', ');
 
-  /**
-   * 연락처
-   */
-  renderContact(contact) {
     return `
-      <div class="info-item contact-item">
-        <div class="info-icon">📞</div>
-        <div class="info-content">
-          <div class="info-label">연락처</div>
-          <div class="info-value contact-text">${contact}</div>
-        </div>
+      <div class="info-row">
+        <span class="info-icon">💳</span>
+        <span class="info-label">결제</span>
+        <span class="info-value">${paymentText}</span>
       </div>
     `;
   },
@@ -163,138 +95,76 @@ export const storeAdditionalInfoHTML = {
   getStyles() {
     return `
       <style>
-        .store-additional-info {
+        .store-additional-info-card {
+          background: white;
+          border-radius: 12px;
+          padding: 16px;
           display: flex;
           flex-direction: column;
           gap: 12px;
-          padding: 16px 0;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          border: 1px solid #f1f5f9;
         }
 
-        .info-item {
+        .info-row {
           display: flex;
-          gap: 12px;
-          padding: 12px;
-          background: #f8f9fa;
-          border-radius: 12px;
-          transition: all 0.2s ease;
-        }
-
-        .info-item:hover {
-          background: #e9ecef;
+          align-items: flex-start;
+          gap: 8px;
+          line-height: 1.5;
         }
 
         .info-icon {
-          font-size: 24px;
-          line-height: 1;
+          font-size: 16px;
           flex-shrink: 0;
-        }
-
-        .info-content {
-          flex: 1;
-          min-width: 0;
+          margin-top: 1px;
         }
 
         .info-label {
           font-size: 12px;
           font-weight: 600;
           color: #6b7280;
-          margin-bottom: 4px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
+          min-width: 52px;
+          flex-shrink: 0;
         }
 
         .info-value {
-          font-size: 14px;
-          color: #1f2937;
+          font-size: 13px;
+          color: #374151;
+          flex: 1;
+          word-break: keep-all;
           line-height: 1.5;
         }
 
-        .rating-score {
-          font-size: 18px;
-          font-weight: 700;
+        /* 평점 강조 */
+        .info-row:has(.info-label:contains('평점')) .info-value {
+          font-weight: 600;
           color: #f59e0b;
-          margin-right: 6px;
         }
 
-        .rating-count {
-          font-size: 13px;
-          color: #6b7280;
-        }
-
-        .description-text {
-          line-height: 1.6;
-        }
-
-        .hours-list {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .hours-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .hours-day {
-          font-weight: 600;
-          color: #4b5563;
-        }
-
-        .hours-time {
-          color: #1f2937;
-        }
-
-        .facilities-grid {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-
-        .facility-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 6px 12px;
-          background: white;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 500;
-          border: 1px solid #e5e7eb;
-        }
-
-        .facility-tag.available {
-          color: #059669;
-          border-color: #d1fae5;
-          background: #ecfdf5;
-        }
-
-        .facility-tag.unavailable {
-          color: #9ca3af;
-          opacity: 0.6;
-        }
-
-        .payment-list {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-        }
-
-        .payment-tag {
-          display: inline-block;
-          padding: 4px 10px;
-          background: white;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          color: #4b5563;
-        }
-
-        .contact-text {
-          font-weight: 600;
+        /* 연락처 링크 스타일 */
+        .info-row:has(.info-label:contains('연락처')) .info-value {
           color: #3b82f6;
+          font-weight: 500;
+        }
+
+        @media (max-width: 380px) {
+          .store-additional-info-card {
+            padding: 14px;
+            gap: 10px;
+          }
+
+          .info-label {
+            font-size: 11px;
+            min-width: 48px;
+          }
+
+          .info-value {
+            font-size: 12px;
+          }
+
+          .info-icon {
+            font-size: 15px;
+          }
         }
       </style>
     `;
@@ -304,4 +174,4 @@ export const storeAdditionalInfoHTML = {
 // 전역 등록
 window.storeAdditionalInfoHTML = storeAdditionalInfoHTML;
 
-console.log('✅ storeAdditionalInfoHTML 모듈 로드 완료');
+console.log('✅ storeAdditionalInfoHTML 모듈 로드 완료 (Compact 버전)');
