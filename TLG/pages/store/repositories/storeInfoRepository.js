@@ -7,20 +7,10 @@ export const storeInfoRepository = {
    * 매장 상세 정보 조회
    */
   async fetchStoreDetailInfo(storeId) {
-    try {
-      const response = await fetch(`/api/stores/${storeId}/detail`);
-      
-      if (!response.ok) {
-        console.warn('⚠️ 매장 상세 정보 조회 실패, 더미 데이터 사용');
+    
+      //추후 API 호출로 변경 ()
+      //  const response = await fetch(`/api/stores/${storeId}/detail`);
         return this.getDummyStoreInfo();
-      }
-
-      const data = await response.json();
-      return data.success ? data.info : this.getDummyStoreInfo();
-    } catch (error) {
-      console.warn('⚠️ 매장 상세 정보 조회 오류:', error);
-      return this.getDummyStoreInfo();
-    }
   },
 
   /**
