@@ -1,3 +1,4 @@
+
 /**
  * 리뷰 탭 뷰 - UI 렌더링
  */
@@ -18,11 +19,13 @@ export const reviewTabView = {
     return `
       <div class="review-tab-container">
         <div class="review-tab-header">
-          <h3 class="review-tab-title">
-            <span class="review-icon">💬</span>
-            최근 리뷰
-          </h3>
-          <span class="review-count">${totalReviews}개</span>
+          <div class="header-left">
+            <h3 class="review-tab-title">
+              <span class="review-icon">💬</span>
+              최근 리뷰
+            </h3>
+            <span class="review-count">${totalReviews}개</span>
+          </div>
         </div>
 
         <div class="review-list">
@@ -30,12 +33,10 @@ export const reviewTabView = {
         </div>
 
         ${totalReviews > 3 ? `
-          <div class="review-footer">
-            <button class="see-more-btn">
-              <span class="btn-text">모든 리뷰 보기</span>
-              <span class="btn-arrow">→</span>
-            </button>
-          </div>
+          <button class="see-more-btn">
+            <span class="btn-text">모든 리뷰 보기</span>
+            <span class="btn-icon">→</span>
+          </button>
         ` : ''}
       </div>
       ${this.getReviewTabStyles()}
@@ -49,7 +50,11 @@ export const reviewTabView = {
     const userName = review.user_name || `사용자${review.user_id}`;
     const rating = review.score || review.rating || 0;
     const content = review.content || review.review_text || '';
-    const date = new Date(review.created_at || review.date).toLocaleDateString('ko-KR');
+    const date = new Date(review.created_at || review.date).toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
 
     return `
       <div class="review-item">
@@ -62,7 +67,7 @@ export const reviewTabView = {
             </div>
           </div>
           <div class="review-rating">
-            <span class="rating-stars">${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}</span>
+            ${this.renderStars(rating)}
           </div>
         </div>
         <div class="review-content">
@@ -73,14 +78,34 @@ export const reviewTabView = {
   },
 
   /**
+   * 별점 렌더링
+   */
+  renderStars(rating) {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+    return `
+      <div class="rating-stars">
+        ${'<span class="star filled">★</span>'.repeat(fullStars)}
+        ${hasHalfStar ? '<span class="star half">★</span>' : ''}
+        ${'<span class="star empty">☆</span>'.repeat(emptyStars)}
+        <span class="rating-number">${rating.toFixed(1)}</span>
+      </div>
+    `;
+  },
+
+  /**
    * 빈 상태 렌더링
    */
   renderEmptyState() {
     return `
-      <div class="empty-review-state">
-        <div class="empty-icon">💬</div>
-        <h3 class="empty-title">아직 리뷰가 없습니다</h3>
-        <p class="empty-description">첫 번째 리뷰를 남겨주세요!</p>
+      <div class="review-tab-container">
+        <div class="empty-review-state">
+          <div class="empty-icon">💬</div>
+          <h3 class="empty-title">아직 리뷰가 없습니다</h3>
+          <p class="empty-description">첫 번째 리뷰를 남겨주세요!</p>
+        </div>
       </div>
       ${this.getReviewTabStyles()}
     `;
@@ -112,14 +137,19 @@ export const reviewTabView = {
     return `
       <style>
         .review-tab-container {
-          padding: 20px 16px;
+          padding: 24px 16px;
+          background: #f8fafc;
+          min-height: 300px;
         }
 
         .review-tab-header {
+          margin-bottom: 20px;
+        }
+
+        .header-left {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          gap: 12px;
         }
 
         .review-tab-title {
@@ -127,78 +157,92 @@ export const reviewTabView = {
           align-items: center;
           gap: 8px;
           margin: 0;
-          font-size: 18px;
+          font-size: 20px;
           font-weight: 700;
-          color: #1a1a1a;
+          color: #1e293b;
         }
 
         .review-icon {
-          font-size: 20px;
+          font-size: 24px;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
 
         .review-count {
           font-size: 14px;
           font-weight: 600;
-          color: #666;
-          background: #f1f5f9;
-          padding: 4px 12px;
-          border-radius: 12px;
+          color: #64748b;
+          background: #e2e8f0;
+          padding: 6px 14px;
+          border-radius: 20px;
+          line-height: 1;
         }
 
         .review-list {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px;
+          margin-bottom: 20px;
         }
 
         .review-item {
           background: white;
-          border-radius: 12px;
-          padding: 16px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
+        }
+
+        .review-item:hover {
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+          transform: translateY(-2px);
+          border-color: #cbd5e1;
         }
 
         .review-header {
           display: flex;
           justify-content: space-between;
-          align-items: center;
-          margin-bottom: 12px;
+          align-items: flex-start;
+          margin-bottom: 14px;
         }
 
         .user-info {
           display: flex;
           align-items: center;
           gap: 12px;
+          flex: 1;
         }
 
         .user-avatar {
-          width: 40px;
-          height: 40px;
+          width: 44px;
+          height: 44px;
           border-radius: 50%;
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 16px;
+          font-size: 18px;
           font-weight: 700;
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
 
         .user-details {
           display: flex;
           flex-direction: column;
-          gap: 2px;
+          gap: 4px;
         }
 
         .user-name {
-          font-size: 14px;
-          font-weight: 600;
-          color: #1a1a1a;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1e293b;
         }
 
         .review-date {
-          font-size: 12px;
-          color: #666;
+          font-size: 13px;
+          color: #64748b;
+          font-weight: 500;
         }
 
         .review-rating {
@@ -206,48 +250,84 @@ export const reviewTabView = {
         }
 
         .rating-stars {
+          display: flex;
+          align-items: center;
+          gap: 2px;
+        }
+
+        .rating-stars .star {
+          font-size: 16px;
+          line-height: 1;
+        }
+
+        .rating-stars .star.filled {
+          color: #f59e0b;
+          text-shadow: 0 1px 2px rgba(245, 158, 11, 0.3);
+        }
+
+        .rating-stars .star.half {
+          color: #f59e0b;
+          opacity: 0.6;
+        }
+
+        .rating-stars .star.empty {
+          color: #cbd5e1;
+        }
+
+        .rating-number {
           font-size: 14px;
-          color: #fbbf24;
+          font-weight: 700;
+          color: #f59e0b;
+          margin-left: 6px;
         }
 
         .review-content {
-          margin-top: 8px;
+          margin-top: 12px;
         }
 
         .review-text {
           margin: 0;
-          font-size: 14px;
+          font-size: 15px;
           line-height: 1.6;
-          color: #374151;
-        }
-
-        .review-footer {
-          margin-top: 20px;
-          text-align: center;
+          color: #475569;
+          word-break: keep-all;
         }
 
         .see-more-btn {
-          display: inline-flex;
+          width: 100%;
+          display: flex;
           align-items: center;
+          justify-content: center;
           gap: 8px;
-          padding: 12px 24px;
-          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          padding: 16px 24px;
+          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
           color: white;
           border: none;
           border-radius: 12px;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
         }
 
         .see-more-btn:hover {
           transform: translateY(-2px);
-          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+          box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+          background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
         }
 
-        .btn-arrow {
-          font-size: 16px;
+        .see-more-btn:active {
+          transform: translateY(0);
+        }
+
+        .btn-icon {
+          font-size: 18px;
+          transition: transform 0.3s ease;
+        }
+
+        .see-more-btn:hover .btn-icon {
+          transform: translateX(4px);
         }
 
         .empty-review-state {
@@ -256,21 +336,51 @@ export const reviewTabView = {
         }
 
         .empty-icon {
-          font-size: 64px;
-          margin-bottom: 16px;
+          font-size: 72px;
+          margin-bottom: 20px;
+          filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
         }
 
         .empty-title {
-          margin: 0 0 8px 0;
-          font-size: 18px;
+          margin: 0 0 10px 0;
+          font-size: 20px;
           font-weight: 700;
-          color: #1a1a1a;
+          color: #1e293b;
         }
 
         .empty-description {
           margin: 0;
-          font-size: 14px;
-          color: #666;
+          font-size: 15px;
+          color: #64748b;
+          font-weight: 500;
+        }
+
+        @media (max-width: 480px) {
+          .review-tab-container {
+            padding: 20px 12px;
+          }
+
+          .review-tab-title {
+            font-size: 18px;
+          }
+
+          .review-item {
+            padding: 16px;
+          }
+
+          .user-avatar {
+            width: 40px;
+            height: 40px;
+            font-size: 16px;
+          }
+
+          .user-name {
+            font-size: 14px;
+          }
+
+          .review-text {
+            font-size: 14px;
+          }
         }
       </style>
     `;
