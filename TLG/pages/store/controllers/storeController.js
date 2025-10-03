@@ -52,6 +52,12 @@ export const storeController = {
       // View를 통한 UI 렌더링
       storeView.renderStoreHTML(store);
 
+      // 매장 추가 정보 로드 (동기적으로 처리)
+      await this.loadStoreAdditionalInfo(store);
+
+      // 공지사항 로드 (동기적으로 처리)
+      await this.loadStoreNotices(store);
+
       // 홈 탭 초기 렌더링 (storeTabController 사용)
       const { storeTabController } = await import('./storeTabController.js');
       const storeContent = document.getElementById('storeContent');
@@ -410,12 +416,6 @@ export const storeController = {
 
     // 이벤트 리스너 설정
     this.setupEventListeners(store);
-
-    // 매장 추가 정보 로드
-    this.loadStoreAdditionalInfo(store).catch(error => console.warn('⚠️ 매장 추가 정보 로드 실패:', error));
-
-    // 공지사항 로드
-    this.loadStoreNotices(store).catch(error => console.warn('⚠️ 공지사항 로드 실패:', error));
 
     // 리뷰 데이터 로드
     this.loadReviewData(store).catch(error => console.warn('⚠️ 리뷰 데이터 로드 실패:', error));
