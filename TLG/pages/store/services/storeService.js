@@ -124,28 +124,26 @@ export const storeService = {
   },
 
   /**
-   * 매장 평점 정보 조회
+   * 매장 평점 정보 조회 (stores 객체 사용)
+   * @deprecated - stores 객체에서 직접 가져오세요
    */
   async getStoreRating(storeId) {
-    try {
-      return await storeRepository.fetchStoreRating(storeId);
-    } catch (error) {
-      console.warn('⚠️ 매장 평점 조회 실패:', error);
-      return { ratingAverage: 0, reviewCount: 0 };
-    }
+    console.warn('⚠️ getStoreRating는 더 이상 사용되지 않습니다. stores 객체를 사용하세요.');
+    const store = window.stores?.[storeId];
+    return {
+      ratingAverage: store?.ratingAverage || 0,
+      reviewCount: store?.reviewCount || 0
+    };
   },
 
   /**
-   * 프로모션 데이터 조회
+   * 프로모션 데이터 조회 (stores 객체 사용)
+   * @deprecated - stores 객체에서 직접 가져오세요
    */
   async getPromotions(storeId) {
-    try {
-      const data = await storeRepository.fetchPromotions(storeId);
-      return data.promotions || [];
-    } catch (error) {
-      console.warn('⚠️ 프로모션 데이터 조회 실패:', error);
-      return [];
-    }
+    console.warn('⚠️ getPromotions는 더 이상 사용되지 않습니다. stores 객체를 사용하세요.');
+    const store = window.stores?.[storeId];
+    return store?.promotions || [];
   },
 
   /**
@@ -170,16 +168,13 @@ export const storeService = {
   },
 
   /**
-   * 상위 사용자 데이터 조회
+   * 상위 사용자 데이터 조회 (stores 객체 사용)
+   * @deprecated - stores 객체에서 직접 가져오세요
    */
   async getTopUsers(storeId) {
-    try {
-      const data = await storeRepository.fetchTopUsers(storeId);
-      return data.users || [];
-    } catch (error) {
-      console.warn('⚠️ 상위 사용자 데이터 조회 실패:', error);
-      return [];
-    }
+    console.warn('⚠️ getTopUsers는 더 이상 사용되지 않습니다. stores 객체를 사용하세요.');
+    const store = window.stores?.[storeId];
+    return store?.topUsers || [];
   },
 
   /**

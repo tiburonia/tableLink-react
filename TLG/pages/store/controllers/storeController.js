@@ -398,10 +398,10 @@ export const storeController = {
   },
 
   /**
-   * 추가 데이터 로드 (비동기)
+   * 추가 데이터 로드 (stores 객체 사용)
    */
   loadAdditionalData(store) {
-    console.log('📊 추가 데이터 로드 시작...');
+    console.log('📊 추가 데이터 로드 시작 (stores 객체 사용)...');
 
     // 상태 저장
     this.state.currentStore = store;
@@ -409,88 +409,36 @@ export const storeController = {
     // 이벤트 리스너 설정
     this.setupEventListeners(store);
 
-    // 리뷰 데이터 로드
-    this.loadReviewData(store).catch(error => console.warn('⚠️ 리뷰 데이터 로드 실패:', error));
+    // stores 객체에서 데이터 가져오기
+    const storeData = window.stores?.[store.id] || store;
 
-    // 프로모션 데이터 로드
-    this.loadPromotionData(store).catch(error => console.warn('⚠️ 프로모션 데이터 로드 실패:', error));
+    // 리뷰 데이터 처리 (stores 객체에서)
+    if (storeData.ratingAverage !== undefined) {
+      storeView.updateRatingDisplay(storeData.ratingAverage);
+    }
 
-    // 단골 레벨 데이터 로드
-    this.loadLoyaltyData(store).catch(error => console.warn('⚠️ 단골 레벨 데이터 로드 실패:', error));
+    // 리뷰 미리보기 설정
+    this.setupReviewPreview(storeData).catch(error => console.warn('⚠️ 리뷰 미리보기 실패:', error));
 
-    // 상위 사용자 데이터 로드
-    this.loadTopUsersData(store).catch(error => console.warn('⚠️ 상위 사용자 데이터 로드 실패:', error));
+    // 프로모션 UI 업데이트 (stores 객체에서)
+    const promotions = storeData.promotions || [];
+    storeView.updatePromotionUI(promotions);
+
+    // 단골 레벨 UI 업데이트 (stores 객체에서)
+    const loyaltyData = storeData.loyaltyData || null;
+    storeView.updateLoyaltyUI(loyaltyData, storeData);
+
+    // 상위 사용자 UI 업데이트 (stores 객체에서)
+    const topUsers = storeData.topUsers || [];
+    storeView.updateTopUsersUI(topUsers);
 
     // 테이블 정보 로드
-    this.loadTableInfo(store);
+    this.loadTableInfo(storeData);
 
     // 첫 화면(메뉴 탭) 설정
-    this.setInitialTab(store);
+    this.setInitialTab(storeData);
 
-    console.log('✅ 추가 데이터 로드 완료');
-  },
-
-
-  /**
-   * 리뷰 데이터 로드
-   */
-  async loadReviewData(store) {
-    try {
-      // 실시간 별점 정보 업데이트
-      const ratingData = await storeService.getStoreRating(store.id);
-      if (ratingData) {
-        store.ratingAverage = ratingData.ratingAverage;
-        store.reviewCount = ratingData.reviewCount;
-        storeView.updateRatingDisplay(ratingData.ratingAverage);
-      }
-
-      // 리뷰 미리보기 설정
-      await this.setupReviewPreview(store);
-    } catch (error) {
-      console.warn('⚠️ 리뷰 데이터 로드 실패:', error);
-    }
-  },
-
-  /**
-   * 프로모션 데이터 로드
-   */
-  async loadPromotionData(store) {
-    try {
-      const promotions = await storeService.getPromotions(store.id);
-      storeView.updatePromotionUI(promotions);
-    } catch (error) {
-      console.warn('⚠️ 프로모션 데이터 로드 실패:', error);
-    }
-  },
-
-  /**
-   * 단골 레벨 데이터 로드
-   */
-  async loadLoyaltyData(store) {
-    try {
-      const userInfo = window.cacheManager ? window.cacheManager.getUserInfo() : window.userInfo;
-
-      if (userInfo && window.RegularLevelManager) {
-        const levelData = await window.RegularLevelManager.getUserRegularLevel(userInfo.id, store.id);
-        storeView.updateLoyaltyUI(levelData, store);
-      } else {
-        storeView.updateLoyaltyUI(null, store);
-      }
-    } catch (error) {
-      console.warn('⚠️ 단골 레벨 데이터 로드 실패:', error);
-    }
-  },
-
-  /**
-   * 상위 사용자 데이터 로드
-   */
-  async loadTopUsersData(store) {
-    try {
-      const topUsers = await storeService.getTopUsers(store.id);
-      storeView.updateTopUsersUI(topUsers);
-    } catch (error) {
-      console.warn('⚠️ 상위 사용자 데이터 로드 실패:', error);
-    }
+    console.log('✅ 추가 데이터 로드 완료 (stores 객체 기반)');
   },
 
   /**
