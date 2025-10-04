@@ -24,11 +24,11 @@ export const storeView = {
 
     // 직접 import한 모듈들을 사용하여 렌더링
     main.innerHTML = `
-    <button id="backBtn" class="header-btn" onclick="renderMap().catch(console.error)" aria-label="뒤로가기">
+    <button id="backBtn" class="header-btn" data-action="back-to-map" aria-label="뒤로가기">
       <span class="header-btn-ico">⬅️</span>
     </button>
 
-    <button id="TLL" class="header-btn" aria-label="QR결제" onclick="TLL().catch(console.error)">
+    <button id="TLL" class="header-btn" data-action="start-tll" aria-label="QR결제">
       <span class="header-btn-ico">📱</span>
     </button>
 
@@ -151,7 +151,7 @@ export const storeView = {
         <div style="padding: 20px; text-align: center; color: #666;">
           <h2>🚫 매장을 불러올 수 없습니다</h2>
           <p style="color: #999; margin: 10px 0;">${message}</p>
-          <button onclick="renderMap()" style="
+          <button data-action="back-to-map" style="
             padding: 10px 20px;
             background: #297efc;
             color: white;

@@ -54,8 +54,9 @@ export const menuTabView = {
         ${categories.map((category, index) => `
           <button 
             class="category-btn ${index === 0 ? 'active' : ''}" 
+            data-action="filter-menu-category"
             data-category="${category}"
-            onclick="menuTabView.filterByCategory('${category}', ${store.id})">
+            data-store-id="${store.id}">
             ${category}
           </button>
         `).join('')}

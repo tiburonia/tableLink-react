@@ -51,7 +51,7 @@ async function renderStore(storeData) {
         <div style="padding: 20px; text-align: center; color: #666;">
           <h2>🚫 매장을 불러올 수 없습니다</h2>
           <p style="color: #999; margin: 10px 0;">${error.message}</p>
-          <button onclick="renderMap()" style="
+          <button data-action="back-to-map" style="
             padding: 10px 20px;
             background: #297efc;
             color: white;

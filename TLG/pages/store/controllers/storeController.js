@@ -29,7 +29,8 @@ export const storeController = {
   state: {
     currentStore: null,
     isInitialized: false,
-    activeTab: 'menu'
+    activeTab: 'menu',
+    globalDelegationInitialized: false
   },
 
   /**
@@ -98,7 +99,7 @@ export const storeController = {
             <div style="padding: 20px; text-align: center; color: #666;">
               <h2>🚫 매장을 불러올 수 없습니다</h2>
               <p style="color: #999; margin: 10px 0;">${error.message}</p>
-              <button onclick="renderMap()" style="
+              <button data-action="back-to-map" style="
                 padding: 10px 20px;
                 background: #297efc;
                 color: white;
@@ -148,6 +149,12 @@ export const storeController = {
       // Service Layer 로드
       const { storeEventService } = await import('../services/storeEventService.js');
 
+      // 전역 이벤트 위임 (보안을 위해 data-action 사용)
+      this.setupGlobalEventDelegation(store);
+
+      // 뒤로가기 버튼
+      this.setupBackButton();
+
       // 즐겨찾기 버튼 (favoriteController로 위임)
       this.setupFavoriteButton(store);
 
@@ -169,6 +176,197 @@ export const storeController = {
       console.log('✅ 모든 이벤트 리스너 설정 완료');
     } catch (error) {
       console.error('❌ 이벤트 리스너 설정 실패:', error);
+    }
+  },
+
+  /**
+   * 전역 이벤트 위임 (data-action 기반)
+   * Idempotent: 한 번만 등록되도록 보장
+   */
+  setupGlobalEventDelegation(store) {
+    // 이미 초기화되었다면 스킵
+    if (this.state.globalDelegationInitialized) {
+      console.log('✅ 전역 이벤트 위임이 이미 초기화되어 있습니다');
+      return;
+    }
+
+    document.addEventListener('click', async (e) => {
+      const target = e.target.closest('[data-action]');
+      if (!target) return;
+
+      const action = target.dataset.action;
+      
+      // 현재 매장 정보 가져오기 (최신 상태 사용)
+      const currentStore = this.state.currentStore || window.currentStore || store;
+
+      switch (action) {
+        case 'back-to-map':
+          e.preventDefault();
+          if (typeof window.renderMap === 'function') {
+            await window.renderMap();
+          }
+          break;
+
+        case 'show-all-reviews':
+          e.preventDefault();
+          if (typeof window.renderAllReview === 'function') {
+            window.renderAllReview(currentStore);
+          } else {
+            console.error('❌ renderAllReview 함수를 찾을 수 없습니다');
+          }
+          break;
+
+        case 'write-review':
+          e.preventDefault();
+          if (typeof window.renderReviewWrite === 'function') {
+            window.renderReviewWrite(currentStore);
+          } else {
+            console.warn('⚠️ 리뷰 작성 기능은 준비 중입니다');
+          }
+          break;
+
+        case 'filter-menu-category':
+          e.preventDefault();
+          const category = target.dataset.category;
+          const storeId = target.dataset.storeId;
+          if (window.menuTabView && typeof window.menuTabView.filterByCategory === 'function') {
+            window.menuTabView.filterByCategory(category, storeId);
+          }
+          break;
+
+        case 'show-table-layout':
+          e.preventDefault();
+          if (typeof window.renderTableLayout === 'function') {
+            window.renderTableLayout(currentStore);
+          } else {
+            console.warn('⚠️ 테이블 배치도 기능은 준비 중입니다');
+          }
+          break;
+
+        case 'show-reservation':
+          e.preventDefault();
+          if (typeof window.renderReservationScreen === 'function') {
+            window.renderReservationScreen(currentStore);
+          } else {
+            console.warn('⚠️ 예약 기능은 준비 중입니다');
+          }
+          break;
+
+        case 'go-back-from-review':
+          e.preventDefault();
+          if (typeof window.goBackFromReview === 'function') {
+            window.goBackFromReview();
+          } else if (typeof window.renderStore === 'function' && window.currentStore) {
+            window.renderStore(window.currentStore);
+          }
+          break;
+
+        case 'back-to-mypage':
+          e.preventDefault();
+          if (typeof window.renderMyPage === 'function') {
+            window.renderMyPage();
+          }
+          break;
+
+        case 'show-promotion-detail':
+          e.preventDefault();
+          if (typeof window.loadPromotionDetails === 'function') {
+            window.loadPromotionDetails(currentStore);
+          }
+          break;
+
+        case 'handle-reorder':
+          e.preventDefault();
+          const orderId = target.dataset.orderId;
+          if (typeof window.handleReorder === 'function') {
+            window.handleReorder(orderId);
+          }
+          break;
+
+        case 'view-payment-receipt':
+          e.preventDefault();
+          const paymentId = target.dataset.paymentId;
+          if (typeof window.viewPaymentReceipt === 'function') {
+            window.viewPaymentReceipt(paymentId);
+          }
+          break;
+
+        case 'request-refund':
+          e.preventDefault();
+          const refundPaymentId = target.dataset.paymentId;
+          if (typeof window.requestRefund === 'function') {
+            window.requestRefund(refundPaymentId);
+          }
+          break;
+
+        case 'end-session':
+          e.preventDefault();
+          const sessionOrderId = target.dataset.orderId;
+          if (typeof window.endSession === 'function') {
+            window.endSession(sessionOrderId);
+          }
+          break;
+
+        case 'print-receipt':
+          e.preventDefault();
+          const receiptPaymentId = target.dataset.paymentId;
+          if (typeof window.printReceipt === 'function') {
+            window.printReceipt(receiptPaymentId);
+          }
+          break;
+
+        case 'close-modal':
+          e.preventDefault();
+          const modal = target.closest('.modal-overlay');
+          if (modal) {
+            modal.remove();
+          }
+          break;
+
+        case 'edit-review':
+          e.preventDefault();
+          const reviewId = target.dataset.reviewId;
+          const reviewContent = target.dataset.reviewContent;
+          const reviewScore = target.dataset.reviewScore;
+          if (typeof window.editMyReview === 'function') {
+            window.editMyReview(reviewId, reviewContent, reviewScore);
+          }
+          break;
+
+        case 'delete-review':
+          e.preventDefault();
+          const deleteReviewId = target.dataset.reviewId;
+          if (typeof window.deleteMyReview === 'function') {
+            window.deleteMyReview(deleteReviewId);
+          }
+          break;
+
+        case 'back-to-store':
+          e.preventDefault();
+          if (typeof window.renderStore === 'function' && window.currentStore) {
+            window.renderStore(window.currentStore);
+          }
+          break;
+      }
+    });
+
+    // 초기화 완료 플래그 설정
+    this.state.globalDelegationInitialized = true;
+    console.log('✅ 전역 이벤트 위임 초기화 완료 (Idempotent)');
+  },
+
+  /**
+   * 뒤로가기 버튼
+   */
+  setupBackButton() {
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn && !backBtn.hasAttribute('data-event-set')) {
+      backBtn.setAttribute('data-event-set', 'true');
+      backBtn.addEventListener('click', async () => {
+        if (typeof window.renderMap === 'function') {
+          await window.renderMap();
+        }
+      });
     }
   },
 

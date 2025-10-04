@@ -415,7 +415,7 @@ function renderPromotionDetail(store) {
 
     <div class="promotion-container">
       <div class="promotion-header">
-        <button class="back-button" onclick="renderStore(window.currentStore)">
+        <button class="back-button" data-action="back-to-store">
           ⬅️
         </button>
         <div class="promotion-title">${store.name}</div>
@@ -628,7 +628,7 @@ async function loadPromotionDetails(store) {
         <div class="no-promotions-icon">⚠️</div>
         <h3>혜택 정보를 불러올 수 없습니다</h3>
         <p>잠시 후 다시 시도해주세요.</p>
-        <button onclick="loadPromotionDetails(window.currentStore)" style="margin-top: 16px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+        <button data-action="show-promotion-detail" style="margin-top: 16px; padding: 8px 16px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
           다시 시도
         </button>
       </div>

@@ -92,7 +92,7 @@ export const tableStatusHTML = {
           </div>
 
           <div class="quick-actions-row">
-            <button class="action-btn layout-btn" onclick="renderTableLayout(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+            <button class="action-btn layout-btn" data-action="show-table-layout" data-store-id="${store.id}">
               <span class="action-icon">🗺️</span>
               <span class="action-text">배치도</span>
             </button>
@@ -100,7 +100,7 @@ export const tableStatusHTML = {
               <span class="action-icon">🔄</span>
               <span class="action-text">새로고침</span>
             </button>
-            <button class="action-btn reserve-btn" onclick="renderReservationScreen(${JSON.stringify(store).replace(/"/g, '&quot;')})">
+            <button class="action-btn reserve-btn" data-action="show-reservation" data-store-id="${store.id}">
               <span class="action-icon">📅</span>
               <span class="action-text">예약</span>
             </button>

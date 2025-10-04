@@ -289,8 +289,6 @@ window.AuthManager = {
 window.getUserInfoSafely = getUserInfoSafely;
 
 // ES6 export (하위 호환성)
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { getUserInfoSafely };
-}
+export { getUserInfoSafely };
 
 console.log('✅ AuthManager 로드 완료 - 통합 로그아웃 함수 포함');

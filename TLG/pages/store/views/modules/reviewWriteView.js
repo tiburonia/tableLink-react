@@ -13,7 +13,7 @@ export const reviewWriteView = {
     main.innerHTML = `
       <div class="review-write-container">
         <div class="review-write-header">
-          <button id="reviewBackBtn" class="header-back-btn" onclick="goBackFromReview()">
+          <button id="reviewBackBtn" class="header-back-btn" data-action="go-back-from-review">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
               <path d="M19 12H5m7-7l-7 7 7 7"/>
             </svg>
@@ -117,7 +117,7 @@ export const reviewWriteView = {
       main.innerHTML = `
         <div class="review-write-container">
           <div class="review-write-header">
-            <button id="reviewBackBtn" class="header-back-btn" onclick="goBackFromReview()">
+            <button id="reviewBackBtn" class="header-back-btn" data-action="go-back-from-review">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                 <path d="M19 12H5m7-7l-7 7 7 7"/>
               </svg>
@@ -132,7 +132,7 @@ export const reviewWriteView = {
               <div class="error-icon">⚠️</div>
               <h3>리뷰 작성을 불러올 수 없어요</h3>
               <p>${message || '잠시 후 다시 시도해주세요'}</p>
-              <button class="primary-btn" onclick="goBackFromReview()">
+              <button class="primary-btn" data-action="go-back-from-review">
                 <span class="btn-icon">🔙</span>
                 돌아가기
               </button>
