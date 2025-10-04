@@ -58,10 +58,7 @@ export const storeController = {
       }
 
       // 전역 stores 객체에 저장
-      if (!window.stores) {
-        window.stores = {};
-      }
-      window.stores[storeId] = store;
+     
       console.log(`✅ 전역 stores 객체 업데이트 완료: store ${storeId}`)
 
       // View를 통한 UI 렌더링
