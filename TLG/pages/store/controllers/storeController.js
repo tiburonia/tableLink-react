@@ -511,18 +511,13 @@ export const storeController = {
    */
   async loadTableInfo(store, forceRefresh = false) {
     try {
-      const { storeLifecycleService } = await import('../services/storeLifecycleService.js');
+      const { tableService } = await import('../services/tableService.js');
       const { tableStatusView } = await import('../views/tableStatusView.js');
 
-      // 테이블 정보 존재하지 않을시 API호출
-      if (!store.tables) {
-        const tableInfo = await storeLifecycleService.loadTableInfo(store, forceRefresh);
-        tableStatusView.updateTableInfoUI(tableInfo)
-      }
-      // 테이블 정보 존재시 API호출 생략 후 tableInfo 생성
-    
-        
+      // tableService를 통해 테이블 정보 로드 (store.tables 존재 여부에 따라 API 호출 결정)
+      const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
       
+      // UI 업데이트
       tableStatusView.updateTableInfoUI(tableInfo);
     } catch (error) {
       console.error('❌ 테이블 정보 로드 실패:', error);
