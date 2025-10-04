@@ -66,60 +66,7 @@ class StoreController {
     }
   }
 
-  /**
-   * 매장 평점 정보 조회
-   */
-  async getStoreRating(req, res, next) {
-    try {
-      const { storeId } = req.params;
-
-      const rating = await storeService.getStoreRating(storeId);
-
-      res.json({
-        success: true,
-        ratingAverage: rating.ratingAverage,
-        reviewCount: rating.reviewCount,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 매장 프로모션 조회
-   */
-  async getStorePromotions(req, res, next) {
-    try {
-      const { storeId } = req.params;
-
-      const promotions = await storeService.getStorePromotions(storeId);
-
-      res.json({
-        success: true,
-        promotions: promotions,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-
-  /**
-   * 매장 상위 사용자 조회
-   */
-  async getStoreTopUsers(req, res, next) {
-    try {
-      const { storeId } = req.params;
-
-      const users = await storeService.getStoreTopUsers(storeId);
-
-      res.json({
-        success: true,
-        users: users,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
+  
 }
 
 module.exports = new StoreController();

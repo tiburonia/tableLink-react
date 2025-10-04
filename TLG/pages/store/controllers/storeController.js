@@ -398,10 +398,10 @@ export const storeController = {
   },
 
   /**
-   * 추가 데이터 로드 (stores 객체 사용)
+   * 추가 데이터 로드 (stores 객체만 사용 - API 호출 제거)
    */
   loadAdditionalData(store) {
-    console.log('📊 추가 데이터 로드 시작 (stores 객체 사용)...');
+    console.log('📊 추가 데이터 로드 시작 (stores 객체만 사용)...');
 
     // 상태 저장
     this.state.currentStore = store;
@@ -409,40 +409,14 @@ export const storeController = {
     // 이벤트 리스너 설정
     this.setupEventListeners(store);
 
-    // stores 객체에서 데이터 가져오기
+    // stores 객체에서 데이터 가져오기 (API 호출 없음)
     const storeData = window.stores?.[store.id] || store;
 
-    // 리뷰 데이터 처리 (stores 객체에서)
-    if (storeData.ratingAverage !== undefined) {
-      storeView.updateRatingDisplay(storeData.ratingAverage);
-    }
-
-    // 리뷰 미리보기 설정
-    this.setupReviewPreview(storeData).catch(error => console.warn('⚠️ 리뷰 미리보기 실패:', error));
-
-    // 프로모션 UI 업데이트 (stores 객체에서)
-    const promotions = storeData.promotions || [];
-    storeView.updatePromotionUI(promotions);
-
-    // 단골 레벨 UI 업데이트 (stores 객체에서)
-    const loyaltyData = storeData.loyaltyData || null;
-    storeView.updateLoyaltyUI(loyaltyData, storeData);
-
-    // 상위 사용자 UI 업데이트 (stores 객체에서)
-    const topUsers = storeData.topUsers || [];
-    storeView.updateTopUsersUI(topUsers);
-
-    // 테이블 정보 로드
-    this.loadTableInfo(storeData);
-
-    // 첫 화면(메뉴 탭) 설정
-    this.setInitialTab(storeData);
-
-    console.log('✅ 추가 데이터 로드 완료 (stores 객체 기반)');
+    console.log('✅ 추가 데이터 로드 완료 (API 호출 없음, stores 객체만 사용)');
   },
 
   /**
-   * 테이블 정보 로드 (레이어드 아키텍처)
+   * 테이블 정보 로드 (이벤트 전용 - 렌더링 시 호출 안 함)
    * @param {Object} store - 매장 객체
    * @param {boolean} forceRefresh - 강제 새로고침 여부
    */
@@ -452,31 +426,15 @@ export const storeController = {
       const tableService = await import('../services/tableService.js').then(m => m.tableService);
       const tableStatusView = await import('../views/tableStatusView.js').then(m => m.tableStatusView);
 
-      setTimeout(async () => {
-        const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
-        tableStatusView.updateTableInfoUI(tableInfo);
-      }, 500);
+      const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
+      tableStatusView.updateTableInfoUI(tableInfo);
     } catch (error) {
       console.error('❌ 테이블 정보 로드 실패:', error);
       throw error;
     }
   },
 
-  /**
-   * 초기 탭 설정
-   */
-  setInitialTab(store) {
-    setTimeout(() => {
-      if (window.StoreTabManager && typeof window.StoreTabManager.renderStoreTab === 'function') {
-        window.StoreTabManager.renderStoreTab('menu', store);
-
-        const menuBtn = document.querySelector('[data-tab="menu"]');
-        if (menuBtn) {
-          menuBtn.classList.add('active');
-        }
-      }
-    }, 200);
-  },
+  
 
   /**
    * 상태 초기화
@@ -488,14 +446,7 @@ export const storeController = {
     this.state.activeTab = 'menu';
   },
 
-  /**
-   * 리뷰 미리보기 설정
-   */
-  async setupReviewPreview(store) {
-    // 동적으로 reviewPreviewController 로드
-    const { reviewPreviewController } = await import('./reviewPreviewController.js');
-    await reviewPreviewController.renderTopReviews(store);
-  },
+  
 
   /**
    * 매장 추가 정보 로드
