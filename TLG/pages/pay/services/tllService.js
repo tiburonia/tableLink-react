@@ -154,5 +154,34 @@ export const tllService = {
     }
 
     return { valid: true };
+  },
+
+  /**
+   * DOM 준비 대기 (미리 선택된 매장 처리용)
+   */
+  async waitForDOMReady(elementIds, maxRetries = 50) {
+    return new Promise((resolve, reject) => {
+      const checkDOM = (retryCount = 0) => {
+        if (retryCount >= maxRetries) {
+          reject(new Error('DOM 로딩 시간 초과'));
+          return;
+        }
+
+        const elements = elementIds.map(id => document.getElementById(id));
+        const allReady = elements.every(el => el !== null);
+
+        if (allReady) {
+          resolve(elements);
+        } else {
+          setTimeout(() => checkDOM(retryCount + 1), 100);
+        }
+      };
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => checkDOM());
+      } else {
+        checkDOM();
+      }
+    });
   }
 };

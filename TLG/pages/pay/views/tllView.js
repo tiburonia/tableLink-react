@@ -89,26 +89,48 @@ export const tllView = {
   },
 
   /**
-   * 검색 결과 표시
+   * 검색 결과 표시 (XSS 방지)
    */
   displaySearchResults(stores) {
     const resultsContainer = document.getElementById('storeSearchResults');
     if (!resultsContainer) return;
 
+    // 기존 내용 제거
+    resultsContainer.innerHTML = '';
+
     if (stores.length === 0) {
-      resultsContainer.innerHTML = '<div style="padding:10px;color:#666;text-align:center;">검색 결과가 없습니다</div>';
+      const emptyDiv = document.createElement('div');
+      emptyDiv.style.padding = '10px';
+      emptyDiv.style.color = '#666';
+      emptyDiv.style.textAlign = 'center';
+      emptyDiv.textContent = '검색 결과가 없습니다';
+      resultsContainer.appendChild(emptyDiv);
       resultsContainer.style.display = 'block';
       return;
     }
 
-    const resultsHTML = stores.map(store => `
-      <div class="store-search-item" data-action="select-store" data-store-id="${store.id}" data-store-name="${store.name.replace(/'/g, "\\'")}">
-        <div style="font-weight:bold;">${store.name}</div>
-        <div style="font-size:12px;color:#666;">${store.category || '기타'} • ${store.address || '주소 정보 없음'}</div>
-      </div>
-    `).join('');
+    // createElement로 안전하게 생성
+    stores.forEach(store => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'store-search-item';
+      itemDiv.setAttribute('data-action', 'select-store');
+      itemDiv.setAttribute('data-store-id', String(store.id));
+      itemDiv.setAttribute('data-store-name', store.name);
 
-    resultsContainer.innerHTML = resultsHTML;
+      const nameDiv = document.createElement('div');
+      nameDiv.style.fontWeight = 'bold';
+      nameDiv.textContent = store.name;
+
+      const infoDiv = document.createElement('div');
+      infoDiv.style.fontSize = '12px';
+      infoDiv.style.color = '#666';
+      infoDiv.textContent = `${store.category || '기타'} • ${store.address || '주소 정보 없음'}`;
+
+      itemDiv.appendChild(nameDiv);
+      itemDiv.appendChild(infoDiv);
+      resultsContainer.appendChild(itemDiv);
+    });
+
     resultsContainer.style.display = 'block';
   },
 
