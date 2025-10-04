@@ -164,26 +164,6 @@ export const storeRepository = {
   },
 
   /**
-   * 스토어 탭 데이터 API 호출 - 모든 탭 데이터를 한번에 가져오기
-   */
-
-  async fetchStoreTabData(storeId) {
-    try {
-      const response = await fetch(`/api/stores/${storeId}/tab-data`);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.tabData || {}
-    } catch (error) {
-      console.error(`❌ 매장 ${storeId} 탭 데이터 조회 실패:`, error);
-      throw error;
-    }
-  },
-
-  /**
    * 매장 메뉴 조회
    */
   async fetchStoreMenu(storeId) {
@@ -225,20 +205,49 @@ export const storeRepository = {
   },
 
   /**
-   * 매장 프로모션 조회
+   * 매장 프로모션 조회 (Repository Layer)
    */
   async fetchStorePromotions(storeId) {
     try {
       const response = await fetch(`/api/stores/${storeId}/promotions`);
 
       if (!response.ok) {
-        throw new Error('프로모션 조회 실패');
+        throw new Error(`프로모션 조회 실패: ${response.status}`);
       }
 
       const data = await response.json();
       return data.promotions || [];
     } catch (error) {
-      console.error('❌ 프로모션 조회 오류:', error);
+      console.error('❌ 프로모션 API 호출 실패:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * 매장 탭 통합 데이터 조회 (Repository Layer)
+   * @param {number} storeId - 매장 ID
+   * @returns {Object} 탭별 데이터 객체 { menu, reviews, promotions, tables }
+   */
+  async fetchStoreTabData(storeId) {
+    try {
+      console.log(`🔍 매장 ${storeId} 탭 통합 데이터 API 호출`);
+
+      const response = await fetch(`/api/stores/${storeId}/tab-data`);
+
+      if (!response.ok) {
+        throw new Error(`탭 데이터 조회 실패: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error('탭 데이터 조회 실패');
+      }
+
+      console.log(`✅ 매장 ${storeId} 탭 데이터 API 응답 완료`);
+      return data.tabData || {};
+    } catch (error) {
+      console.error('❌ 탭 데이터 API 호출 실패:', error);
       throw error;
     }
   }

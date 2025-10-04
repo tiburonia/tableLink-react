@@ -92,7 +92,23 @@ export const storeTabController = {
   async renderHomeTab(store, container) {
     console.log('🍽️ 홈 탭 렌더링 시작');
 
-    // 1. 기본 뷰 렌더링
+    // 1. 스켈레톤 먼저 표시
+    const { homeTabSkeleton } = await import('../views/tabs/homeTabSkeleton.js');
+    container.innerHTML = homeTabSkeleton.render();
+
+    // 2. 백그라운드 탭 데이터 로드 대기
+    if (window.storeController?.state?.tabData) {
+      console.log('✅ 캐시된 탭 데이터 사용');
+    } else {
+      console.log('⏳ 탭 데이터 로딩 대기 중...');
+      // 최대 3초 대기
+      const startTime = Date.now();
+      while (!window.storeController?.state?.tabData && (Date.now() - startTime) < 3000) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    // 3. 기본 뷰 렌더링
     const homeHTML = homeTabView.render(store);
     container.innerHTML = homeHTML;
 

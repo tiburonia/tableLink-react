@@ -54,9 +54,13 @@ export const storeController = {
       }
 
       // 통합 탭 데이터 호출 API (백그라운드에서 미리 로드)
-      this.fetchStoreTabData(store.id).catch(error => {
-        console.warn('⚠️ 탭 데이터 백그라운드 로드 실패:', error);
-      });
+      this.fetchStoreTabData(store.id)
+        .then(() => {
+          console.log('✅ 탭 데이터 백그라운드 로드 완료');
+        })
+        .catch(error => {
+          console.warn('⚠️ 탭 데이터 백그라운드 로드 실패:', error);
+        });
 
       // View를 통한 UI 렌더링
       storeView.renderStoreHTML(store);
