@@ -133,6 +133,7 @@ export const storeViewSkeleton = {
 
       /* 패널 */
       .skeleton-panel {
+        top: 200px;
         position: fixed;
         bottom: 0;
         left: 50%;

@@ -39,7 +39,7 @@ export const storeView = {
       </div>
     </header>
 
-    <div id="storePanel" class="collapsed">
+    <div id="storePanel" class="collapsed" style="top: 200px">
       <div id="panelHandle"></div>
       <div id="storePanelContainer">
 

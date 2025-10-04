@@ -76,365 +76,189 @@ window.TLL = async function TLL(preselectedStore = null) {
     </div>
 
     <style>
-      .tll-layout {
-        min-height: 100vh;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      }
+  .tll-layout {
+    min-height: 100vh;
+    background: #f3f4f6;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
 
-      .tll-header {
-        max-width: 500px;
-        margin: 0 auto 30px;
-      }
+  .tll-header {
+    width: 100%;
+    max-width: 480px;
+    margin-bottom: 20px;
+  }
 
-      .back-button {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: rgba(255, 255, 255, 0.2);
-        border: none;
-        padding: 12px 20px;
-        border-radius: 50px;
-        color: white;
-        font-size: 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-        margin-bottom: 20px;
-      }
+  .back-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    color: #374151;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    margin-bottom: 10px;
+  }
+  .back-button:hover {
+    color: #1e40af;
+  }
 
-      .back-button:hover {
-        background: rgba(255, 255, 255, 0.3);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-      }
+  .header-title {
+    text-align: center;
+    color: #1f2937;
+  }
 
-      .back-icon {
-        font-size: 18px;
-        font-weight: bold;
-      }
+  .tll-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+  }
 
-      .header-title {
-        text-align: center;
-        color: white;
-      }
+  .title-icon {
+    font-size: 26px;
+  }
 
-      .tll-title {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        font-size: 32px;
-        font-weight: 800;
-        margin: 0 0 8px 0;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-      }
+  .tll-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin: 0;
+  }
 
-      .title-icon {
-        font-size: 36px;
-        filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.3));
-      }
+  .tll-container {
+    width: 100%;
+    max-width: 480px;
+    background: white;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+  }
 
-      .tll-subtitle {
-        font-size: 16px;
-        margin: 0;
-        opacity: 0.9;
-        font-weight: 400;
-      }
+  .section-header {
+    margin-bottom: 8px;
+  }
 
-      .tll-container {
-        max-width: 500px;
-        margin: 0 auto;
-        background: white;
-        border-radius: 24px;
-        padding: 32px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.8);
-      }
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
 
-      .search-section {
-        margin-bottom: 16px;
-      }
+  .search-input {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 12px;
+    background: #f9fafb;
+    transition: all 0.2s ease;
+  }
 
-      .table-section {
-        margin-bottom: 32px;
-      }
+  .search-input:focus {
+    outline: none;
+    border-color: #297efc;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(41, 126, 252, 0.15);
+  }
 
-      .section-header {
-        margin-bottom: 16px;
-      }
+  .store-search-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
 
-      .section-title {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 18px;
-        font-weight: 700;
-        color: #1f2937;
-        margin: 0;
-      }
+  .store-search-item:hover {
+    background: #f9fafb;
+  }
 
-      .section-icon {
-        font-size: 20px;
-      }
+  .selected-store {
+    background: #297efc;
+    border-radius: 12px;
+    padding: 12px 14px;
+    color: white;
+    margin-top: 10px;
+  }
 
-      .search-input-wrapper {
-        position: relative;
-        margin-bottom: 16px;
-      }
+  .selected-store-header {
+    font-size: 13px;
+    opacity: 0.85;
+    margin-bottom: 4px;
+  }
 
-      .search-input {
-        width: 100%;
-        padding: 16px 20px;
-        padding-right: 50px;
-        font-size: 16px;
-        border: 2px solid #e5e7eb;
-        border-radius: 16px;
-        background: #f9fafb;
-        transition: all 0.3s ease;
-        box-sizing: border-box;
-      }
+  .selected-store-name {
+    font-size: 17px;
+    font-weight: 600;
+  }
 
-      .search-input:focus {
-        outline: none;
-        border-color: #3b82f6;
-        background: white;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-      }
+  .table-select {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 15px;
+    border: 1.5px solid #d1d5db;
+    border-radius: 12px;
+    background: #fff;
+    transition: all 0.2s ease;
+  }
 
-      .search-icon {
-        position: absolute;
-        right: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9ca3af;
-        font-size: 18px;
-        pointer-events: none;
-      }
+  .table-select:focus {
+    border-color: #297efc;
+    box-shadow: 0 0 0 3px rgba(41, 126, 252, 0.1);
+    outline: none;
+  }
 
-      .search-results {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background: white;
-        border: 2px solid #e5e7eb;
-        border-top: none;
-        border-radius: 0 0 16px 16px;
-        max-height: 280px;
-        overflow-y: auto;
-        z-index: 1000;
-        display: none;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-        margin-top: -2px;
-      }
+  .start-order-btn {
+    width: 100%;
+    margin-top: 20px;
+    background: #297efc;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 0;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
 
-      .store-search-item {
-        padding: 16px 20px;
-        cursor: pointer;
-        border-bottom: 1px solid #f3f4f6;
-        transition: all 0.2s ease;
-      }
+  .start-order-btn:hover:enabled {
+    background: #1e40af;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(30, 64, 175, 0.25);
+  }
 
-      .store-search-item:hover {
-        background: #f8fafc;
-      }
+  .start-order-btn:disabled {
+    background: #d1d5db;
+    color: #6b7280;
+    cursor: not-allowed;
+  }
 
-      .store-search-item:last-child {
-        border-bottom: none;
-        border-radius: 0 0 16px 16px;
-      }
+  @media (max-width: 480px) {
+    .tll-container {
+      padding: 20px 16px;
+    }
+    .tll-title {
+      font-size: 22px;
+    }
+    .start-order-btn {
+      font-size: 15px;
+      padding: 12px;
+    }
+  }
+</style>
 
-      .store-search-item > div:first-child {
-        font-weight: 600;
-        color: #1f2937;
-        margin-bottom: 4px;
-      }
-
-      .store-search-item > div:last-child {
-        font-size: 14px;
-        color: #6b7280;
-      }
-
-      .selected-store {
-        background: linear-gradient(135deg, #10b981 0%, #047857 100%);
-        border-radius: 16px;
-        padding: 16px 20px;
-        color: white;
-        display: none;
-      }
-
-      .selected-store-header {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        margin-bottom: 8px;
-        opacity: 0.9;
-      }
-
-      .selected-store-name {
-        font-size: 18px;
-        font-weight: 700;
-      }
-
-      .table-select-wrapper {
-        position: relative;
-      }
-
-      .table-select {
-        width: 100%;
-        padding: 16px 20px;
-        padding-right: 50px;
-        font-size: 16px;
-        border: 2px solid #e5e7eb;
-        border-radius: 16px;
-        background: #f9fafb;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        appearance: none;
-        box-sizing: border-box;
-      }
-
-      .table-select:enabled {
-        background: white;
-        border-color: #d1d5db;
-      }
-
-      .table-select:enabled:focus {
-        outline: none;
-        border-color: #3b82f6;
-        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-      }
-
-      .table-select:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-      }
-
-      .select-arrow {
-        position: absolute;
-        right: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #9ca3af;
-        font-size: 14px;
-        pointer-events: none;
-      }
-
-      .action-section {
-        text-align: center;
-      }
-
-      .start-order-btn {
-        position: relative;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 12px;
-        width: 100%;
-        padding: 18px 24px;
-        font-size: 18px;
-        font-weight: 700;
-        border: none;
-        border-radius: 16px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        overflow: hidden;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .start-order-btn:disabled {
-        background: linear-gradient(135deg, #d1d5db 0%, #9ca3af 100%);
-        color: #6b7280;
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-      }
-
-      .start-order-btn:enabled {
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-        color: white;
-        box-shadow: 0 8px 25px rgba(245, 158, 11, 0.3);
-      }
-
-      .start-order-btn:enabled:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 35px rgba(245, 158, 11, 0.4);
-      }
-
-      .start-order-btn:enabled:active {
-        transform: translateY(-1px);
-      }
-
-      .btn-icon {
-        font-size: 20px;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
-      }
-
-      .btn-shine {
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-        transition: left 0.6s ease;
-      }
-
-      .start-order-btn:enabled:hover .btn-shine {
-        left: 100%;
-      }
-
-      @media (max-width: 480px) {
-        .tll-layout {
-          padding: 12px;
-        }
-
-        .tll-container {
-          padding: 24px 16px;
-          border-radius: 20px;
-        }
-
-        .tll-title {
-          font-size: 28px;
-        }
-
-        .title-icon {
-          font-size: 32px;
-        }
-
-        .search-input,
-        .table-select {
-          padding: 14px 16px;
-          font-size: 15px;
-        }
-
-        .start-order-btn {
-          padding: 16px 20px;
-          font-size: 16px;
-        }
-      }
-
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-
-      .loading-spinner {
-        display: inline-block;
-        width: 16px;
-        height: 16px;
-        border: 2px solid #e0e0e0;
-        border-top: 2px solid #3b82f6;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-right: 8px;
-      }
-    </style>
   `;
 
   // 2. 검색 기능 설정
