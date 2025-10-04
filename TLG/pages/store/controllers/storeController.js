@@ -33,7 +33,7 @@ export const storeController = {
   },
 
   /**
-   * 매장 렌더링 메인 함수 - stores 객체 사용
+   * 매장 렌더링 메인 함수 - API 호출 후 stores 객체 업데이트
    */
   async renderStore(storeData) {
     console.log('🏪 storeController.renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
@@ -42,13 +42,27 @@ export const storeController = {
       // 모듈 로드 확인
       await ensureModulesLoaded();
 
-      // stores 객체에서 매장 데이터 가져오기
+      // 매장 ID 추출
       const storeId = storeData.store_id || storeData.id;
-      const store = window.stores?.[storeId] || storeData;
+      
+      if (!storeId) {
+        throw new Error('매장 ID가 없습니다');
+      }
+
+      // API 호출하여 최신 매장 데이터 가져오기
+      console.log(`🔍 매장 ${storeId} API 호출 중...`);
+      const store = await this.fetchStoreData(storeId);
 
       if (!store || !store.id) {
         throw new Error('매장 데이터를 찾을 수 없습니다');
       }
+
+      // 전역 stores 객체에 저장
+      if (!window.stores) {
+        window.stores = {};
+      }
+      window.stores[storeId] = store;
+      console.log(`✅ 전역 stores 객체 업데이트 완료: store ${storeId}`)
 
       // View를 통한 UI 렌더링
       storeView.renderStoreHTML(store);
