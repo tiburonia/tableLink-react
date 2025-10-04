@@ -164,6 +164,26 @@ export const storeRepository = {
   },
 
   /**
+   * 스토어 탭 데이터 API 호출 - 모든 탭 데이터를 한번에 가져오기
+   */
+
+  async fetchStoreTabData(storeId) {
+    try {
+      const response = await fetch(`/api/stores/${storeId}/tab-data`);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data.tabData || {}
+    } catch (error) {
+      console.error(`❌ 매장 ${storeId} 탭 데이터 조회 실패:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * 매장 메뉴 조회
    */
   async fetchStoreMenu(storeId) {

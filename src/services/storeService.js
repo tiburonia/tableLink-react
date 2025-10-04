@@ -81,6 +81,80 @@ class StoreService {
     return storeBasicInfo;
   }
 
+
+  /**
+   * 매장 탭 정보 통합 조회 (1회성)
+   */
+  // userId파라미터 현재는 사용하지 않지만 추후 사용
+  async getStoreTabData(storeId) {
+
+    
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    
+
+    console.log(`🏪 매장 ${storeId} 탭 정보 조회 요청`);
+
+    // 매장 기본정보 조회
+    const storeResult = await storeRepository.getStoreById(numericStoreId);
+    const store = storeResult[0]; // 배열의 첫 번째 요소 사용
+
+
+    //매장 메뉴 조회
+    const menu = await storeRepository.getStoreMenu(numericStoreId)
+
+    //테이블 정보 조회
+    const table = await tableRepository.getStoreTable(numericStoreId)
+
+    //매장 리뷰 조회 (최근 5개)
+    const review = await reviewRepository.getStoreReviews(numericStoreId, 5, 0)
+
+    //매장 프로모션 조회 >> store_regular_levels
+    const promotion = await storeRepository.getStorePromotion(numericStoreId)
+
+
+    if (!store) {
+      throw new Error('매장을 찾을 수 없습니다');
+    }
+
+
+    const storeBasicInfo = {
+      // 기본 매장 정보를 루트 레벨에 펼침
+      ...(store || {}),
+
+      // 추가 데이터
+      menu: menu || [],                    // 메뉴 목록
+      tables: table || [],                 // 테이블 정보
+      reviews: review || [],               // 최근 리뷰 5개
+      promotions: promotion || [],         // 프로모션/단골레벨 정보
+
+      // 메타 정보
+      menuCount: menu ? menu.length : 0,
+      tableCount: table ? table.length : 0,
+      reviewCount: review ? review.length : 0,
+      promotionCount: promotion ? promotion.length : 0,
+
+
+
+      // 테이블 상태 요약
+      tableStatusSummary: table ? {
+        available: table.filter(t => t.status === 'AVAILABLE').length,
+        occupied: table.filter(t => t.status === 'OCCUPIED').length,
+        total: table.length
+      } : { available: 0, occupied: 0, total: 0 },
+
+
+    }; 
+
+    console.log(`✅ 매장 ${storeId} 기본 정보 조회 완료: ${store.name}`);
+    console.log(`📊 포함된 데이터: 메뉴 ${storeBasicInfo.menuCount}개, 테이블 ${storeBasicInfo.tableCount}개, 리뷰 ${storeBasicInfo.reviewCount}개, 프로모션 ${storeBasicInfo.promotionCount}개`);
+
+    return storeBasicInfo;
+  }
+
   /**
    * 매장 검색
    */

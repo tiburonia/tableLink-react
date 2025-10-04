@@ -18,57 +18,9 @@ export const storeTabService = {
     if (!storeId) {
       throw new Error('매장 ID가 필요합니다');
     }
-
-    console.log(`🔄 매장 ${storeId} 통합 탭 데이터 요청 시작`);
-
-    try {
-      // 모든 탭 데이터를 병렬로 가져오기
-      const [menuData, reviewData, promotionData] = await Promise.all([
-        this.getMenuData(storeId).catch(error => {
-          console.warn('⚠️ 메뉴 데이터 로드 실패:', error);
-          return [];
-        }),
-        this.getReviewData(storeId).catch(error => {
-          console.warn('⚠️ 리뷰 데이터 로드 실패:', error);
-          return [];
-        }),
-        this.getPromotions(storeId).catch(error => {
-          console.warn('⚠️ 프로모션 데이터 로드 실패:', error);
-          return this.getDummyPromotions();
-        })
-      ]);
-
-      // 통합 데이터 구성
-      const tabData = {
-        menu: {
-          items: menuData,
-          grouped: this.groupMenuByCategory(menuData),
-          count: menuData.length,
-          categories: [...new Set(menuData.map(item => item.category || '기타'))]
-        },
-        review: {
-          items: reviewData,
-          stats: this.calculateReviewStats(reviewData),
-          count: reviewData.length
-        },
-        promotion: {
-          items: promotionData,
-          active: promotionData.filter(p => p.isActive),
-          count: promotionData.length
-        }
-      };
-
-      console.log(`✅ 매장 ${storeId} 통합 탭 데이터 로드 완료:`, {
-        메뉴: tabData.menu.count,
-        리뷰: tabData.review.count,
-        프로모션: tabData.promotion.count
-      });
-
+      // Repository에서 통합 데이터 가져오기
+      const tabData = await storeRepository.fetchStoreTabData(storeId);
       return tabData;
-    } catch (error) {
-      console.error(`❌ 매장 ${storeId} 통합 탭 데이터 로드 실패:`, error);
-      throw error;
-    }
   },
 
 
