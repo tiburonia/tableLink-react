@@ -131,24 +131,6 @@ export const storeTabController = {
       console.error('❌ 메뉴 모듈 로드 실패:', error);
     }
 
-    // 4. 리뷰 프리뷰 모듈 로드 및 렌더링
-    try {
-      const { reviewPreviewHTML } = await import('../views/modules/reviewPreviewHTML.js');
-      const { reviewPreviewController } = await import('./reviewPreviewController.js');
-
-      const reviewContainer = document.getElementById('home-review-preview');
-      if (reviewContainer) {
-        reviewContainer.innerHTML = reviewPreviewHTML.renderReviewPreviewHTML();
-
-        // 리뷰 데이터 로드
-        if (reviewPreviewController && typeof reviewPreviewController.renderTopReviews === 'function') {
-          await reviewPreviewController.renderTopReviews(store);
-        }
-      }
-    } catch (error) {
-      console.error('❌ 리뷰 프리뷰 모듈 로드 실패:', error);
-    }
-
     console.log('✅ 홈 탭 렌더링 완료');
   },
 
@@ -190,16 +172,13 @@ export const storeTabController = {
 
     try {
       // 서비스를 통해 메뉴 데이터 가져오기
-      const menuData = await storeTabService.getMenuData(store.id);
 
-      // 메뉴 데이터를 store 객체에 추가
-      const storeWithMenu = { ...store, menu: menuData };
 
       // menuTabView 모듈 동적 로드
       const { menuTabView } = await import('../views/tabs/menuTabView.js');
 
       // 메뉴 탭 HTML 렌더링
-      const menuHTML = menuTabView.render(storeWithMenu);
+      const menuHTML = menuTabView.render(store);
       container.innerHTML = menuHTML;
 
       console.log('✅ 메뉴 탭 렌더링 완료');
