@@ -135,6 +135,35 @@ export const storeRepository = {
   },
 
   /**
+   * 매장 상세 데이터 조회 (userId 포함)
+   */
+  async fetchStoreById(storeId, userId = null) {
+    try {
+      let apiUrl = `/api/stores/${storeId}`;
+      if (userId) {
+        apiUrl += `?userId=${userId}`;
+      }
+
+      const response = await fetch(apiUrl);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.store) {
+        throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
+      }
+
+      return data.store;
+    } catch (error) {
+      console.error(`❌ 매장 ${storeId} 조회 실패:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * 매장 메뉴 조회
    */
   async fetchStoreMenu(storeId) {

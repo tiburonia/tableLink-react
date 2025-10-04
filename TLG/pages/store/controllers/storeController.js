@@ -11,11 +11,11 @@ async function ensureModulesLoaded() {
       const viewModule = await import('../views/storeView.js');
       storeService = serviceModule.storeService;
       storeView = viewModule.storeView;
-      
+
       if (!storeService || !storeView) {
         throw new Error('모듈 로드 후에도 storeService 또는 storeView가 undefined입니다');
       }
-      
+
       console.log('✅ Store 모듈 로드 완료:', { hasService: !!storeService, hasView: !!storeView });
     } catch (error) {
       console.error('❌ Store 모듈 임포트 실패:', error);
@@ -41,7 +41,7 @@ export const storeController = {
     try {
       // 모듈 로드 확인
       await ensureModulesLoaded();
-      
+
       let store;
 
       if (storeData && storeData.store_id) {
@@ -52,7 +52,7 @@ export const storeController = {
       } else {
         throw new Error('매장 ID 또는 매장 데이터가 필요합니다');
       }
-      
+
       //storeTab 데이터 호출 API  
       const storeTabData = await this.fetchStoreTabData(store.id)
 
@@ -81,7 +81,7 @@ export const storeController = {
 
     } catch (error) {
       console.error('❌ 매장 렌더링 실패:', error);
-      
+
       // storeView가 없는 경우 직접 에러 표시
       if (storeView && typeof storeView.showError === 'function') {
         storeView.showError(error.message);
@@ -109,39 +109,24 @@ export const storeController = {
   },
 
   /**
-   * API에서 매장 데이터 가져오기
+   * 매장 데이터 조회 (Service Layer 사용)
    */
   async fetchStoreData(storeId) {
-    console.log(`🔍 매장 ${storeId} API 데이터 요청 시작`);
+    console.log(`🔍 매장 ${storeId} 데이터 요청 시작`);
 
     try {
       // 사용자 정보 가져오기
-      const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : null;
+      const userInfo = window.AuthManager?.getUserInfo?.() || null;
       const userId = userInfo?.userId || userInfo?.id;
 
-      // API 요청 URL 구성
-      let apiUrl = `/api/stores/${storeId}`;
-      if (userId) {
-        apiUrl += `?userId=${userId}`;
-      }
+      // Service를 통해 데이터 조회 및 표준화
+      const storeData = await storeService.fetchStoreData(storeId, userId);
 
-      const response = await fetch(apiUrl);
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success || !data.store) {
-        throw new Error(data.error || '매장 정보를 불러올 수 없습니다');
-      }
-
-      console.log(`✅ 매장 ${storeId} API 데이터 로드 완료`);
-      return data.store;
+      console.log(`✅ 매장 ${storeId} 데이터 로드 완료`);
+      return storeData;
 
     } catch (error) {
-      console.error(`❌ 매장 ${storeId} API 요청 실패:`, error);
+      console.error(`❌ 매장 ${storeId} 데이터 조회 실패:`, error);
       throw error;
     }
   },
@@ -156,9 +141,9 @@ export const storeController = {
     try {
       const storeTabData = await storeTabService.fetchStoreTabData(storeId)
 
-     
-      
-     
+
+
+
     } catch {
       console.error(`❌ 매장 ${storeId} 탭 데이터 요청 실패:`, error);
       throw error;
@@ -594,7 +579,7 @@ export const storeController = {
       const { storeAdditionalInfoHTML } = await import('../views/modules/storeAdditionalInfoHTML.js');
 
       const additionalInfo = await storeInfoService.getStoreAdditionalInfo(store);
-      
+
       const container = document.querySelector('.store-additional-info-section');
       if (container) {
         container.innerHTML = storeAdditionalInfoHTML.render(additionalInfo);
@@ -614,7 +599,7 @@ export const storeController = {
       const { storeNoticeHTML } = await import('../views/modules/storeNoticeHTML.js');
 
       const notices = await storeInfoService.getStoreNotices(store);
-      
+
       const container = document.getElementById('storeNoticeContainer');
       if (container) {
         container.innerHTML = storeNoticeHTML.render(notices);

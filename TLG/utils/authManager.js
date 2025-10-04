@@ -1,4 +1,3 @@
-
 /**
  * 사용자 인증 관리 유틸리티
  */
@@ -92,7 +91,7 @@ function initializeApp() {
 
       // 사용자가 로그인되어 있으면 메인 화면으로
       console.log('🏠 로그인 상태 확인됨 - 메인 화면으로 이동');
-      
+
       // renderMap 함수 안전하게 호출
       if (typeof window.renderMap === 'function') {
         console.log('✅ 전역 renderMap 함수 발견, 실행 중...');
@@ -102,7 +101,7 @@ function initializeApp() {
         renderMap();
       } else {
         console.warn('⚠️ renderMap 함수를 찾을 수 없음 - 동적 로드 시도');
-        
+
         // renderMap 모듈 동적 로드 시도
         import('/TLG/pages/main/renderMap.js')
           .then(() => {
@@ -277,12 +276,18 @@ window.addEventListener('message', function(event) {
   }
 });
 
-// 전역 함수로 내보내기
+// 전역 객체로 노출
+window.AuthManager = {
+  setUserInfo,
+  getUserInfo: getUserInfoSafely, // getUserInfoSafely를 getUserInfo라는 이름으로 노출 (하위 호환성)
+  clearUserInfo,
+  logout: logOutF // logOutF를 logout이라는 이름으로 노출 (하위 호환성)
+};
+
+// getUserInfoSafely도 export (하위 호환성)
+export { getUserInfoSafely };
+
+// 전역 함수로도 등록 (하위 호환성)
 window.getUserInfoSafely = getUserInfoSafely;
-window.initializeApp = initializeApp;
-window.setUserInfo = setUserInfo;
-window.clearUserInfo = clearUserInfo;
-window.logOutF = logOutF;  // 통합 로그아웃 함수 추가
-window.isLoggedIn = isLoggedIn;
 
 console.log('✅ AuthManager 로드 완료 - 통합 로그아웃 함수 포함');

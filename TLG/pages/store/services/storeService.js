@@ -149,6 +149,27 @@ export const storeService = {
   },
 
   /**
+   * 매장 데이터 조회 및 표준화
+   */
+  async fetchStoreData(storeId, userId = null) {
+    try {
+      console.log(`🔍 매장 ${storeId} 데이터 조회 시작`);
+
+      // Repository에서 원시 데이터 가져오기
+      const rawStoreData = await storeRepository.fetchStoreById(storeId, userId);
+
+      // 비즈니스 로직: 데이터 표준화
+      const standardizedStore = this.standardizeStoreData(rawStoreData);
+
+      console.log(`✅ 매장 ${storeId} 데이터 표준화 완료`);
+      return standardizedStore;
+    } catch (error) {
+      console.error(`❌ 매장 ${storeId} 데이터 조회 실패:`, error);
+      throw error;
+    }
+  },
+
+  /**
    * 상위 사용자 데이터 조회
    */
   async getTopUsers(storeId) {
