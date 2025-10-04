@@ -8,7 +8,7 @@ import { tllController } from './controllers/tllController.js';
 /**
  * TLL 메인 함수
  */
-window.TLL = async function TLL(preselectedStore = null) {
+async function TLL(preselectedStore = null) {
   try {
     console.log('🚀 TLL 시작');
 
@@ -30,7 +30,10 @@ window.TLL = async function TLL(preselectedStore = null) {
     console.error('❌ TLL 초기화 실패:', error);
     alert('TLL 주문 시스템을 시작할 수 없습니다.');
   }
-};
+}
+
+// 즉시 전역에 등록
+window.TLL = TLL;
 
 /**
  * 토스페이먼츠 결제 성공 처리
@@ -152,17 +155,14 @@ window.selectTLLTable = function(tableName, tableNumber) {
 /**
  * TLL 함수 전역 등록 확인
  */
-(function() {
-  console.log('🔧 TLL 함수 전역 등록 시작...');
+console.log('🔧 TLL 함수 전역 등록 시작...');
 
-  if (typeof window.TLL === 'function') {
-    console.log('✅ TLL 함수가 이미 등록되어 있음');
-  } else if (typeof TLL !== 'undefined') {
-    window.TLL = TLL;
-    console.log('✅ TLL 함수 전역 등록 완료');
-  } else {
-    console.error('❌ TLL 함수 정의를 찾을 수 없음');
-  }
-})();
+if (typeof window.TLL === 'function') {
+  console.log('✅ TLL 함수가 이미 등록되어 있음');
+} else {
+  console.log('✅ TLL 함수 전역 등록 완료');
+}
 
+// 전역 함수 확인
+console.log('TLL 타입:', typeof window.TLL);
 console.log('✅ TLL 모듈 로드 완료 (레이어드 아키텍처)');
