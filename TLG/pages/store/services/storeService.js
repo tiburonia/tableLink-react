@@ -159,10 +159,10 @@ export const storeService = {
       const rawStoreData = await storeRepository.fetchStoreById(storeId, userId);
 
       // 비즈니스 로직: 데이터 표준화
-      const standardizedStore = this.standardizeStoreData(rawStoreData);
+      const normalizedStore = await this.normalizeStoreData(rawStoreData);
 
       console.log(`✅ 매장 ${storeId} 데이터 표준화 완료`);
-      return standardizedStore;
+      return normalizedStore;
     } catch (error) {
       console.error(`❌ 매장 ${storeId} 데이터 조회 실패:`, error);
       throw error;
