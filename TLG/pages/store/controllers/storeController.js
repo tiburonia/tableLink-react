@@ -103,6 +103,29 @@ export const storeController = {
     }
   },
 
+  /**
+   * 매장 데이터 조회 (Service Layer 사용)
+   */
+  async fetchStoreData(storeId) {
+    console.log(`🔍 매장 ${storeId} 데이터 요청 시작`);
+
+    try {
+      // 사용자 정보 가져오기
+      const userInfo = window.AuthManager?.getUserInfo?.() || null;
+      const userId = userInfo?.userId || userInfo?.id;
+
+      // Service를 통해 데이터 조회 및 표준화
+      const storeData = await storeService.fetchStoreData(storeId, userId);
+
+      console.log(`✅ 매장 ${storeId} 데이터 로드 완료`);
+      return storeData;
+
+    } catch (error) {
+      console.error(`❌ 매장 ${storeId} 데이터 조회 실패:`, error);
+      throw error;
+    }
+  },
+
 
   /**
    * 이벤트 리스너 설정
