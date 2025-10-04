@@ -142,7 +142,7 @@ export const storeTabController = {
 
     try {
       // 1. 서비스를 통해 리뷰 데이터 가져오기
-      const reviewData = await storeTabService.getReviewData(store.id);
+      const reviewData = store.reviews || [];
 
       // 2. 뷰 렌더링
       const reviewHTML = reviewTabView.render(store, reviewData);
