@@ -14,23 +14,11 @@ export const storeInfoRepository = {
   },
 
   /**
-   * 매장 공지사항 조회
+   * 매장 공지사항 조회 (API 호출 제거 - 더미 데이터 사용)
    */
   async fetchStoreNotices(storeId) {
-    try {
-      const response = await fetch(`/api/stores/${storeId}/notices`);
-      
-      if (!response.ok) {
-        console.warn('⚠️ 공지사항 조회 실패, 더미 데이터 사용');
-        return this.getDummyNotices();
-      }
-
-      const data = await response.json();
-      return data.success ? data.notices : this.getDummyNotices();
-    } catch (error) {
-      console.warn('⚠️ 공지사항 조회 오류:', error);
-      return this.getDummyNotices();
-    }
+    console.log('📢 공지사항 로드 (더미 데이터 사용 - API 호출 없음)');
+    return this.getDummyNotices();
   },
 
   /**
