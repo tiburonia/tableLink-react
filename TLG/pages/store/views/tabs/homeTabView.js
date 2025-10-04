@@ -15,7 +15,6 @@ export const homeTabView = {
         ${this.renderTableStatus()}
         ${this.renderFacilities()}
         ${this.renderMenu(store)}
-        ${this.renderReviewPreview()}
       </div>
       ${this.getStyles()}
     `;
