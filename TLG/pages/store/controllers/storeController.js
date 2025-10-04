@@ -180,7 +180,7 @@ export const storeController = {
       if (!target) return;
 
       const action = target.dataset.action;
-      
+
       // 현재 매장 정보 가져오기 (최신 상태 사용)
       const currentStore = this.state.currentStore || window.currentStore || store;
 
@@ -362,7 +362,7 @@ export const storeController = {
     try {
       const { favoriteController } = await import('./favoriteController.js');
       const favoriteBtn = document.getElementById('favoriteBtn');
-      
+
       if (favoriteBtn) {
         favoriteBtn.addEventListener('click', () => {
           favoriteController.toggleFavorite(store);
@@ -402,7 +402,7 @@ export const storeController = {
     try {
       const { tllController } = await import('./tllController.js');
       const tllButton = document.getElementById('TLL');
-      
+
       if (tllButton) {
         tllButton.removeAttribute('onclick');
         tllButton.addEventListener('click', async () => {
@@ -439,7 +439,7 @@ export const storeController = {
         console.error('❌ 패널 컨트롤러 로드 실패:', error);
         // 폴백으로 Service Layer 사용
         const fallbackSuccess = storeEventService.initializeFallbackPanelHandling();
-        
+
         if (!fallbackSuccess) {
           const storePanelContainer = document.getElementById('storePanelContainer');
           storeEventService.applyFallbackScrolling(storePanelContainer);
@@ -459,6 +459,7 @@ export const storeController = {
       });
     }
 
+    // 테이블 상세 토글 버튼 이벤트 설정
     this.setupTableDetailToggle(storeEventService);
     this.setupTableActions(store);
   },
@@ -475,14 +476,14 @@ export const storeController = {
       tableDetailToggleBtn.addEventListener('click', () => {
         // Service에서 상태 계산
         const toggleState = storeEventService.calculateTableDetailToggleState(
-          tableDetailContent, 
+          tableDetailContent,
           tableDetailToggleBtn
         );
 
         // Service에서 애니메이션 적용
         storeEventService.applyTableDetailToggle(
-          tableDetailContent, 
-          tableDetailToggleBtn, 
+          tableDetailContent,
+          tableDetailToggleBtn,
           toggleState
         );
       });
@@ -504,7 +505,7 @@ export const storeController = {
     }
   },
 
-  
+
 
   /**
    * 테이블 정보 로드 (이벤트 전용 - 수동 새로고침 버튼에서만 사용)
@@ -516,7 +517,7 @@ export const storeController = {
 
       // tableService를 통해 테이블 정보 로드 (store.tables 존재 여부에 따라 API 호출 결정)
       const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
-      
+
       // UI 업데이트
       tableStatusView.updateTableInfoUI(tableInfo);
     } catch (error) {
@@ -525,7 +526,7 @@ export const storeController = {
     }
   },
 
-  
+
 
   /**
    * 상태 초기화
