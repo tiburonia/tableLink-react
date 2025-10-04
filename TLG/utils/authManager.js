@@ -284,10 +284,12 @@ window.AuthManager = {
   logOutF // logOutF를 logout이라는 이름으로 노출 (하위 호환성)
 };
 
-// getUserInfoSafely도 export (하위 호환성)
-export { getUserInfoSafely };
-
 // 전역 함수로도 등록 (하위 호환성)
 window.getUserInfoSafely = getUserInfoSafely;
+
+// ES6 export (하위 호환성)
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { getUserInfoSafely };
+}
 
 console.log('✅ AuthManager 로드 완료 - 통합 로그아웃 함수 포함');

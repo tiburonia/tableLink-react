@@ -1,15 +1,12 @@
 
-
 /**
  * 매장 탭 서비스 - 비즈니스 로직
- * Repository와 Controller 사이의 중간 계층
+ * stores 객체에서 데이터를 추출하여 처리
  */
-
-import { storeRepository } from '../repositories/storeRepository.js';
 
 export const storeTabService = {
   /**
-   * 메뉴 데이터 가져오기 및 검증
+   * 메뉴 데이터 가져오기 (stores 객체에서)
    */
   async getMenuData(storeId) {
     if (!storeId) {
@@ -17,17 +14,25 @@ export const storeTabService = {
     }
 
     try {
-      // Repository에서 원시 데이터 가져오기
-      const rawMenuData = await storeRepository.fetchStoreMenu(storeId);
+      // stores 객체에서 매장 데이터 가져오기
+      const store = window.stores?.[storeId];
+      
+      if (!store) {
+        console.warn(`⚠️ stores 객체에서 매장 ${storeId}를 찾을 수 없습니다`);
+        return [];
+      }
 
+      // 메뉴 데이터 추출
+      const rawMenuData = store.menu || [];
+      
       // 비즈니스 로직: 데이터 검증 및 변환
       const validatedMenu = this.validateAndTransformMenuData(rawMenuData);
 
-      console.log(`✅ 메뉴 데이터 처리 완료: ${validatedMenu.length}개`);
+      console.log(`✅ 메뉴 데이터 처리 완료 (stores 객체): ${validatedMenu.length}개`);
       return validatedMenu;
     } catch (error) {
       console.error('❌ 메뉴 데이터 처리 실패:', error);
-      throw error;
+      return [];
     }
   },
 
@@ -35,7 +40,6 @@ export const storeTabService = {
    * 메뉴 데이터 검증 및 변환
    */
   validateAndTransformMenuData(rawData) {
-    // null/undefined 체크
     if (!rawData) {
       console.warn('⚠️ 메뉴 데이터가 없습니다');
       return [];
@@ -49,7 +53,7 @@ export const storeTabService = {
         console.log('✅ 메뉴 JSON 파싱 성공');
       } catch (parseError) {
         console.error('❌ 메뉴 JSON 파싱 실패:', parseError);
-        throw new Error('메뉴 데이터 형식 오류');
+        return [];
       }
     }
 
@@ -85,7 +89,7 @@ export const storeTabService = {
   },
 
   /**
-   * 리뷰 데이터 가져오기
+   * 리뷰 데이터 가져오기 (stores 객체에서)
    */
   async getReviewData(storeId) {
     if (!storeId) {
@@ -93,13 +97,21 @@ export const storeTabService = {
     }
 
     try {
-      // Repository에서 데이터 가져오기
-      const reviews = await storeRepository.fetchStoreReviews(storeId);
+      // stores 객체에서 매장 데이터 가져오기
+      const store = window.stores?.[storeId];
+      
+      if (!store) {
+        console.warn(`⚠️ stores 객체에서 매장 ${storeId}를 찾을 수 없습니다`);
+        return [];
+      }
+
+      // 리뷰 데이터 추출
+      const reviews = store.reviews || [];
 
       // 비즈니스 로직: 리뷰 정렬 및 필터링
       const processedReviews = this.processReviews(reviews);
 
-      console.log(`✅ 리뷰 데이터 처리 완료: ${processedReviews.length}개`);
+      console.log(`✅ 리뷰 데이터 처리 완료 (stores 객체): ${processedReviews.length}개`);
       return processedReviews;
     } catch (error) {
       console.error('❌ 리뷰 데이터 처리 실패:', error);
@@ -141,7 +153,7 @@ export const storeTabService = {
   },
 
   /**
-   * 프로모션 데이터 가져오기
+   * 프로모션 데이터 가져오기 (stores 객체에서)
    */
   async getPromotions(storeId) {
     if (!storeId) {
@@ -150,19 +162,24 @@ export const storeTabService = {
     }
 
     try {
-      // Repository에서 데이터 가져오기
-      const promotions = await storeRepository.fetchStorePromotions(storeId);
+      // stores 객체에서 매장 데이터 가져오기
+      const store = window.stores?.[storeId];
+      
+      if (!store) {
+        console.warn(`⚠️ stores 객체에서 매장 ${storeId}를 찾을 수 없습니다`);
+        return this.getDummyPromotions();
+      }
+
+      // 프로모션 데이터 추출
+      const promotions = store.promotions || [];
 
       // 비즈니스 로직: 활성 프로모션 필터링 및 정렬
       const activePromotions = this.filterActivePromotions(promotions);
 
-      console.log(`✅ 프로모션 데이터 처리 완료: ${activePromotions.length}개`);
-      return activePromotions;
+      console.log(`✅ 프로모션 데이터 처리 완료 (stores 객체): ${activePromotions.length}개`);
+      return activePromotions.length > 0 ? activePromotions : this.getDummyPromotions();
     } catch (error) {
       console.error('❌ 프로모션 데이터 처리 실패:', error);
-      
-      // 폴백: 더미 데이터 반환
-      console.log('📦 더미 프로모션 데이터 사용');
       return this.getDummyPromotions();
     }
   },
@@ -180,7 +197,7 @@ export const storeTabService = {
     return promotions
       .map(promo => this.normalizePromotion(promo))
       .filter(promo => {
-        if (!promo.isActive) return false;
+        if (!promo || !promo.isActive) return false;
         
         const startDate = new Date(promo.startDate);
         const endDate = new Date(promo.endDate);
@@ -188,7 +205,6 @@ export const storeTabService = {
         return now >= startDate && now <= endDate;
       })
       .sort((a, b) => {
-        // 할인율이 높은 순으로 정렬
         const discountA = parseInt(a.discountRate) || 0;
         const discountB = parseInt(b.discountRate) || 0;
         return discountB - discountA;
@@ -311,4 +327,4 @@ export const storeTabService = {
 // 전역 등록
 window.storeTabService = storeTabService;
 
-console.log('✅ storeTabService 모듈 로드 완료 (레이어드 아키텍처)');
+console.log('✅ storeTabService 모듈 로드 완료 (stores 객체 기반)');

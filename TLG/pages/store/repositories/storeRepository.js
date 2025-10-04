@@ -164,63 +164,33 @@ export const storeRepository = {
   },
 
   /**
-   * 매장 메뉴 조회
+   * 매장 메뉴 조회 (stores 객체 사용)
+   * @deprecated - storeTabService에서 stores 객체 직접 사용
    */
   async fetchStoreMenu(storeId) {
-    try {
-      const response = await fetch(`/api/stores/${storeId}/menu`);
-
-      if (!response.ok) {
-        console.warn('⚠️ 메뉴 조회 실패, 매장 데이터에서 추출');
-        // 폴백: 매장 정보에서 메뉴 추출
-        const storeData = await this.fetchStoreById(storeId);
-        return storeData.menu || [];
-      }
-
-      const data = await response.json();
-      return data.menu || data.data || [];
-    } catch (error) {
-      console.error('❌ 메뉴 조회 오류:', error);
-      return [];
-    }
+    console.warn('⚠️ fetchStoreMenu는 더 이상 사용되지 않습니다. stores 객체를 사용하세요.');
+    const store = window.stores?.[storeId];
+    return store?.menu || [];
   },
 
   /**
-   * 매장 리뷰 조회
+   * 매장 리뷰 조회 (stores 객체 사용)
+   * @deprecated - storeTabService에서 stores 객체 직접 사용
    */
   async fetchStoreReviews(storeId) {
-    try {
-      const response = await fetch(`/api/reviews/stores/${storeId}`);
-
-      if (!response.ok) {
-        throw new Error('리뷰 조회 실패');
-      }
-
-      const data = await response.json();
-      return data.reviews || [];
-    } catch (error) {
-      console.error('❌ 리뷰 조회 오류:', error);
-      return [];
-    }
+    console.warn('⚠️ fetchStoreReviews는 더 이상 사용되지 않습니다. stores 객체를 사용하세요.');
+    const store = window.stores?.[storeId];
+    return store?.reviews || [];
   },
 
   /**
-   * 매장 프로모션 조회 (Repository Layer)
+   * 매장 프로모션 조회 (stores 객체 사용)
+   * @deprecated - storeTabService에서 stores 객체 직접 사용
    */
   async fetchStorePromotions(storeId) {
-    try {
-      const response = await fetch(`/api/stores/${storeId}/promotions`);
-
-      if (!response.ok) {
-        throw new Error(`프로모션 조회 실패: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.promotions || [];
-    } catch (error) {
-      console.error('❌ 프로모션 API 호출 실패:', error);
-      throw error;
-    }
+    console.warn('⚠️ fetchStorePromotions는 더 이상 사용되지 않습니다. stores 객체를 사용하세요.');
+    const store = window.stores?.[storeId];
+    return store?.promotions || [];
   },
 
   };
