@@ -288,7 +288,4 @@ window.AuthManager = {
 // 전역 함수로도 등록 (하위 호환성)
 window.getUserInfoSafely = getUserInfoSafely;
 
-// ES6 export (하위 호환성)
-export { getUserInfoSafely };
-
 console.log('✅ AuthManager 로드 완료 - 통합 로그아웃 함수 포함');
