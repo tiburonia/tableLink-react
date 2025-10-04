@@ -454,8 +454,8 @@ export const storeController = {
   setupTableEvents(store, storeEventService) {
     const tlrContainer = document.getElementById('TLR');
     if (tlrContainer) {
-      tlrContainer.addEventListener('click', () => {
-        storeEventService.handleTLRClick(store);
+      tlrContainer.addEventListener('click', async () => {
+        await storeEventService.handleTLRClick(store);
       });
     }
 

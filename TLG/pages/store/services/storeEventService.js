@@ -90,11 +90,18 @@ export const storeEventService = {
   /**
    * TLR 컨테이너 클릭 처리
    */
-  handleTLRClick(store) {
-    if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
-      window.TableInfoManager.loadTableInfo(store);
-    } else {
-      console.warn('⚠️ TableInfoManager를 찾을 수 없습니다');
+  async handleTLRClick(store) {
+    try {
+      // tableController를 동적으로 로드
+      const { tableController } = await import('../controllers/tableController.js');
+      
+      // 테이블 정보 로드 및 UI 업데이트 (강제 새로고침)
+      await tableController.loadAndDisplayTableInfo(store, true);
+      
+      console.log('✅ TLR 클릭: 테이블 정보 새로고침 완료');
+    } catch (error) {
+      console.error('❌ TLR 클릭 처리 실패:', error);
+      alert('테이블 정보를 불러올 수 없습니다.');
     }
   }
 };
