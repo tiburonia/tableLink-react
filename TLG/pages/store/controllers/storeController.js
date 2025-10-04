@@ -141,15 +141,18 @@ export const storeController = {
   /**
    * 이벤트 리스너 설정
    */
-  setupEventListeners(store) {
+  async setupEventListeners(store) {
     try {
       console.log('🔧 이벤트 리스너 설정 시작...');
+
+      // Service Layer 로드
+      const { storeEventService } = await import('../services/storeEventService.js');
 
       // 즐겨찾기 버튼 (favoriteController로 위임)
       this.setupFavoriteButton(store);
 
       // 리뷰 링크
-      this.setupReviewEvents(store);
+      this.setupReviewEvents(store, storeEventService);
 
       // TLL 버튼 (tllController로 위임)
       this.setupTLLButton(store);
@@ -158,10 +161,10 @@ export const storeController = {
       this.setupTabNavigation(store);
 
       // 패널 핸들링
-      this.setupPanelHandling();
+      this.setupPanelHandling(storeEventService);
 
       // 테이블 관련 이벤트
-      this.setupTableEvents(store);
+      this.setupTableEvents(store, storeEventService);
 
       console.log('✅ 모든 이벤트 리스너 설정 완료');
     } catch (error) {
@@ -191,24 +194,20 @@ export const storeController = {
   },
 
   /**
-   * 리뷰 관련 이벤트
+   * 리뷰 관련 이벤트 (Service Layer 사용)
    */
-  setupReviewEvents(store) {
+  setupReviewEvents(store, storeEventService) {
     const reviewLink = document.getElementById('reviewLink');
     if (reviewLink) {
       reviewLink.addEventListener('click', () => {
-        if (typeof renderAllReview === 'function') {
-          renderAllReview(store);
-        }
+        storeEventService.showAllReviews(store);
       });
     }
 
     const reviewSeeMoreBtns = document.getElementsByClassName('see-more-btn');
     if (reviewSeeMoreBtns && reviewSeeMoreBtns.length > 0) {
       reviewSeeMoreBtns[0].addEventListener('click', () => {
-        if (typeof renderAllReview === 'function') {
-          renderAllReview(store);
-        }
+        storeEventService.showAllReviews(store);
       });
     }
   },
@@ -244,7 +243,7 @@ export const storeController = {
   /**
    * 패널 핸들링 설정 (레이어드 아키텍처)
    */
-  async setupPanelHandling() {
+  async setupPanelHandling(storeEventService) {
     console.log('🔧 패널 핸들링 설정 시작 (레이어드 아키텍처)...');
 
     // DOM이 준비될 때까지 대기
@@ -255,80 +254,54 @@ export const storeController = {
         panelController.initializePanelHandling();
       } catch (error) {
         console.error('❌ 패널 컨트롤러 로드 실패:', error);
-        // 폴백으로 레거시 매니저 사용
-        if (window.StorePanelManager && typeof window.StorePanelManager.initializePanelHandling === 'function') {
-          console.log('🔄 폴백: StorePanelManager 사용');
-          window.StorePanelManager.initializePanelHandling();
-        } else {
-          this.setupFallbackScrolling();
+        // 폴백으로 Service Layer 사용
+        const fallbackSuccess = storeEventService.initializeFallbackPanelHandling();
+        
+        if (!fallbackSuccess) {
+          const storePanelContainer = document.getElementById('storePanelContainer');
+          storeEventService.applyFallbackScrolling(storePanelContainer);
         }
       }
     }, 100);
   },
 
   /**
-   * 폴백 스크롤 설정
+   * 테이블 관련 이벤트 (Service Layer 사용)
    */
-  setupFallbackScrolling() {
-    console.log('🔄 폴백 스크롤 설정 시작...');
-
-    const storePanelContainer = document.getElementById('storePanelContainer');
-    if (storePanelContainer) {
-      storePanelContainer.style.overflowY = 'auto';
-      storePanelContainer.style.overflowX = 'hidden';
-      storePanelContainer.style.webkitOverflowScrolling = 'touch';
-      storePanelContainer.style.height = 'calc(100% - 24px)';
-
-      console.log('✅ 폴백 스크롤 설정 완료');
-    } else {
-      console.warn('⚠️ storePanelContainer를 찾을 수 없습니다');
-    }
-  },
-
-  /**
-   * 테이블 관련 이벤트
-   */
-  setupTableEvents(store) {
+  setupTableEvents(store, storeEventService) {
     const tlrContainer = document.getElementById('TLR');
     if (tlrContainer) {
       tlrContainer.addEventListener('click', () => {
-        if (window.TableInfoManager && typeof window.TableInfoManager.loadTableInfo === 'function') {
-          window.TableInfoManager.loadTableInfo(store);
-        }
+        storeEventService.handleTLRClick(store);
       });
     }
 
-    this.setupTableDetailToggle();
+    this.setupTableDetailToggle(storeEventService);
     this.setupTableActions(store);
   },
 
   /**
-   * 테이블 상세 토글 버튼
+   * 테이블 상세 토글 버튼 (Service Layer 사용)
    */
-  setupTableDetailToggle() {
+  setupTableDetailToggle(storeEventService) {
     const tableDetailToggleBtn = document.getElementById('tableDetailToggleBtn');
     const tableDetailContent = document.getElementById('tableDetailContent');
 
     if (tableDetailToggleBtn && tableDetailContent && !tableDetailToggleBtn.hasAttribute('data-event-set')) {
       tableDetailToggleBtn.setAttribute('data-event-set', 'true');
       tableDetailToggleBtn.addEventListener('click', () => {
-        const isExpanded = tableDetailContent.style.display !== 'none';
+        // Service에서 상태 계산
+        const toggleState = storeEventService.calculateTableDetailToggleState(
+          tableDetailContent, 
+          tableDetailToggleBtn
+        );
 
-        if (isExpanded) {
-          tableDetailContent.classList.remove('show');
-          setTimeout(() => {
-            tableDetailContent.style.display = 'none';
-          }, 300);
-          tableDetailToggleBtn.classList.remove('expanded');
-          tableDetailToggleBtn.querySelector('.toggle-text').textContent = '테이블 현황 자세히 보기';
-        } else {
-          tableDetailContent.style.display = 'block';
-          setTimeout(() => {
-            tableDetailContent.classList.add('show');
-          }, 10);
-          tableDetailToggleBtn.classList.add('expanded');
-          tableDetailToggleBtn.querySelector('.toggle-text').textContent = '테이블 현황 간단히 보기';
-        }
+        // Service에서 애니메이션 적용
+        storeEventService.applyTableDetailToggle(
+          tableDetailContent, 
+          tableDetailToggleBtn, 
+          toggleState
+        );
       });
     }
   },
