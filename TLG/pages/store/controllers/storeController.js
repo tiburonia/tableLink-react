@@ -40,6 +40,9 @@ export const storeController = {
     console.log('🏪 storeController.renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
 
     try {
+      // 스켈레톤 표시
+      await this.showSkeleton();
+      
       await ensureModulesLoaded();
 
       const storeId = storeData.store_id || storeData.id;
@@ -92,6 +95,21 @@ export const storeController = {
     } catch (error) {
       console.error('❌ 매장 렌더링 실패:', error);
       this.showError(error.message);
+    }
+  },
+
+  /**
+   * 스켈레톤 표시
+   */
+  async showSkeleton() {
+    try {
+      const { storeViewSkeleton } = await import('../views/storeViewSkeleton.js');
+      const main = document.getElementById('main');
+      if (main) {
+        main.innerHTML = storeViewSkeleton.render();
+      }
+    } catch (error) {
+      console.warn('⚠️ 스켈레톤 로드 실패:', error);
     }
   },
 
