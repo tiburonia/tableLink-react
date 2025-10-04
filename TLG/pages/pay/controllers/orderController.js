@@ -1,5 +1,6 @@
 import { OrderService } from '../services/orderService.js';
 import { OrderView } from '../views/orderView.js';
+import { getUserInfoSafely } from '../../../utils/authManager.js';
 
 export class OrderController {
   constructor() {
@@ -11,7 +12,7 @@ export class OrderController {
     try {
       console.log('🛒 TLL 주문 화면 로드:', { store: store.name, table: tableName, tableNum: tableNumber });
 
-      const userInfo = this.getUserInfo();
+      const userInfo = getUserInfoSafely();
       if (!userInfo) {
         alert('로그인이 필요합니다.');
         if (typeof renderLogin === 'function') {
@@ -144,32 +145,6 @@ export class OrderController {
       orderBtn.addEventListener('click', () => {
         this.proceedToPayment();
       });
-    }
-  }
-
-  getUserInfo() {
-    try {
-      const cookies = document.cookie.split(';').map(cookie => cookie.trim());
-      const userInfoCookie = cookies.find(cookie => cookie.startsWith('userInfo='));
-
-      if (userInfoCookie) {
-        const userInfoValue = decodeURIComponent(userInfoCookie.split('=')[1]);
-        return JSON.parse(userInfoValue);
-      }
-
-      const localStorageUserInfo = localStorage.getItem('userInfo');
-      if (localStorageUserInfo) {
-        return JSON.parse(localStorageUserInfo);
-      }
-
-      if (window.userInfo && window.userInfo.id) {
-        return window.userInfo;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('❌ 사용자 정보 파싱 오류:', error);
-      return null;
     }
   }
 
