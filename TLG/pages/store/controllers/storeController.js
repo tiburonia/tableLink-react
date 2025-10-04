@@ -33,7 +33,7 @@ export const storeController = {
   },
 
   /**
-   * 매장 렌더링 메인 함수 - API 요청 후 렌더링
+   * 매장 렌더링 메인 함수 - stores 객체 사용
    */
   async renderStore(storeData) {
     console.log('🏪 storeController.renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
@@ -42,15 +42,12 @@ export const storeController = {
       // 모듈 로드 확인
       await ensureModulesLoaded();
 
-      let store;
+      // stores 객체에서 매장 데이터 가져오기
+      const storeId = storeData.store_id || storeData.id;
+      const store = window.stores?.[storeId] || storeData;
 
-      if (storeData && storeData.store_id) {
-        const storeId = storeData.store_id;
-        // API 응답이 이미 표준화되어 있으므로 그대로 사용
-        //renderStore 전역 stores객체 호출 API
-        store = await this.fetchStoreData(storeId);
-      } else {
-        throw new Error('매장 ID 또는 매장 데이터가 필요합니다');
+      if (!store || !store.id) {
+        throw new Error('매장 데이터를 찾을 수 없습니다');
       }
 
       // View를 통한 UI 렌더링
@@ -65,14 +62,15 @@ export const storeController = {
       // 홈 탭 초기 렌더링 (storeTabController 사용)
       const { storeTabController } = await import('./storeTabController.js');
       const storeContent = document.getElementById('storeContent');
-      const homeTabBtn = document.querySelector('[data-tab="home"]')
+      const homeTabBtn = document.querySelector('[data-tab="home"]');
       if (storeContent && storeTabController) {
         await storeTabController.renderHomeTab(store, storeContent);
-        homeTabBtn.classList.add('active')
+        homeTabBtn.classList.add('active');
       }
 
-      // 추가 데이터 로드 및 업데이트 (비동기)
-      this.loadAdditionalData(store);
+      // 상태 저장 및 이벤트 리스너 설정
+      this.state.currentStore = store;
+      this.setupEventListeners(store);
 
       console.log('✅ 매장 렌더링 완료:', store.name);
 
@@ -102,29 +100,6 @@ export const storeController = {
           `;
         }
       }
-    }
-  },
-
-  /**
-   * 매장 데이터 조회 (Service Layer 사용)
-   */
-  async fetchStoreData(storeId) {
-    console.log(`🔍 매장 ${storeId} 데이터 요청 시작`);
-
-    try {
-      // 사용자 정보 가져오기
-      const userInfo = window.AuthManager?.getUserInfo?.() || null;
-      const userId = userInfo?.userId || userInfo?.id;
-
-      // Service를 통해 데이터 조회 및 표준화
-      const storeData = await storeService.fetchStoreData(storeId, userId);
-
-      console.log(`✅ 매장 ${storeId} 데이터 로드 완료`);
-      return storeData;
-
-    } catch (error) {
-      console.error(`❌ 매장 ${storeId} 데이터 조회 실패:`, error);
-      throw error;
     }
   },
 
@@ -397,26 +372,10 @@ export const storeController = {
     }
   },
 
-  /**
-   * 추가 데이터 로드 (stores 객체만 사용 - API 호출 제거)
-   */
-  loadAdditionalData(store) {
-    console.log('📊 추가 데이터 로드 시작 (stores 객체만 사용)...');
-
-    // 상태 저장
-    this.state.currentStore = store;
-
-    // 이벤트 리스너 설정
-    this.setupEventListeners(store);
-
-    // stores 객체에서 데이터 가져오기 (API 호출 없음)
-    const storeData = window.stores?.[store.id] || store;
-
-    console.log('✅ 추가 데이터 로드 완료 (API 호출 없음, stores 객체만 사용)');
-  },
+  
 
   /**
-   * 테이블 정보 로드 (이벤트 전용 - 렌더링 시 호출 안 함)
+   * 테이블 정보 로드 (이벤트 전용 - 수동 새로고침 버튼에서만 사용)
    * @param {Object} store - 매장 객체
    * @param {boolean} forceRefresh - 강제 새로고침 여부
    */
@@ -443,10 +402,8 @@ export const storeController = {
     console.log('🔄 Store Controller 상태 초기화');
     this.state.currentStore = null;
     this.state.isInitialized = false;
-    this.state.activeTab = 'menu';
+    this.state.activeTab = 'home';
   },
-
-  
 
   /**
    * 매장 추가 정보 로드
