@@ -8,6 +8,17 @@
 import { storeRepository } from '../repositories/storeRepository.js';
 
 export const storeTabService = {
+
+  /**
+   * 스토어 탭 통합 API호출
+   */
+  async fetchStoreTabData(storeId) {
+    
+  },
+
+
+
+  
   /**
    * 메뉴 데이터 가져오기 및 검증
    */

@@ -1,3 +1,6 @@
+import { storeTabService } from '../services/storeTabService.js';
+import { storeTabController } from './storeTabController.js';
+
 // 매장 컨트롤러 - 이벤트 처리 및 흐름 제어
 let storeService, storeView;
 
@@ -44,10 +47,14 @@ export const storeController = {
       if (storeData && storeData.store_id) {
         const storeId = storeData.store_id;
         // API 응답이 이미 표준화되어 있으므로 그대로 사용
+        //renderStore 전역 stores객체 호출 API
         store = await this.fetchStoreData(storeId);
       } else {
         throw new Error('매장 ID 또는 매장 데이터가 필요합니다');
       }
+      
+      //storeTab 데이터 호출 API  
+      const storeTabData = await this.fetchStoreTabData(store.id)
 
       // View를 통한 UI 렌더링
       storeView.renderStoreHTML(store);
@@ -137,6 +144,25 @@ export const storeController = {
       console.error(`❌ 매장 ${storeId} API 요청 실패:`, error);
       throw error;
     }
+  },
+
+
+  /**
+   * 스토어 탭 데이터 API호출
+   */
+  async fetchStoreTabData(storeId) {
+    console.log(`🔍 매장 ${storeId} 탭 데이터 요청 시작`)
+
+    try {
+      const storeTabData = await storeTabService.fetchStoreTabData(storeId)
+
+     
+      
+     
+    } catch {
+      console.error(`❌ 매장 ${storeId} 탭 데이터 요청 실패:`, error);
+      throw error;
+    }          
   },
 
   /**
