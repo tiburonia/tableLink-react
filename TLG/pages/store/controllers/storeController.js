@@ -34,53 +34,61 @@ export const storeController = {
   },
 
   /**
-   * 매장 렌더링 메인 함수 - API 호출 후 stores 객체 업데이트
+   * 매장 렌더링 메인 함수 - 오케스트레이션만 담당
    */
   async renderStore(storeData) {
     console.log('🏪 storeController.renderStore 호출:', storeData?.name, 'ID:', storeData?.id);
 
     try {
-      // 모듈 로드 확인
       await ensureModulesLoaded();
 
-      // 매장 ID 추출
       const storeId = storeData.store_id || storeData.id;
-      
       if (!storeId) {
         throw new Error('매장 ID가 없습니다');
       }
 
-      // API 호출하여 최신 매장 데이터 가져오기
+      // Service Layer를 통한 데이터 페칭
+      const { storeLifecycleService } = await import('../services/storeLifecycleService.js');
+      const { storeAdditionalInfoHTML } = await import('../views/modules/storeAdditionalInfoHTML.js');
+      const { storeNoticeHTML } = await import('../views/modules/storeNoticeHTML.js');
+      const { storeTabController } = await import('./storeTabController.js');
+
+      const userInfo = window.AuthManager?.getUserInfo?.() || null;
+      const userId = userInfo?.userId || userInfo?.id;
+
       console.log(`🔍 매장 ${storeId} API 호출 중...`);
-      const store = await this.fetchStoreData(storeId);
+      const store = await storeLifecycleService.fetchStoreData(storeId, userId);
 
       if (!store || !store.id) {
         throw new Error('매장 데이터를 찾을 수 없습니다');
       }
 
-      // 전역 stores 객체에 저장
-     
-      console.log(`✅ 전역 stores 객체 업데이트 완료: store ${storeId}`)
-
-      // View를 통한 UI 렌더링
+      // View 렌더링
       storeView.renderStoreHTML(store);
 
-      // 매장 추가 정보 로드 (동기적으로 처리)
-      await this.loadStoreAdditionalInfo(store);
+      // 초기화 데이터 병렬 로드
+      const { additionalInfo, notices } = await storeLifecycleService.initializeStoreData(store);
 
-      // 공지사항 로드 (동기적으로 처리)
-      await this.loadStoreNotices(store);
+      // UI 업데이트
+      const additionalInfoContainer = document.querySelector('.store-additional-info-section');
+      if (additionalInfoContainer) {
+        additionalInfoContainer.innerHTML = storeAdditionalInfoHTML.render(additionalInfo);
+      }
 
-      // 홈 탭 초기 렌더링 (storeTabController 사용)
-      const { storeTabController } = await import('./storeTabController.js');
+      const noticeContainer = document.getElementById('storeNoticeContainer');
+      if (noticeContainer) {
+        noticeContainer.innerHTML = storeNoticeHTML.render(notices);
+      }
+
+      // 홈 탭 렌더링
       const storeContent = document.getElementById('storeContent');
       const homeTabBtn = document.querySelector('[data-tab="home"]');
       if (storeContent && storeTabController) {
         await storeTabController.renderHomeTab(store, storeContent);
-        homeTabBtn.classList.add('active');
+        homeTabBtn?.classList.add('active');
       }
 
-      // 상태 저장 및 이벤트 리스너 설정
+      // 상태 저장 및 이벤트 설정
       this.state.currentStore = store;
       this.setupEventListeners(store);
 
@@ -88,53 +96,35 @@ export const storeController = {
 
     } catch (error) {
       console.error('❌ 매장 렌더링 실패:', error);
-
-      // storeView가 없는 경우 직접 에러 표시
-      if (storeView && typeof storeView.showError === 'function') {
-        storeView.showError(error.message);
-      } else {
-        const main = document.getElementById('main');
-        if (main) {
-          main.innerHTML = `
-            <div style="padding: 20px; text-align: center; color: #666;">
-              <h2>🚫 매장을 불러올 수 없습니다</h2>
-              <p style="color: #999; margin: 10px 0;">${error.message}</p>
-              <button data-action="back-to-map" style="
-                padding: 10px 20px;
-                background: #297efc;
-                color: white;
-                border: none;
-                border-radius: 8px;
-                cursor: pointer;
-                font-size: 16px;
-              ">지도로 돌아가기</button>
-            </div>
-          `;
-        }
-      }
+      this.showError(error.message);
     }
   },
 
   /**
-   * 매장 데이터 조회 (Service Layer 사용)
+   * 에러 표시 (View Layer)
    */
-  async fetchStoreData(storeId) {
-    console.log(`🔍 매장 ${storeId} 데이터 요청 시작`);
-
-    try {
-      // 사용자 정보 가져오기
-      const userInfo = window.AuthManager?.getUserInfo?.() || null;
-      const userId = userInfo?.userId || userInfo?.id;
-
-      // Service를 통해 데이터 조회 및 표준화
-      const storeData = await storeService.fetchStoreData(storeId, userId);
-
-      console.log(`✅ 매장 ${storeId} 데이터 로드 완료`);
-      return storeData;
-
-    } catch (error) {
-      console.error(`❌ 매장 ${storeId} 데이터 조회 실패:`, error);
-      throw error;
+  showError(message) {
+    if (storeView && typeof storeView.showError === 'function') {
+      storeView.showError(message);
+    } else {
+      const main = document.getElementById('main');
+      if (main) {
+        main.innerHTML = `
+          <div style="padding: 20px; text-align: center; color: #666;">
+            <h2>🚫 매장을 불러올 수 없습니다</h2>
+            <p style="color: #999; margin: 10px 0;">${message}</p>
+            <button data-action="back-to-map" style="
+              padding: 10px 20px;
+              background: #297efc;
+              color: white;
+              border: none;
+              border-radius: 8px;
+              cursor: pointer;
+              font-size: 16px;
+            ">지도로 돌아가기</button>
+          </div>
+        `;
+      }
     }
   },
 
@@ -523,16 +513,13 @@ export const storeController = {
 
   /**
    * 테이블 정보 로드 (이벤트 전용 - 수동 새로고침 버튼에서만 사용)
-   * @param {Object} store - 매장 객체
-   * @param {boolean} forceRefresh - 강제 새로고침 여부
    */
   async loadTableInfo(store, forceRefresh = false) {
     try {
-      // Service Layer를 통한 데이터 로딩 및 계산
-      const tableService = await import('../services/tableService.js').then(m => m.tableService);
-      const tableStatusView = await import('../views/tableStatusView.js').then(m => m.tableStatusView);
+      const { storeLifecycleService } = await import('../services/storeLifecycleService.js');
+      const { tableStatusView } = await import('../views/tableStatusView.js');
 
-      const tableInfo = await tableService.loadTableInfo(store, forceRefresh);
+      const tableInfo = await storeLifecycleService.loadTableInfo(store, forceRefresh);
       tableStatusView.updateTableInfoUI(tableInfo);
     } catch (error) {
       console.error('❌ 테이블 정보 로드 실패:', error);
@@ -552,45 +539,6 @@ export const storeController = {
     this.state.activeTab = 'home';
   },
 
-  /**
-   * 매장 추가 정보 로드
-   */
-  async loadStoreAdditionalInfo(store) {
-    try {
-      const { storeInfoService } = await import('../services/storeInfoService.js');
-      const { storeAdditionalInfoHTML } = await import('../views/modules/storeAdditionalInfoHTML.js');
-
-      const additionalInfo = await storeInfoService.getStoreAdditionalInfo(store);
-
-      const container = document.querySelector('.store-additional-info-section');
-      if (container) {
-        container.innerHTML = storeAdditionalInfoHTML.render(additionalInfo);
-        console.log('✅ 매장 추가 정보 렌더링 완료');
-      }
-    } catch (error) {
-      console.error('❌ 매장 추가 정보 로드 실패:', error);
-    }
-  },
-
-  /**
-   * 공지사항 로드
-   */
-  async loadStoreNotices(store) {
-    try {
-      const { storeInfoService } = await import('../services/storeInfoService.js');
-      const { storeNoticeHTML } = await import('../views/modules/storeNoticeHTML.js');
-
-      const notices = await storeInfoService.getStoreNotices(store);
-
-      const container = document.getElementById('storeNoticeContainer');
-      if (container) {
-        container.innerHTML = storeNoticeHTML.render(notices);
-        console.log('✅ 공지사항 렌더링 완료');
-      }
-    } catch (error) {
-      console.error('❌ 공지사항 로드 실패:', error);
-    }
-  },
 };
 
 // 전역 등록
