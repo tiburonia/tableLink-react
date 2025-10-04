@@ -1,3 +1,228 @@
+/* 마이페이지 스타일 - 네이티브 앱 디자인 */
+
+/* 전체 레이아웃 */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #fafafa;
+  overflow-x: hidden;
+}
+
+#main {
+  padding-bottom: 80px;
+  background-color: #fafafa;
+}
+
+/* 상단 헤더 */
+.mypage-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.login-link {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  cursor: pointer;
+}
+
+.settings-btn-icon {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0;
+  color: #666;
+}
+
+/* 예약/이용예정 카드 */
+.mypage-reserve-card {
+  background-color: #fff;
+  border-radius: 12px;
+  margin: 16px 16px 8px 16px;
+  padding: 32px 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.reserve-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+
+.reserve-text {
+  font-size: 15px;
+  color: #666;
+  margin: 0 0 20px 0;
+  font-weight: 500;
+}
+
+.reserve-action-btn {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.reserve-action-btn:hover {
+  background-color: #e9ecef;
+}
+
+.reserve-action-btn:active {
+  transform: scale(0.98);
+}
+
+/* 정보 섹션 */
+.mypage-info-section {
+  background-color: #fff;
+  margin-top: 8px;
+  padding: 20px 0;
+  border-top: 8px solid #f5f5f5;
+}
+
+.section-title-simple {
+  font-size: 13px;
+  color: #999;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  padding: 0 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 간단 메뉴 리스트 */
+.simple-menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.simple-menu-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.simple-menu-list li:last-child {
+  border-bottom: none;
+}
+
+.simple-menu-list li:active {
+  background-color: #f8f9fa;
+}
+
+.simple-menu-list li span:first-child {
+  font-size: 15px;
+  color: #333;
+  font-weight: 500;
+}
+
+.arrow-icon {
+  font-size: 20px;
+  color: #ccc;
+  font-weight: 300;
+}
+
+/* 바텀 네비게이션 */
+.bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  background-color: #fff;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 0 12px 0;
+  border-top: 1px solid #eee;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  z-index: 1000;
+}
+
+.nav-item {
+  background: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 6px 12px;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.nav-icon {
+  font-size: 22px;
+  transition: transform 0.2s ease;
+}
+
+.nav-label {
+  font-size: 11px;
+  color: #999;
+  font-weight: 500;
+}
+
+.nav-item.active .nav-label {
+  color: #007aff;
+  font-weight: 600;
+}
+
+.nav-item.active .nav-icon {
+  transform: scale(1.1);
+}
+
+.nav-item:active {
+  transform: scale(0.95);
+}
+
+/* 반응형 */
+@media (max-width: 380px) {
+  .mypage-reserve-card {
+    margin: 12px;
+    padding: 24px 16px;
+  }
+
+  .nav-label {
+    font-size: 10px;
+  }
+
+  .nav-icon {
+    font-size: 20px;
+  }
+}
+
+/* 스크롤바 스타일링 */
+::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+/* 안전 영역 (노치 대응) */
+@supports (padding: max(0px)) {
+  .bottom-nav-bar {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
 
 /* 마이페이지 스타일 */
 
@@ -712,11 +937,11 @@
   .profile-card {
     padding: 20px;
   }
-  
+
   .quick-actions {
     gap: 8px;
   }
-  
+
   .quick-action-item {
     padding: 16px 8px;
   }
