@@ -70,7 +70,7 @@ export const tllController = {
   async loadTLLScript(store) {
     return new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = '/TLG/utils/TLL.js';
+      script.src = '/TLG/pages/pay/TLL.js';
 
       script.onload = async () => {
         setTimeout(async () => {
