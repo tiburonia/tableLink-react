@@ -17,7 +17,9 @@ export const tableService = {
       // 매장이 운영중지 상태면 기본 데이터 반환
       if (store.isOpen === false) {
         console.log(`🔴 매장 ${store.name}이 운영중지 상태입니다.`);
-        return this.getClosedStoreData();
+        const closedData = this.getClosedStoreData();
+        store.tableInfo = closedData; // store 객체에 정규화
+        return closedData;
       }
 
       let tables;
@@ -34,15 +36,25 @@ export const tableService = {
 
       if (tables.length === 0) {
         console.warn(`⚠️ 매장 ${store.name}에 테이블 데이터가 없습니다`);
-        return this.getEmptyTableData();
+        const emptyData = this.getEmptyTableData();
+        store.tableInfo = emptyData; // store 객체에 정규화
+        return emptyData;
       }
 
       // 통계 계산
-      return this.calculateTableStats(tables, store.name);
+      const stats = this.calculateTableStats(tables, store.name);
+      
+      // store 객체에 tableInfo로 정규화하여 저장
+      store.tableInfo = stats;
+      console.log(`✅ store.tableInfo에 통계 저장 완료`);
+      
+      return stats;
 
     } catch (error) {
       console.error('❌ 테이블 정보 로딩 실패:', error);
-      return this.getErrorData();
+      const errorData = this.getErrorData();
+      store.tableInfo = errorData; // 에러 상태도 정규화
+      return errorData;
     }
   },
 
