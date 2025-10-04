@@ -8,11 +8,11 @@ export const tableStatusHTML = {
 
         <div class="tlr-header-new">
           <div class="status-indicator-wrapper">
-            <div class="status-pulse ${store.isOpen ? 'active' : 'inactive'}"></div>
+            <div class="status-pulse ${store.is_Open ? 'active' : 'inactive'}"></div>
             <div class="tlr-title-section">
               <h3 class="tlr-main-title">테이블 현황</h3>
-              <div class="tlr-status-badge ${store.isOpen ? 'open' : 'closed'}" id="tableStatusBadge">
-                ${store.isOpen ? '실시간 업데이트 중' : '운영중지'}
+              <div class="tlr-status-badge ${store.is_Open ? 'open' : 'closed'}" id="tableStatusBadge">
+                ${store.is_Open ? '실시간 업데이트 중' : '운영중지'}
               </div>
             </div>
           </div>

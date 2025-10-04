@@ -514,7 +514,15 @@ export const storeController = {
       const { storeLifecycleService } = await import('../services/storeLifecycleService.js');
       const { tableStatusView } = await import('../views/tableStatusView.js');
 
-      const tableInfo = await storeLifecycleService.loadTableInfo(store, forceRefresh);
+      // 테이블 정보 존재하지 않을시 API호출
+      if (!store.tables) {
+        const tableInfo = await storeLifecycleService.loadTableInfo(store, forceRefresh);
+        tableStatusView.updateTableInfoUI(tableInfo)
+      }
+      // 테이블 정보 존재시 API호출 생략 후 tableInfo 생성
+    
+        
+      
       tableStatusView.updateTableInfoUI(tableInfo);
     } catch (error) {
       console.error('❌ 테이블 정보 로드 실패:', error);

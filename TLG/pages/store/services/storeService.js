@@ -13,6 +13,8 @@ export const storeService = {
   /**
    * storeData 표준화 및 검증
    */
+
+  //사용하지 않음
   async normalizeStoreData(rawStoreData) {
     console.log('🔧 매장 데이터 표준화 시작:', rawStoreData);
 
@@ -157,10 +159,11 @@ export const storeService = {
       const rawStoreData = await storeRepository.fetchStoreById(storeId, userId);
 
       // 비즈니스 로직: 데이터 표준화
-      const normalizedStore = await this.normalizeStoreData(rawStoreData);
-
+      
+      //const normalizedStore = await this.normalizeStoreData(rawStoreData);
+      //사용하지 않고 원시데이터 그대로 사용
       console.log(`✅ 매장 ${storeId} 데이터 표준화 완료`);
-      return normalizedStore;
+      return rawStoreData;
     } catch (error) {
       console.error(`❌ 매장 ${storeId} 데이터 조회 실패:`, error);
       throw error;
