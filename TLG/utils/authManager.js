@@ -278,10 +278,10 @@ window.addEventListener('message', function(event) {
 
 // 전역 객체로 노출
 window.AuthManager = {
-  setUserInfo,
   getUserInfo: getUserInfoSafely, // getUserInfoSafely를 getUserInfo라는 이름으로 노출 (하위 호환성)
+  setUserInfo,
   clearUserInfo,
-  logout: logOutF // logOutF를 logout이라는 이름으로 노출 (하위 호환성)
+  logOutF // logOutF를 logout이라는 이름으로 노출 (하위 호환성)
 };
 
 // getUserInfoSafely도 export (하위 호환성)

@@ -1,4 +1,3 @@
-
 /**
  * 매장 탭 컨트롤러 - 사용자 인터랙션 처리
  */
@@ -103,7 +102,7 @@ export const storeTabController = {
       const tableStatusContainer = document.getElementById('home-table-status');
       if (tableStatusContainer) {
         tableStatusContainer.innerHTML = tableStatusHTML.renderTableStatusHTML(store);
-        
+
         // 테이블 상태 업데이트
         if (window.storeController && typeof window.storeController.loadTableInfo === 'function') {
           await window.storeController.loadTableInfo(store);
@@ -136,11 +135,11 @@ export const storeTabController = {
     try {
       const { reviewPreviewHTML } = await import('../views/modules/reviewPreviewHTML.js');
       const { reviewPreviewController } = await import('./reviewPreviewController.js');
-      
+
       const reviewContainer = document.getElementById('home-review-preview');
       if (reviewContainer) {
         reviewContainer.innerHTML = reviewPreviewHTML.renderReviewPreviewHTML();
-        
+
         // 리뷰 데이터 로드
         if (reviewPreviewController && typeof reviewPreviewController.renderTopReviews === 'function') {
           await reviewPreviewController.renderTopReviews(store);
@@ -157,11 +156,19 @@ export const storeTabController = {
    * 리뷰 탭 렌더링
    */
   async renderReviewTab(store, container) {
-    console.log('📖 리뷰 탭 렌더링 시작');
+    console.log('💬 리뷰 탭 렌더링 시작');
 
     try {
-      // 1. 서비스를 통해 리뷰 데이터 가져오기
-      const reviewData = await storeTabService.getReviewData(store.id);
+      // 캐시된 탭 데이터가 있으면 사용, 없으면 개별 요청
+      let reviewData;
+
+      if (window.storeController?.state?.tabData?.review) {
+        console.log('✅ 캐시된 리뷰 데이터 사용');
+        reviewData = window.storeController.state.tabData.review.items;
+      } else {
+        // 1. 서비스를 통해 리뷰 데이터 가져오기
+        reviewData = await storeTabService.getReviewData(store.id);
+      }
 
       // 2. 뷰 렌더링
       const reviewHTML = reviewTabView.render(store, reviewData);
@@ -192,13 +199,13 @@ export const storeTabController = {
     try {
       // 서비스를 통해 메뉴 데이터 가져오기
       const menuData = await storeTabService.getMenuData(store.id);
-      
+
       // 메뉴 데이터를 store 객체에 추가
       const storeWithMenu = { ...store, menu: menuData };
 
       // menuTabView 모듈 동적 로드
       const { menuTabView } = await import('../views/tabs/menuTabView.js');
-      
+
       // 메뉴 탭 HTML 렌더링
       const menuHTML = menuTabView.render(storeWithMenu);
       container.innerHTML = menuHTML;
@@ -223,7 +230,7 @@ export const storeTabController = {
     try {
       // storeInfoTabView 모듈 동적 로드
       const { storeInfoTabView } = await import('../views/tabs/storeInfoTabView.js');
-      
+
       // 매장 추가 정보 가져오기
       const { storeInfoService } = await import('../services/storeInfoService.js');
       const additionalInfo = await storeInfoService.getStoreAdditionalInfo(store);
@@ -252,7 +259,7 @@ export const storeTabController = {
     try {
       // regularTabView 모듈 동적 로드
       const { regularTabView } = await import('../views/tabs/regularTabView.js');
-      
+
       // 프로모션 데이터 가져오기
       const promotions = await storeTabService.getPromotions(store.id);
 
@@ -265,7 +272,7 @@ export const storeTabController = {
       const promotionSection = document.getElementById('promotionSection');
       if (promotionSection) {
         promotionSection.innerHTML = promotionCardHTML.renderPromotionCardHTML(store);
-        
+
         // 프로모션 데이터 업데이트
         if (window.storeView && typeof window.storeView.updatePromotionUI === 'function') {
           window.storeView.updatePromotionUI(promotions);
@@ -282,7 +289,7 @@ export const storeTabController = {
       `;
     }
   }
-  
+
 };
 
 // 전역 등록 (하위 호환성)
