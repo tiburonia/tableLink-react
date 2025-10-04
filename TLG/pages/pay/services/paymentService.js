@@ -4,7 +4,9 @@
  */
 
 import { paymentRepository } from '../repositories/paymentRepository.js';
-import { getUserInfoSafely } from '../../../utils/authManager.js';
+
+// getUserInfoSafely는 전역 함수로 사용 (authManager.js에서 window에 등록됨)
+const getUserInfoSafely = () => window.getUserInfoSafely?.() || window.AuthManager?.getUserInfo?.();
 
 export const paymentService = {
   /**

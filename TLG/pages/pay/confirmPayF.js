@@ -5,7 +5,9 @@
 
 import { tossPaymentService } from './services/tossPaymentService.js';
 import { paymentService } from './services/paymentService.js';
-import { getUserInfoSafely } from '../../utils/authManager.js';
+
+// getUserInfoSafely는 전역 함수로 사용 (authManager.js에서 window에 등록됨)
+const getUserInfoSafely = () => window.getUserInfoSafely?.() || window.AuthManager?.getUserInfo?.();
 
 /**
  * 사용자 정보 가져오기 (레거시 호환)
@@ -15,7 +17,7 @@ function getUserInfo() {
   if (userInfo && userInfo.id) {
     return userInfo;
   }
-  
+
   // 추가 레거시 방식 시도
   try {
     const cookies = document.cookie.split(';').map(cookie => cookie.trim());
