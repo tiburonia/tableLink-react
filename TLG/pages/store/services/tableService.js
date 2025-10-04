@@ -139,5 +139,17 @@ export const tableService = {
       statusClass: 'error',
       rawData: { totalTables: 0, availableTables: 0, totalSeats: 0, availableSeats: 0, occupiedTables: 0 }
     };
+  },
+
+  /**
+   * 테이블 배치도 정보 조회
+   */
+  async getTableLayout(storeId) {
+    try {
+      return await tableRepository.fetchTableLayout(storeId);
+    } catch (error) {
+      console.error('❌ 테이블 배치도 조회 실패:', error);
+      throw error;
+    }
   }
 };
