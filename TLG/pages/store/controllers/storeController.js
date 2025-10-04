@@ -56,7 +56,7 @@ export const storeController = {
       const userInfo = window.AuthManager?.getUserInfo?.() || null;
       const userId = userInfo?.userId || userInfo?.id;
 
-      console.log(`🔍 매장 ${storeId} API 호출 중...`);
+      console.log(`🔍 매장 ${storeId} 통합 API 호출 중...`);
       const store = await storeLifecycleService.fetchStoreData(storeId, userId);
 
       if (!store || !store.id) {
@@ -69,7 +69,7 @@ export const storeController = {
       // 초기화 데이터 병렬 로드
       const { additionalInfo, notices } = await storeLifecycleService.initializeStoreData(store);
 
-      // UI 업데이트
+      //store additional info section UI 업데이트
       const additionalInfoContainer = document.querySelector('.store-additional-info-section');
       if (additionalInfoContainer) {
         additionalInfoContainer.innerHTML = storeAdditionalInfoHTML.render(additionalInfo);

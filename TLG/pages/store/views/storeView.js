@@ -125,19 +125,7 @@ export const storeView = {
     `;
   },
 
-  /**
-   * 모듈식 컴포넌트들 렌더링
-   */
-  renderModularComponents(store) {
-    let components = "";
-
-    // 직접 import한 모듈들 사용
-    components += topUsersHTML.renderTopUsersHTML(store);
-    components += promotionCardHTML.renderPromotionCardHTML(store);
-    components += tableStatusHTML.renderTableStatusHTML(store);
-
-    return components;
-  },
+  
 
   
 
@@ -165,85 +153,7 @@ export const storeView = {
     }
   },
 
-  // 유틸리티 함수들
-  getBenefitIcon(type) {
-    const iconMap = {
-      discount: "🏷️",
-      point: "⭐",
-      free_delivery: "🚚",
-      new_customer: "🎁",
-      loyalty: "👑",
-    };
-    return iconMap[type] || "🎉";
-  },
-
-  formatDiscountValue(promotion) {
-    if (promotion.discount_percent) {
-      return `${promotion.discount_percent}%`;
-    } else if (promotion.discount_amount) {
-      return `${promotion.discount_amount.toLocaleString()}원`;
-    } else if (promotion.type === "point") {
-      return `${promotion.point_rate}% 적립`;
-    }
-    return "혜택";
-  },
-
-  getAvatarColor(name) {
-    const colors = [
-      "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-      "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-      "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-      "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-      "linear-gradient(135deg, #fa709a 0%, #fee140 100%)",
-    ];
-
-    const hash = name.split("").reduce((a, b) => {
-      a = (a << 5) - a + b.charCodeAt(0);
-      return a & a;
-    }, 0);
-
-    return colors[Math.abs(hash) % colors.length];
-  },
-
-  formatCurrency(amount) {
-    const num = parseFloat(amount) || 0;
-    if (num >= 1000000) {
-      return `${Math.floor(num / 1000000)}M원`;
-    } else if (num >= 1000) {
-      return `${Math.floor(num / 1000)}K원`;
-    } else {
-      return `${num.toLocaleString()}원`;
-    }
-  },
-
-  createDefaultLoyaltyHTML(store) {
-    return `
-      <div class="loyalty-card default">
-        <div class="loyalty-header">
-          <span class="loyalty-icon">🆕</span>
-          <span class="loyalty-title">신규 고객</span>
-        </div>
-        <div class="loyalty-message">
-          ${store.name}에 처음 방문하신 것을 환영합니다!
-        </div>
-      </div>
-    `;
-  },
-
-  createLoyaltyCardHTML(levelData, store) {
-    return `
-      <div class="loyalty-card premium">
-        <div class="loyalty-header">
-          <span class="loyalty-icon">${levelData.level?.icon || "👑"}</span>
-          <span class="loyalty-title">${levelData.level?.name || "단골 고객"}</span>
-        </div>
-        <div class="loyalty-stats">
-          <div class="stat">방문: ${levelData.stats?.visitCount || 0}회</div>
-          <div class="stat">포인트: ${levelData.stats?.points || 0}P</div>
-        </div>
-      </div>
-    `;
-  },
+  
 };
 
 // 전역 등록
