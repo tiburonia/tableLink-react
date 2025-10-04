@@ -145,13 +145,13 @@ export const storeController = {
     try {
       console.log('🔧 이벤트 리스너 설정 시작...');
 
-      // 즐겨찾기 버튼
+      // 즐겨찾기 버튼 (favoriteController로 위임)
       this.setupFavoriteButton(store);
 
       // 리뷰 링크
       this.setupReviewEvents(store);
 
-      // TLL 버튼 (QR 주문)
+      // TLL 버튼 (tllController로 위임)
       this.setupTLLButton(store);
 
       // 탭 네비게이션
@@ -170,29 +170,21 @@ export const storeController = {
   },
 
   /**
-   * 즐겨찾기 버튼 이벤트
+   * 즐겨찾기 버튼 이벤트 (favoriteController로 위임)
    */
-  setupFavoriteButton(store) {
-    const favoriteBtn = document.getElementById('favoriteBtn');
-    if (favoriteBtn) {
-      favoriteBtn.addEventListener('click', () => {
-        if (typeof toggleFavorite === 'function') {
-          toggleFavorite(store);
-        }
-      });
-
-      // 즐겨찾기 버튼 초기화
-      this.initializeFavoriteButton(store);
-    }
-  },
-
-  /**
-   * 즐겨찾기 버튼 초기화
-   */
-  async initializeFavoriteButton(store) {
+  async setupFavoriteButton(store) {
     try {
       const { favoriteController } = await import('./favoriteController.js');
-      await favoriteController.initializeFavoriteButton(store);
+      const favoriteBtn = document.getElementById('favoriteBtn');
+      
+      if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', () => {
+          favoriteController.toggleFavorite(store);
+        });
+
+        // 즐겨찾기 버튼 초기화
+        await favoriteController.initializeFavoriteButton(store);
+      }
     } catch (error) {
       console.warn('⚠️ 즐겨찾기 컨트롤러 로드 실패:', error);
     }
@@ -222,72 +214,22 @@ export const storeController = {
   },
 
   /**
-   * TLL 버튼 이벤트 (QR 주문)
+   * TLL 버튼 이벤트 (tllController로 위임)
    */
-  setupTLLButton(store) {
-    const tllButton = document.getElementById('TLL');
-    if (tllButton) {
-      tllButton.removeAttribute('onclick');
-      tllButton.addEventListener('click', async () => {
-        try {
-          console.log(`🎯 TLL 버튼 클릭 - 매장 ${store.name} 선택`);
-
-          const normalizedStore = {
-            id: store.id,
-            store_id: store.id,
-            name: store.name,
-            category: store.category || '기타',
-            address: store.address || '주소 정보 없음',
-            isOpen: store.isOpen !== false,
-            menu: Array.isArray(store.menu) ? store.menu : []
-          };
-
-          // 전역 저장
-          window.preselectedStoreForTLL = normalizedStore;
-          window.selectedStore = normalizedStore;
-          window.currentStoreForTLL = normalizedStore;
-
-          if (typeof window.TLL === 'function') {
-            await window.TLL(normalizedStore);
-          } else if (typeof TLL === 'function') {
-            await TLL(normalizedStore);
-          } else {
-            await this.loadTLLScript(normalizedStore);
-          }
-        } catch (error) {
-          console.error('❌ TLL 실행 실패:', error);
-          alert('QR 주문 시스템 실행 중 오류가 발생했습니다.');
-        }
-      });
+  async setupTLLButton(store) {
+    try {
+      const { tllController } = await import('./tllController.js');
+      const tllButton = document.getElementById('TLL');
+      
+      if (tllButton) {
+        tllButton.removeAttribute('onclick');
+        tllButton.addEventListener('click', async () => {
+          await tllController.startTLLOrder(store);
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ TLL 컨트롤러 로드 실패:', error);
     }
-  },
-
-  /**
-   * TLL 스크립트 동적 로드
-   */
-  async loadTLLScript(store) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = '/TLG/utils/TLL.js';
-
-      script.onload = async () => {
-        setTimeout(async () => {
-          try {
-            if (typeof window.TLL === 'function') {
-              await window.TLL(store);
-              resolve();
-            } else {
-              reject(new Error('TLL 함수를 찾을 수 없습니다'));
-            }
-          } catch (error) {
-            reject(error);
-          }
-        }, 100);
-      };
-
-      script.onerror = () => reject(new Error('TLL.js 스크립트 로드 실패'));
-      document.head.appendChild(script);
-    });
   },
 
   /**
