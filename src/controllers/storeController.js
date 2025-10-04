@@ -28,23 +28,6 @@ class StoreController {
   }
 
   /**
-   * 매장 탭 정보 조회
-   */
-  async getStoreTabData(req, res, next) {
-    try {
-      const { storeId } = req.params;
-
-      const tabData = await storeService.getStoreTabData(storeId);
-
-      res.json({
-        success: true,
-        tabData: tabData,
-      });
-    } catch (error) {
-      next(error);
-    }
-  }
-  /**
    * 매장 검색
    */
   async searchStores(req, res, next) {

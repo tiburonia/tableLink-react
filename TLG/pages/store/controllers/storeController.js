@@ -53,15 +53,6 @@ export const storeController = {
         throw new Error('매장 ID 또는 매장 데이터가 필요합니다');
       }
 
-      // 통합 탭 데이터 호출 API (백그라운드에서 미리 로드)
-      this.fetchStoreTabData(store.id)
-        .then(() => {
-          console.log('✅ 탭 데이터 백그라운드 로드 완료');
-        })
-        .catch(error => {
-          console.warn('⚠️ 탭 데이터 백그라운드 로드 실패:', error);
-        });
-
       // View를 통한 UI 렌더링
       storeView.renderStoreHTML(store);
 
@@ -137,28 +128,6 @@ export const storeController = {
     }
   },
 
-
-  /**
-   * 스토어 탭 데이터 API 호출 (통합)
-   */
-  async fetchStoreTabData(storeId) {
-    console.log(`🔍 매장 ${storeId} 탭 데이터 요청 시작`);
-
-    try {
-      // Service Layer를 통한 통합 API 호출
-      const storeTabData = await storeTabService.fetchStoreTabData(storeId);
-
-      // 상태 저장 (필요시 사용)
-      this.state.tabData = storeTabData;
-
-      console.log(`✅ 매장 ${storeId} 탭 데이터 로드 완료`);
-      return storeTabData;
-
-    } catch (error) {
-      console.error(`❌ 매장 ${storeId} 탭 데이터 요청 실패:`, error);
-      throw error;
-    }          
-  },
 
   /**
    * 이벤트 리스너 설정

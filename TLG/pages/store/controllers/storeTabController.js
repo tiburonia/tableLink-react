@@ -92,23 +92,7 @@ export const storeTabController = {
   async renderHomeTab(store, container) {
     console.log('🍽️ 홈 탭 렌더링 시작');
 
-    // 1. 스켈레톤 먼저 표시
-    const { homeTabSkeleton } = await import('../views/tabs/homeTabSkeleton.js');
-    container.innerHTML = homeTabSkeleton.render();
-
-    // 2. 백그라운드 탭 데이터 로드 대기
-    if (window.storeController?.state?.tabData) {
-      console.log('✅ 캐시된 탭 데이터 사용');
-    } else {
-      console.log('⏳ 탭 데이터 로딩 대기 중...');
-      // 최대 3초 대기
-      const startTime = Date.now();
-      while (!window.storeController?.state?.tabData && (Date.now() - startTime) < 3000) {
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    // 3. 기본 뷰 렌더링
+    // 1. 기본 뷰 렌더링
     const homeHTML = homeTabView.render(store);
     container.innerHTML = homeHTML;
 
@@ -175,16 +159,8 @@ export const storeTabController = {
     console.log('💬 리뷰 탭 렌더링 시작');
 
     try {
-      // 캐시된 탭 데이터가 있으면 사용, 없으면 개별 요청
-      let reviewData;
-
-      if (window.storeController?.state?.tabData?.review) {
-        console.log('✅ 캐시된 리뷰 데이터 사용');
-        reviewData = window.storeController.state.tabData.review.items;
-      } else {
-        // 1. 서비스를 통해 리뷰 데이터 가져오기
-        reviewData = await storeTabService.getReviewData(store.id);
-      }
+      // 1. 서비스를 통해 리뷰 데이터 가져오기
+      const reviewData = await storeTabService.getReviewData(store.id);
 
       // 2. 뷰 렌더링
       const reviewHTML = reviewTabView.render(store, reviewData);

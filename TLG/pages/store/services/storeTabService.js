@@ -8,24 +8,6 @@
 import { storeRepository } from '../repositories/storeRepository.js';
 
 export const storeTabService = {
-
-  /**
-   * 스토어 탭 통합 API 호출 - 모든 탭 데이터를 한번에 가져오기
-   * @param {number} storeId - 매장 ID
-   * @returns {Object} 탭별 데이터 객체
-   */
-  async fetchStoreTabData(storeId) {
-    if (!storeId) {
-      throw new Error('매장 ID가 필요합니다');
-    }
-      // Repository에서 통합 데이터 가져오기
-      const tabData = await storeRepository.fetchStoreTabData(storeId);
-      return tabData;
-  },
-
-
-
-  
   /**
    * 메뉴 데이터 가져오기 및 검증
    */
