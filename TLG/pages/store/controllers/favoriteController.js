@@ -44,7 +44,7 @@ export const favoriteController = {
   },
 
   /**
-   * 즐겨찾기 버튼 초기화
+   * 즐겨찾기 버튼 초기화 (stores 객체 사용 - API 호출 없음)
    */
   async initializeFavoriteButton(store) {
     try {
@@ -59,10 +59,13 @@ export const favoriteController = {
         return;
       }
 
-      const isFavorited = await favoriteService.getFavoriteStatus(window.userInfo.id, storeId);
+      // stores 객체에서 즐겨찾기 상태 가져오기 (API 호출 없음)
+      const storeData = window.stores?.[storeId] || store;
+      const isFavorited = storeData.isFavorited || false;
+      
       favoriteButtonView.updateFavoriteButton(storeId, isFavorited);
       
-      console.log(`✅ 즐겨찾기 버튼 초기화 완료: storeId=${storeId}, favorited=${isFavorited}`);
+      console.log(`✅ 즐겨찾기 버튼 초기화 완료 (stores 객체 사용): storeId=${storeId}, favorited=${isFavorited}`);
     } catch (error) {
       console.error('❌ 즐겨찾기 버튼 초기화 실패:', error);
     }

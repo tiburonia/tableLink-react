@@ -13,11 +13,13 @@ try {
 
 export const favoriteService = {
   /**
-   * 즐겨찾기 상태 조회
+   * 즐겨찾기 상태 조회 (stores 객체 사용 - API 호출 없음)
    */
   async getFavoriteStatus(userId, storeId) {
     try {
-      return await favoriteRepository.checkFavoriteStatus(userId, storeId);
+      // stores 객체에서 즐겨찾기 상태 가져오기
+      const storeData = window.stores?.[storeId];
+      return storeData?.isFavorited || false;
     } catch (error) {
       console.error('❌ 즐겨찾기 상태 확인 중 오류:', error);
       return false;
