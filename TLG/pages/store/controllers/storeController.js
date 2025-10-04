@@ -69,15 +69,10 @@ export const storeController = {
       // 초기화 데이터 병렬 로드
       const { additionalInfo, notices } = await storeLifecycleService.initializeStoreData(store);
 
-      //store additional info section UI 업데이트
+      //store additional info section UI 업데이트 (공지사항 포함)
       const additionalInfoContainer = document.querySelector('.store-additional-info-section');
       if (additionalInfoContainer) {
-        additionalInfoContainer.innerHTML = storeAdditionalInfoHTML.render(additionalInfo);
-      }
-
-      const noticeContainer = document.getElementById('storeNoticeContainer');
-      if (noticeContainer) {
-        noticeContainer.innerHTML = storeNoticeHTML.render(notices);
+        additionalInfoContainer.innerHTML = storeAdditionalInfoHTML.render(additionalInfo, notices);
       }
 
       // 홈 탭 렌더링

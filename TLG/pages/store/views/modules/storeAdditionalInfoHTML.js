@@ -3,9 +3,9 @@
  */
 export const storeAdditionalInfoHTML = {
   /**
-   * 매장 추가 정보 섹션 렌더링
+   * 매장 추가 정보 섹션 렌더링 (공지사항 포함)
    */
-  render(additionalInfo) {
+  render(additionalInfo, notices = null) {
     if (!additionalInfo) return '';
 
     return `
@@ -18,6 +18,7 @@ export const storeAdditionalInfoHTML = {
         ${this.renderPaymentMethods(additionalInfo.payment)}
         ${this.renderInfoRow('📞', '연락처', additionalInfo.contact)}
       </div>
+      ${notices ? this.renderNotices(notices) : ''}
       ${this.getStyles()}
     `;
   },
@@ -90,6 +91,67 @@ export const storeAdditionalInfoHTML = {
   },
 
   /**
+   * 공지사항 섹션 렌더링
+   */
+  renderNotices(notices) {
+    if (!notices || notices.length === 0) {
+      return this.renderEmptyNotices();
+    }
+
+    return `
+      <div class="store-notices">
+        <div class="notices-header">
+          <h3 class="notices-title">
+            <span class="notices-icon">📢</span>
+            공지사항
+          </h3>
+        </div>
+        <div class="notices-list">
+          ${notices.map(notice => this.renderNoticeItem(notice)).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  /**
+   * 공지사항 항목 렌더링
+   */
+  renderNoticeItem(notice) {
+    const typeClass = notice.type === 'important' ? 'notice-important' : 'notice-event';
+    const newBadge = notice.isNew ? '<span class="notice-new-badge">NEW</span>' : '';
+
+    return `
+      <div class="notice-item ${typeClass}">
+        <div class="notice-icon">${notice.icon}</div>
+        <div class="notice-content">
+          <div class="notice-header">
+            <h4 class="notice-title">${notice.title}</h4>
+            ${newBadge}
+          </div>
+          <p class="notice-text">${notice.content}</p>
+          <div class="notice-meta">
+            <span class="notice-date">${notice.formattedDate}</span>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  /**
+   * 빈 공지사항 렌더링
+   */
+  renderEmptyNotices() {
+    return `
+      <div class="store-notices empty">
+        <div class="notices-empty">
+          <span class="empty-icon">📭</span>
+          <p class="empty-text">현재 공지사항이 없습니다</p>
+        </div>
+      </div>
+    `;
+  },
+
+  /**
    * 스타일
    */
   getStyles() {
@@ -148,6 +210,140 @@ export const storeAdditionalInfoHTML = {
           font-weight: 500;
         }
 
+        /* 공지사항 스타일 */
+        .store-notices {
+          margin-top: 16px;
+          padding-top: 16px;
+          border-top: 1px solid #f1f5f9;
+        }
+
+        .notices-header {
+          margin-bottom: 12px;
+        }
+
+        .notices-title {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #1f2937;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .notices-icon {
+          font-size: 18px;
+        }
+
+        .notices-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .notice-item {
+          display: flex;
+          gap: 10px;
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 8px;
+          border-left: 3px solid #e5e7eb;
+          transition: all 0.2s ease;
+        }
+
+        .notice-item:hover {
+          transform: translateX(2px);
+          background: #f3f4f6;
+        }
+
+        .notice-item.notice-important {
+          border-left-color: #ef4444;
+          background: linear-gradient(to right, #fef2f2 0%, #f9fafb 10%);
+        }
+
+        .notice-item.notice-event {
+          border-left-color: #3b82f6;
+          background: linear-gradient(to right, #eff6ff 0%, #f9fafb 10%);
+        }
+
+        .notice-icon {
+          font-size: 20px;
+          line-height: 1;
+          flex-shrink: 0;
+        }
+
+        .notice-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .notice-header {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 6px;
+        }
+
+        .notice-title {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 600;
+          color: #1f2937;
+          line-height: 1.3;
+        }
+
+        .notice-new-badge {
+          display: inline-block;
+          padding: 2px 5px;
+          background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+          color: white;
+          font-size: 9px;
+          font-weight: 700;
+          border-radius: 3px;
+          text-transform: uppercase;
+          letter-spacing: 0.3px;
+        }
+
+        .notice-text {
+          margin: 0 0 6px 0;
+          font-size: 12px;
+          color: #4b5563;
+          line-height: 1.4;
+        }
+
+        .notice-meta {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .notice-date {
+          font-size: 11px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .notices-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 24px 20px;
+          text-align: center;
+        }
+
+        .empty-icon {
+          font-size: 36px;
+          margin-bottom: 8px;
+          opacity: 0.4;
+        }
+
+        .empty-text {
+          margin: 0;
+          font-size: 12px;
+          color: #9ca3af;
+        }
+
         @media (max-width: 380px) {
           .store-additional-info-card {
             padding: 14px;
@@ -165,6 +361,28 @@ export const storeAdditionalInfoHTML = {
 
           .info-icon {
             font-size: 15px;
+          }
+
+          .store-notices {
+            margin-top: 14px;
+            padding-top: 14px;
+          }
+
+          .notices-title {
+            font-size: 15px;
+          }
+
+          .notice-item {
+            padding: 10px;
+            gap: 8px;
+          }
+
+          .notice-title {
+            font-size: 13px;
+          }
+
+          .notice-text {
+            font-size: 11px;
           }
         }
       </style>

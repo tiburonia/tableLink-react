@@ -69,13 +69,8 @@ export const storeView = {
               </div>
             </div>
             <div class="store-additional-info-section"></div>
-            
-          </div>
-        </div>
 
-        <!-- 공지사항 영역 -->
-        <div id="storeNoticeContainer">
-          <div></div>
+          </div>
         </div>
 
         <div id="storeNavBar" class="modern-nav">
@@ -121,13 +116,13 @@ export const storeView = {
       </nav>
     </footer>
 
-      
+
     `;
   },
 
-  
 
-  
+
+
 
   /**
    * 오류 메시지 표시
@@ -153,7 +148,7 @@ export const storeView = {
     }
   },
 
-  
+
 };
 
 // 전역 등록
