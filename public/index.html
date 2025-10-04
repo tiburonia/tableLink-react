@@ -116,20 +116,18 @@
   <script src="TLG/pages/main/renderSubMain.js"></script>
   <script type="module" src="TLG/pages/pay/TLL.js"></script>
 
-  <!-- 앱 초기화 스크립트를 모든 다른 스크립트보다 먼저 로드 -->
-  <script type="text/javascript" src="/TLG/utils/authManager.js"></script>
+  <!-- 앱 초기화 스크립트 (AuthManager에서 제공) -->
+  <script type="module">
+    import { initializeApp } from '/TLG/utils/authManager.js';
 
-  <script>
-    // DOM이 완전히 로드된 후 앱 초기화 (단일 이벤트 리스너)
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', function() {
       console.log('🔄 DOM 로드 완료, 앱 초기화 시작');
 
-      // authManager.js가 로드되었는지 확인
       if (typeof initializeApp === 'function') {
         console.log('✅ initializeApp 함수 발견, 실행 중...');
         initializeApp();
       } else {
-        console.error('❌ initializeApp 함수를 찾을 수 없습니다');
+        console.error('❌ initializeApp 함수를 찾을 수 없음');
         // 폴백으로 직접 로그인 화면 렌더링
         setTimeout(() => {
           if (typeof renderLogin === 'function') {
@@ -138,13 +136,15 @@
 
 
           } else {
-            console.error('❌ renderLogin 함수도 찾을 수 없습니다');
+            console.error('❌ renderLogin 함수도 찾을 수 없음');
             document.getElementById('main').innerHTML = '<div style="padding: 20px; text-align: center;">앱을 로딩하는 중...</div>';
           }
         }, 100);
       }
     });
+  </script>
 
+  <script>
     // 토스페이먼츠 팝업창으로부터 메시지 수신
     window.addEventListener('message', function(event) {
       console.log('📨 메시지 수신:', event.data);

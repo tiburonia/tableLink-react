@@ -1,9 +1,10 @@
+
 /**
- * 사용자 인증 관리 유틸리티
+ * 사용자 인증 관리 유틸리티 (ES6 모듈)
  */
 
 // 사용자 정보를 안전하게 가져오는 함수
-function getUserInfoSafely() {
+export function getUserInfoSafely() {
   try {
     // 쿠키에서 userInfo 찾기
     const cookies = document.cookie.split(';').map(cookie => cookie.trim());
@@ -56,7 +57,7 @@ function getCookieUserInfo() {
 }
 
 // 앱 초기화 함수
-function initializeApp() {
+export function initializeApp() {
   console.log('🚀 앱 초기화 시작');
 
   try {
@@ -147,7 +148,7 @@ function initializeApp() {
 }
 
 // 사용자 로그인 처리
-function setUserInfo(userInfo) {
+export function setUserInfo(userInfo) {
   console.log('👤 사용자 정보 설정:', userInfo?.name || userInfo?.id);
 
   window.userInfo = userInfo;
@@ -169,7 +170,7 @@ function setUserInfo(userInfo) {
 }
 
 // 사용자 로그아웃 처리 (내부용)
-function clearUserInfo() {
+export function clearUserInfo() {
   console.log('🪚 사용자 정보 정리');
 
   window.userInfo = null;
@@ -192,7 +193,7 @@ function clearUserInfo() {
 }
 
 // 통합 로그아웃 함수 (UI용)
-function logOutF() {
+export function logOutF() {
   console.log('🚪 사용자 로그아웃 처리 시작');
 
   // userInfo 객체가 존재하는 경우 개별 속성 초기화
@@ -237,7 +238,7 @@ function logOutF() {
 }
 
 // 로그인 상태 확인
-function isLoggedIn() {
+export function isLoggedIn() {
   return window.userInfo && window.userInfo.id;
 }
 
@@ -276,16 +277,23 @@ window.addEventListener('message', function(event) {
   }
 });
 
-// 전역 객체로 노출
-window.AuthManager = {
-  getUserInfo: getUserInfoSafely, // getUserInfoSafely를 getUserInfo라는 이름으로 노출 (하위 호환성)
+// 전역 객체로 노출 (하위 호환성)
+export const AuthManager = {
+  getUserInfo: getUserInfoSafely,
   getUserInfoSafely,
   setUserInfo,
   clearUserInfo,
-  logOutF // logOutF를 logout이라는 이름으로 노출 (하위 호환성)
+  logOutF,
+  isLoggedIn
 };
 
 // 전역 함수로도 등록 (하위 호환성)
+window.AuthManager = AuthManager;
 window.getUserInfoSafely = getUserInfoSafely;
+window.setUserInfo = setUserInfo;
+window.clearUserInfo = clearUserInfo;
+window.logOutF = logOutF;
+window.isLoggedIn = isLoggedIn;
+window.initializeApp = initializeApp;
 
-console.log('✅ AuthManager 로드 완료 - 통합 로그아웃 함수 포함');
+console.log('✅ AuthManager 로드 완료 (ES6 모듈) - 통합 로그아웃 함수 포함');
