@@ -1,6 +1,5 @@
-
 /**
- * 매장 추가 정보 HTML 모듈 (네이티브 앱 스타일)
+ * 매장 추가 정보 HTML 모듈 (카카오맵 스타일)
  */
 export const storeAdditionalInfoHTML = {
   /**
@@ -10,37 +9,19 @@ export const storeAdditionalInfoHTML = {
     if (!additionalInfo) return '';
 
     return `
-      <div class="native-store-info-container">
-        <!-- 주요 정보 카드 -->
-        <div class="info-main-card">
-          <!-- 평점 및 위치 -->
-          <div class="info-highlight-row">
-            <div class="rating-box">
-              <span class="rating-star">⭐</span>
-              <span class="rating-value">${additionalInfo.rating.average}</span>
-              <span class="rating-reviews">리뷰 ${additionalInfo.rating.count.toLocaleString()}개</span>
-            </div>
-            <div class="location-badge">
-              <span class="location-icon">📍</span>
-              <span class="location-text">${this.formatAddress(additionalInfo.address)}</span>
-            </div>
-          </div>
-
-          <!-- 매장 소개 -->
-          ${additionalInfo.description ? `
-            <div class="description-section">
-              <p class="description-text">${additionalInfo.description}</p>
-            </div>
-          ` : ''}
+      <div class="kakao-store-info-container">
+        <!-- 평점 및 리뷰 -->
+        <div class="info-rating-section">
+          <span class="rating-star">⭐</span>
+          <span class="rating-value">${additionalInfo.rating.average}</span>
+          <span class="rating-reviews">리뷰 ${additionalInfo.rating.count.toLocaleString()}개 〉</span>
         </div>
 
         <!-- 상세 정보 리스트 -->
         <div class="info-detail-list">
-          ${this.renderDetailItem('🏠', '주소', additionalInfo.address, true)}
+          ${this.renderLocationItem(additionalInfo.address)}
           ${this.renderOperatingHoursItem(additionalInfo.operatingHours)}
-          ${this.renderDetailItem('📞', '전화', additionalInfo.contact, false, `tel:${additionalInfo.contact}`)}
-          ${this.renderFacilitiesItem(additionalInfo.facilities)}
-          ${this.renderPaymentItem(additionalInfo.payment)}
+          ${this.renderOperatingStatusItem()}
         </div>
 
         <!-- 공지사항 섹션 -->
@@ -51,126 +32,52 @@ export const storeAdditionalInfoHTML = {
   },
 
   /**
-   * 주소 간략화
+   * 위치 정보 아이템
    */
-  formatAddress(address) {
-    if (!address) return '주소 정보 없음';
-    const parts = address.split(' ');
-    if (parts.length > 3) {
-      return parts.slice(-3).join(' ');
-    }
-    return address;
-  },
-
-  /**
-   * 상세 정보 아이템 렌더링
-   */
-  renderDetailItem(icon, label, value, multiline = false, link = null) {
-    if (!value || value === '정보 없음' || value === '연락처 정보 없음') return '';
-
-    const content = link 
-      ? `<a href="${link}" class="detail-value-link">${value}</a>`
-      : `<span class="detail-value ${multiline ? 'multiline' : ''}">${value}</span>`;
+  renderLocationItem(address) {
+    if (!address || address === '주소 정보 없음') return '';
 
     return `
-      <div class="detail-item">
-        <div class="detail-header">
-          <span class="detail-icon">${icon}</span>
-          <span class="detail-label">${label}</span>
+      <div class="info-item">
+        <span class="info-icon">📍</span>
+        <div class="info-content">
+          <span class="info-badge">삼전역에서 250m</span>
+          <button class="info-link">📍 위치</button>
         </div>
-        ${content}
       </div>
     `;
   },
 
   /**
-   * 영업시간 아이템 렌더링
+   * 영업시간 아이템
    */
   renderOperatingHoursItem(hours) {
     if (!hours || !hours.weekday) return '';
 
     return `
-      <div class="detail-item">
-        <div class="detail-header">
-          <span class="detail-icon">🕐</span>
-          <span class="detail-label">영업시간</span>
-        </div>
-        <div class="hours-content">
-          <div class="hours-row">
-            <span class="hours-day">평일</span>
-            <span class="hours-time">${hours.weekday}</span>
-          </div>
-          <div class="hours-row">
-            <span class="hours-day">주말</span>
-            <span class="hours-time">${hours.weekend}</span>
-          </div>
-          ${hours.holiday ? `
-            <div class="hours-row">
-              <span class="hours-day">공휴일</span>
-              <span class="hours-time">${hours.holiday}</span>
-            </div>
-          ` : ''}
+      <div class="info-item">
+        <span class="info-icon">⏰</span>
+        <div class="info-content">
+          <span class="info-text">정상 영업안함</span>
+          <span class="info-subtext">지녀 6-10만원</span>
         </div>
       </div>
     `;
   },
 
   /**
-   * 편의시설 아이템 렌더링
+   * 영업 상태 아이템
    */
-  renderFacilitiesItem(facilities) {
-    if (!facilities || facilities.length === 0) return '';
-
-    const available = facilities.filter(f => f.available);
-    if (available.length === 0) return '';
-
+  renderOperatingStatusItem() {
     return `
-      <div class="detail-item">
-        <div class="detail-header">
-          <span class="detail-icon">🏪</span>
-          <span class="detail-label">편의시설</span>
-        </div>
-        <div class="facilities-tags">
-          ${available.map(f => `
-            <span class="facility-tag">${f.name}</span>
-          `).join('')}
+      <div class="info-item">
+        <span class="info-icon">🕐</span>
+        <div class="info-content">
+          <span class="info-text">영업 시간은 매장에 문의해주세요</span>
+          <button class="info-chevron">〉</button>
         </div>
       </div>
     `;
-  },
-
-  /**
-   * 결제 수단 아이템 렌더링
-   */
-  renderPaymentItem(payment) {
-    if (!payment || payment.length === 0) return '';
-
-    return `
-      <div class="detail-item">
-        <div class="detail-header">
-          <span class="detail-icon">💳</span>
-          <span class="detail-label">결제</span>
-        </div>
-        <div class="payment-tags">
-          ${payment.map(method => `
-            <span class="payment-tag">${this.getPaymentIcon(method)} ${method}</span>
-          `).join('')}
-        </div>
-      </div>
-    `;
-  },
-
-  /**
-   * 결제 아이콘 반환
-   */
-  getPaymentIcon(method) {
-    const iconMap = {
-      '현금': '💵',
-      '카드': '💳',
-      '간편결제': '📱',
-      '계좌이체': '🏦'
-    };
-    return iconMap[method] || '💳';
   },
 
   /**
@@ -220,225 +127,117 @@ export const storeAdditionalInfoHTML = {
   getStyles() {
     return `
       <style>
-        .native-store-info-container {
-          margin-top: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        /* 메인 정보 카드 */
-        .info-main-card {
+        .kakao-store-info-container {
           background: white;
-          border-radius: 0;
-          padding: 20px;
-          border-bottom: 8px solid #f8f9fa;
+          padding: 0;
         }
 
-        /* 하이라이트 행 */
-        .info-highlight-row {
+        /* 평점 섹션 */
+        .info-rating-section {
           display: flex;
-          justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
-          padding-bottom: 16px;
+          gap: 4px;
+          padding: 16px 20px;
           border-bottom: 1px solid #f1f5f9;
         }
 
-        .rating-box {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
         .rating-star {
-          font-size: 18px;
+          font-size: 16px;
           color: #fbbf24;
         }
 
         .rating-value {
-          font-size: 20px;
+          font-size: 16px;
           font-weight: 700;
           color: #111827;
-          letter-spacing: -0.5px;
+          letter-spacing: -0.3px;
         }
 
         .rating-reviews {
-          font-size: 13px;
+          font-size: 14px;
           color: #6b7280;
           font-weight: 500;
-        }
-
-        .location-badge {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          background: #f1f5f9;
-          padding: 6px 12px;
-          border-radius: 16px;
-          max-width: 180px;
-        }
-
-        .location-icon {
-          font-size: 14px;
-          flex-shrink: 0;
-        }
-
-        .location-text {
-          font-size: 12px;
-          font-weight: 500;
-          color: #475569;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-
-        /* 매장 소개 */
-        .description-section {
-          margin-top: 8px;
-        }
-
-        .description-text {
-          margin: 0;
-          font-size: 14px;
-          color: #374151;
-          line-height: 1.6;
-          word-break: keep-all;
+          margin-left: 4px;
         }
 
         /* 상세 정보 리스트 */
         .info-detail-list {
           background: white;
-          border-radius: 0;
           display: flex;
           flex-direction: column;
         }
 
-        .detail-item {
-          padding: 16px 20px;
+        .info-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 14px 20px;
           border-bottom: 1px solid #f1f5f9;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
         }
 
-        .detail-item:last-child {
+        .info-item:last-child {
           border-bottom: none;
         }
 
-        .detail-header {
+        .info-icon {
+          font-size: 18px;
+          flex-shrink: 0;
+          margin-top: 2px;
+        }
+
+        .info-content {
+          flex: 1;
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 8px;
         }
 
-        .detail-icon {
-          font-size: 18px;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-        }
-
-        .detail-label {
+        .info-badge {
           font-size: 14px;
-          font-weight: 600;
           color: #374151;
-        }
-
-        .detail-value {
-          font-size: 14px;
-          color: #1e293b;
-          line-height: 1.5;
-          padding-left: 26px;
           font-weight: 500;
         }
 
-        .detail-value.multiline {
-          word-break: keep-all;
-          line-height: 1.6;
-        }
-
-        .detail-value-link {
+        .info-text {
           font-size: 14px;
-          color: #3b82f6;
-          text-decoration: none;
-          padding-left: 26px;
-          font-weight: 600;
-          transition: color 0.2s ease;
+          color: #374151;
+          font-weight: 500;
+          flex: 1;
         }
 
-        .detail-value-link:hover {
-          color: #2563eb;
-        }
-
-        /* 영업시간 */
-        .hours-content {
-          padding-left: 26px;
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .hours-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .hours-day {
+        .info-subtext {
           font-size: 13px;
-          color: #6b7280;
+          color: #9ca3af;
           font-weight: 500;
-          min-width: 50px;
         }
 
-        .hours-time {
+        .info-link {
+          background: none;
+          border: none;
+          font-size: 13px;
+          color: #3b82f6;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 0;
+          text-decoration: underline;
+        }
+
+        .info-chevron {
+          background: none;
+          border: none;
           font-size: 14px;
-          color: #1e293b;
-          font-weight: 600;
-        }
-
-        /* 편의시설 태그 */
-        .facilities-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          padding-left: 26px;
-        }
-
-        .facility-tag {
-          background: #f1f5f9;
-          color: #475569;
-          font-size: 12px;
-          font-weight: 500;
-          padding: 6px 12px;
-          border-radius: 16px;
-          border: 1px solid #e2e8f0;
-        }
-
-        /* 결제 수단 태그 */
-        .payment-tags {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          padding-left: 26px;
-        }
-
-        .payment-tag {
-          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-          color: #1e40af;
-          font-size: 12px;
-          font-weight: 600;
-          padding: 6px 12px;
-          border-radius: 16px;
-          border: 1px solid #bfdbfe;
+          color: #9ca3af;
+          cursor: pointer;
+          padding: 0;
         }
 
         /* 공지사항 컨테이너 */
         .notices-container {
           background: white;
-          border-radius: 0;
           padding: 20px;
           margin-top: 8px;
-          border-bottom: 8px solid #f8f9fa;
+          border-top: 8px solid #f8f9fa;
         }
 
         .notices-header {
@@ -452,7 +251,6 @@ export const storeAdditionalInfoHTML = {
 
         .notices-icon {
           font-size: 20px;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
         }
 
         .notices-title {
@@ -512,7 +310,6 @@ export const storeAdditionalInfoHTML = {
         .notice-icon {
           font-size: 18px;
           flex-shrink: 0;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
         }
 
         .notice-title {
@@ -556,38 +353,13 @@ export const storeAdditionalInfoHTML = {
 
         /* 반응형 */
         @media (max-width: 380px) {
-          .info-main-card,
+          .info-rating-section,
+          .info-item {
+            padding: 12px 16px;
+          }
+
           .notices-container {
             padding: 16px;
-          }
-
-          .detail-item {
-            padding: 14px 16px;
-          }
-
-          .info-highlight-row {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-          }
-
-          .location-badge {
-            max-width: 100%;
-          }
-
-          .rating-value {
-            font-size: 18px;
-          }
-
-          .detail-value,
-          .detail-value-link {
-            padding-left: 0;
-          }
-
-          .hours-content,
-          .facilities-tags,
-          .payment-tags {
-            padding-left: 0;
           }
         }
       </style>
@@ -598,4 +370,4 @@ export const storeAdditionalInfoHTML = {
 // 전역 등록
 window.storeAdditionalInfoHTML = storeAdditionalInfoHTML;
 
-console.log('✅ storeAdditionalInfoHTML 모듈 로드 완료 (네이티브 앱 스타일)');
+console.log('✅ storeAdditionalInfoHTML 모듈 로드 완료 (카카오맵 스타일)');
