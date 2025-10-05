@@ -28,7 +28,7 @@ export class PaymentController {
       // 데이터 저장
       this.currentOrder = currentOrder;
       this.store = currentOrder.store_id;
-      this.tableNum = currentOrder.table_Number;
+      this.tableNum = currentOrder.table_number;
 
       // 주문 데이터 준비
       this.orderData = paymentService.prepareOrderData(currentOrder);

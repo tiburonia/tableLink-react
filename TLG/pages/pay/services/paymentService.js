@@ -42,59 +42,35 @@ export const paymentService = {
     if (Array.isArray(items)) {
       return items;
     }
-    
+
     if (typeof items === 'string') {
       try {
         return JSON.parse(items);
       } catch (error) {
-        console.warn('⚠️ 매장 메뉴 JSON 파싱 실패:', error);
+        console.warn('⚠️ 매장 메뉴 JSON 파싱 실패, 빈 배열 반환');
         return [];
       }
     }
-    
+
     return [];
   },
 
   /**
    * 주문 아이템 처리
    */
-  processOrderItems(currentOrder, menuData) {
-    const items = [];
-
-    if (Array.isArray(currentOrder)) {
-      // TLL 스타일 배열 구조
-      currentOrder.forEach((orderItem, index) => {
-        const item = this.parseArrayItem(orderItem, index);
-        if (item) items.push(item);
-      });
-    } else if (typeof currentOrder === 'object') {
-      // TLG 스타일 객체 구조
-      for (const name in currentOrder) {
-        const qty = currentOrder[name];
-        const menu = menuData.find(m => m.name === name);
-        
-        if (!menu) {
-          console.warn(`⚠️ 메뉴 "${name}"를 찾을 수 없습니다`);
-          continue;
-        }
-        
-        const price = menu.price * qty;
-        items.push({ 
-          name, 
-          qty, 
-          price: menu.price, 
-          totalPrice: price,
-          menuId: menu.id,
-          cook_station: menu.cook_station || 'KITCHEN'
-        });
-      }
+  processOrderItems(currentOrder) {
+    if (!currentOrder.items || !Array.isArray(currentOrder.items)) {
+      console.error('❌ 유효한 주문 아이템이 없습니다');
+      return [];
     }
 
-    if (items.length === 0) {
-      throw new Error('유효한 주문 아이템이 없습니다.');
-    }
-
-    return items;
+    return currentOrder.items.map(item => ({
+      id: item.id || item.menuId,
+      name: item.name,
+      price: parseInt(item.price),
+      qty: parseInt(item.quantity || item.qty || 1),
+      totalPrice: parseInt(item.price) * parseInt(item.quantity || item.qty || 1)
+    }));
   },
 
   /**

@@ -9,22 +9,23 @@ let paymentControllerInstance = null;
 
 /**
  * 결제 화면 렌더링 함수
- * @param {Object|Array} currentOrder - 현재 주문 데이터
- * @param {Object} store - 매장 정보
- * @param {number} tableNum - 테이블 번호
+ * @param {Object} currentOrder - 현재 주문 데이터 (store_id, items 등 포함)
  */
 async function renderPay(currentOrder) {
-  console.log('🔄 renderPay 호출:', { currentOrder});
+  console.log('🔄 renderPay 호출:', { currentOrder });
 
   try {
     // 입력 데이터 검증
-    if (!currentOrder || (Array.isArray(currentOrder) && currentOrder.length === 0) || 
-        (typeof currentOrder === 'object' && Object.keys(currentOrder).length === 0)) {
+    if (!currentOrder || (typeof currentOrder === 'object' && Object.keys(currentOrder).length === 0)) {
       throw new Error('주문 데이터가 없습니다.');
     }
 
     if (!currentOrder.store_id) {
       throw new Error('매장 정보가 올바르지 않습니다.');
+    }
+
+    if (!currentOrder.items || !Array.isArray(currentOrder.items) || currentOrder.items.length === 0) {
+      throw new Error('주문 항목이 없습니다.');
     }
 
     // PaymentController 인스턴스 생성
