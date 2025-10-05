@@ -5,12 +5,13 @@
 export const mapDataRepository = {
   /**
    * 뷰포트 기반 매장 데이터 조회
+   * @param {number} level - 카카오 지도 레벨 (1-14)
+   * @param {string} bbox - bounding box 문자열 (minLng,minLat,maxLng,maxLat)
    */
-  async fetchViewportStores(bounds, zoom) {
+  async fetchViewportStores(level, bbox) {
     try {
-      const bbox = `${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}`;
       const response = await fetch(
-        `/api/clusters/clusters?zoom=${zoom}&bbox=${bbox}`
+        `/api/clusters/clusters?level=${level}&bbox=${bbox}`
       );
 
       if (!response.ok) {

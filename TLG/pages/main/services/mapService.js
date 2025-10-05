@@ -1,11 +1,19 @@
 // 모듈 임포트 (조건부)
 let mapDataRepository;
+let mapLevelConverter;
 
 try {
   const repoModule = await import('../repositories/mapDataRepository.js');
   mapDataRepository = repoModule.mapDataRepository;
 } catch (error) {
   console.warn('⚠️ mapDataRepository 모듈 임포트 실패:', error);
+}
+
+try {
+  const converterModule = await import('../utils/mapLevelConverter.js');
+  mapLevelConverter = converterModule.mapLevelConverter;
+} catch (error) {
+  console.warn('⚠️ mapLevelConverter 모듈 임포트 실패:', error);
 }
 
 /**
@@ -22,16 +30,21 @@ export const mapService = {
     }
 
     const bounds = map.getBounds();
-    const level = map.getZoom(); // 네이버 지도: getZoom() 사용
+    const naverZoom = map.getZoom(); // 네이버 지도: getZoom() 사용 (6-21)
+
+    // 네이버 줌을 카카오 레벨로 변환 (1-14)
+    const kakaoLevel = mapLevelConverter ? 
+      mapLevelConverter.naverZoomToKakaoLevel(naverZoom) : 
+      Math.max(1, Math.min(14, 28 - naverZoom)); // fallback
 
     // 네이버 지도 API: getSW(), getNE() 또는 _sw, _ne 프로퍼티 사용
     const sw = bounds.getSW ? bounds.getSW() : bounds._sw;
     const ne = bounds.getNE ? bounds.getNE() : bounds._ne;
     const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
 
-    console.log(`📱 매장 데이터 조회: level=${level}, bbox=${bbox}`);
+    console.log(`📱 매장 데이터 조회: 네이버줌=${naverZoom} → 카카오레벨=${kakaoLevel}, bbox=${bbox}`);
 
-    const data = await mapDataRepository.fetchViewportStores(level, bbox);
+    const data = await mapDataRepository.fetchViewportStores(kakaoLevel, bbox);
 
     if (!data.success) {
       throw new Error(data.error || '매장 데이터 조회 실패');

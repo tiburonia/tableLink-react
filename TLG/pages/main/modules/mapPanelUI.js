@@ -699,7 +699,12 @@ window.MapPanelUI = {
 
     try {
       const bounds = map.getBounds();
-      const level = map.getZoom(); // 네이버 지도: getZoom() 사용
+      const naverZoom = map.getZoom(); // 네이버 지도: getZoom() 사용 (6-21)
+
+      // 네이버 줌을 카카오 레벨로 변환 (1-14)
+      const kakaoLevel = window.mapLevelConverter ? 
+        window.mapLevelConverter.naverZoomToKakaoLevel(naverZoom) : 
+        Math.max(1, Math.min(14, 28 - naverZoom)); // fallback
 
       // 네이버 지도 API: getSW(), getNE() 또는 _sw, _ne 프로퍼티 사용
       const sw = bounds.getSW ? bounds.getSW() : bounds._sw;
@@ -709,11 +714,11 @@ window.MapPanelUI = {
       const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
 
       const params = new URLSearchParams({
-        level: level,
+        level: kakaoLevel,
         bbox: bbox
       });
 
-      console.log(`📱 개별 매장 API 호출: level=${level}, bbox=${bbox}`);
+      console.log(`📱 개별 매장 API 호출: 네이버줌=${naverZoom} → 카카오레벨=${kakaoLevel}, bbox=${bbox}`);
 
       const response = await fetch(`/api/clusters/clusters?${params}`);
 
@@ -731,11 +736,11 @@ window.MapPanelUI = {
 
       // 응답 데이터 정규화
       const features = data.data || data.features || [];
-      console.log(`✅ 개별 매장 ${features.length}개 로딩 완료 (레벨: ${level})`);
+      console.log(`✅ 개별 매장 ${features.length}개 로딩 완료 (카카오레벨: ${kakaoLevel})`);
 
       // 빈 결과 처리
       if (features.length === 0) {
-        console.log(`📍 현재 뷰포트에 매장 데이터 없음 - 레벨: ${level}, bbox: ${bbox}`);
+        console.log(`📍 현재 뷰포트에 매장 데이터 없음 - 카카오레벨: ${kakaoLevel}, bbox: ${bbox}`);
       }
 
       // 표준화된 storeData 객체로 변환
@@ -780,12 +785,12 @@ window.MapPanelUI = {
     if (!storeListContainer) return;
 
     const bounds = map.getBounds();
-    const level = map.getZoom(); // 네이버 지도: getZoom() 사용
+    const naverZoom = map.getZoom(); // 네이버 지도: getZoom() 사용 (6-21)
     
     // 네이버 지도 API: getSW(), getNE() 또는 _sw, _ne 프로퍼티 사용
     const sw = bounds.getSW ? bounds.getSW() : bounds._sw;
     const ne = bounds.getNE ? bounds.getNE() : bounds._ne;
-    console.log(`🔄 뷰포트 기반 패널 재구성 - 레벨: ${level}, 범위: (${sw.lat()},${sw.lng()}) ~ (${ne.lat()},${ne.lng()})`);
+    console.log(`🔄 뷰포트 기반 패널 재구성 - 네이버줌: ${naverZoom}, 범위: (${sw.lat()},${sw.lng()}) ~ (${ne.lat()},${ne.lng()})`);
 
     // 기존 컨텐츠 제거
     storeListContainer.innerHTML = '';
@@ -811,7 +816,7 @@ window.MapPanelUI = {
             <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
             <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">현재 영역에 매장이 없습니다</div>
             <div style="font-size: 14px;">지도를 이동하거나 확대해보세요</div>
-            <div style="font-size: 12px; color: #999; margin-top: 8px;">레벨: ${level}</div>
+            <div style="font-size: 12px; color: #999; margin-top: 8px;">네이버줌: ${naverZoom}</div>
           </div>
         `;
         return;

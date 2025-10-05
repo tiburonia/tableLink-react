@@ -1,0 +1,172 @@
+mapPanelUI.js:718  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/clusters/clusters?level=15&bbox=126.9696744%2C37.5502893%2C126.9863256%2C37.5827072 400 (Bad Request)
+loadViewportStores @ mapPanelUI.js:718
+rebuildStorePanel @ mapPanelUI.js:803
+connectToMap @ mapPanelUI.js:889
+(anonymous) @ mapController.js:450
+setTimeout
+connectMapPanelUI @ mapController.js:441
+initializeMap @ mapController.js:70
+await in initializeMap
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapPanelUI.js:722 ❌ API 응답 오류: 400 {"success":false,"error":"지도 레벨이 유효하지 않습니다 (1-14 사이여야 함)"}
+loadViewportStores @ mapPanelUI.js:722
+await in loadViewportStores
+rebuildStorePanel @ mapPanelUI.js:803
+connectToMap @ mapPanelUI.js:889
+(anonymous) @ mapController.js:450
+setTimeout
+connectMapPanelUI @ mapController.js:441
+initializeMap @ mapController.js:70
+await in initializeMap
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapPanelUI.js:772 ❌ 뷰포트 매장 데이터 로딩 실패: Error: API 호출 실패: 400
+    at Object.loadViewportStores (mapPanelUI.js:723:15)
+    at async Object.rebuildStorePanel (mapPanelUI.js:803:22)
+loadViewportStores @ mapPanelUI.js:772
+await in loadViewportStores
+rebuildStorePanel @ mapPanelUI.js:803
+connectToMap @ mapPanelUI.js:889
+(anonymous) @ mapController.js:450
+setTimeout
+connectMapPanelUI @ mapController.js:441
+initializeMap @ mapController.js:70
+await in initializeMap
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapPanelUI.js:843 ❌ 뷰포트 기반 패널 재구성 실패: Error: API 호출 실패: 400
+    at Object.loadViewportStores (mapPanelUI.js:723:15)
+    at async Object.rebuildStorePanel (mapPanelUI.js:803:22)
+rebuildStorePanel @ mapPanelUI.js:843
+await in rebuildStorePanel
+connectToMap @ mapPanelUI.js:889
+(anonymous) @ mapController.js:450
+setTimeout
+connectMapPanelUI @ mapController.js:441
+initializeMap @ mapController.js:70
+await in initializeMap
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapController.js:294 🔄 지도 변경 감지 - 줌 레벨: 15
+mapMarkerManager.js:29 🔄 [MapMarkerManager] 지도 줌 레벨 15 변경 - 마커 업데이트 시작
+mapMarkerManager.js:68 🔄 [MapMarkerManager] 뷰포트 변경 감지 - diff 업데이트 수행
+mapMarkerManager.js:105 🌐 [MapMarkerManager] Service Layer를 통한 매장 데이터 조회 시작 (레벨: 15)
+mapMarkerManager.js:113 📍 [MapMarkerManager] mapService.getViewportStores 호출
+mapService.js:32 📱 매장 데이터 조회: level=15, bbox=126.9696744,37.5502893,126.9863256,37.5827072
+mapPanelUI.js:788 🔄 뷰포트 기반 패널 재구성 - 레벨: 15, 범위: (37.5502893,126.9696744) ~ (37.5827072,126.9863256)
+mapPanelUI.js:716 📱 개별 매장 API 호출: level=15, bbox=126.9696744,37.5502893,126.9863256,37.5827072
+mapDataRepository.js:12  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/clusters/clusters?zoom=126.9696744,37.5502893,126.9863256,37.5827072&bbox=undefined,undefined,undefined,undefined 400 (Bad Request)
+fetchViewportStores @ mapDataRepository.js:12
+getViewportStores @ mapService.js:34
+refreshMarkersWithService @ mapMarkerManager.js:116
+handleMapLevelChange @ mapMarkerManager.js:72
+handleMapChange @ mapController.js:299
+(anonymous) @ mapController.js:430
+setTimeout
+loadInitialData @ mapController.js:429
+initializeMap @ mapController.js:67
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapDataRepository.js:22 fetchViewportStores 오류: Error: 매장 데이터 조회 실패: 400
+    at Object.fetchViewportStores (mapDataRepository.js:17:15)
+    at async Object.getViewportStores (mapService.js:34:18)
+    at async Object.refreshMarkersWithService (mapMarkerManager.js:116:22)
+    at async Object.handleMapLevelChange (mapMarkerManager.js:72:7)
+fetchViewportStores @ mapDataRepository.js:22
+await in fetchViewportStores
+getViewportStores @ mapService.js:34
+refreshMarkersWithService @ mapMarkerManager.js:116
+handleMapLevelChange @ mapMarkerManager.js:72
+handleMapChange @ mapController.js:299
+(anonymous) @ mapController.js:430
+setTimeout
+loadInitialData @ mapController.js:429
+initializeMap @ mapController.js:67
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapMarkerManager.js:131 ❌ [MapMarkerManager] Service Layer를 통한 매장 데이터 조회 실패: Error: 매장 데이터 조회 실패: 400
+    at Object.fetchViewportStores (mapDataRepository.js:17:15)
+    at async Object.getViewportStores (mapService.js:34:18)
+    at async Object.refreshMarkersWithService (mapMarkerManager.js:116:22)
+    at async Object.handleMapLevelChange (mapMarkerManager.js:72:7)
+refreshMarkersWithService @ mapMarkerManager.js:131
+await in refreshMarkersWithService
+handleMapLevelChange @ mapMarkerManager.js:72
+handleMapChange @ mapController.js:299
+(anonymous) @ mapController.js:430
+setTimeout
+loadInitialData @ mapController.js:429
+initializeMap @ mapController.js:67
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapMarkerManager.js:84 ✅ [MapMarkerManager] 지도 레벨 15 마커 업데이트 완료
+mapPanelUI.js:718  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/clusters/clusters?level=15&bbox=126.9696744%2C37.5502893%2C126.9863256%2C37.5827072 400 (Bad Request)
+loadViewportStores @ mapPanelUI.js:718
+rebuildStorePanel @ mapPanelUI.js:803
+handleMapChange @ mapController.js:304
+(anonymous) @ mapController.js:430
+setTimeout
+loadInitialData @ mapController.js:429
+initializeMap @ mapController.js:67
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapPanelUI.js:722 ❌ API 응답 오류: 400 {"success":false,"error":"지도 레벨이 유효하지 않습니다 (1-14 사이여야 함)"}
+loadViewportStores @ mapPanelUI.js:722
+await in loadViewportStores
+rebuildStorePanel @ mapPanelUI.js:803
+handleMapChange @ mapController.js:304
+(anonymous) @ mapController.js:430
+setTimeout
+loadInitialData @ mapController.js:429
+initializeMap @ mapController.js:67
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapPanelUI.js:772 ❌ 뷰포트 매장 데이터 로딩 실패: Error: API 호출 실패: 400
+    at Object.loadViewportStores (mapPanelUI.js:723:15)
+    at async Object.rebuildStorePanel (mapPanelUI.js:803:22)
+    at async Object.handleMapChange (mapController.js:304:9)
+loadViewportStores @ mapPanelUI.js:772
+await in loadViewportStores
+rebuildStorePanel @ mapPanelUI.js:803
+handleMapChange @ mapController.js:304
+(anonymous) @ mapController.js:430
+setTimeout
+loadInitialData @ mapController.js:429
+initializeMap @ mapController.js:67
+renderMap @ renderMap.js:12
+(anonymous) @ authManager.js:111
+Promise.then
+initializeApp @ authManager.js:108
+(anonymous) @ (index):128Understand this error
+mapPanelUI.js:843 ❌ 뷰포트 기반 패널 재구성 실패: Error: API 호출 실패: 400
+    at Object.loadViewportStores (mapPanelUI.js:723:15)
+    at async Object.rebuildStorePanel (mapPanelUI.js:803:22)
+    at async Object.handleMapChange (mapController.js:304:9)
