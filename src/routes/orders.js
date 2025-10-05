@@ -11,6 +11,9 @@ router.put('/update-status', orderController.updateOrderStatus);
 // 주문 조회 API (단일)
 router.get('/order/:orderId', orderController.getOrderById);
 
+// 마이페이지 주문 목록 조회 API (경로 우선순위 위해 상단 배치)
+router.get('/mypage/:userId', orderController.getUserOrders);
+
 // 사용자 주문 목록 조회 API
 router.get('/users/:userId', orderController.getUserOrders);
 

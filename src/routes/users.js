@@ -2,11 +2,19 @@
 const express = require('express');
 const router = express.Router();
 const { Pool } = require('pg');
+const userController = require('../controllers/userController');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
+
+// ========== 레이어드 아키텍처 라우트 ==========
+
+// 사용자 정보 조회 (마이페이지용)
+router.post('/info', userController.getUserInfo.bind(userController));
+
+// ========== 레거시 라우트 (Pool 직접 사용) ==========
 
 // 사용자 즐겨찾기 상태 조회
 router.get('/favorite/status/:userId/:storeId', async (req, res) => {
