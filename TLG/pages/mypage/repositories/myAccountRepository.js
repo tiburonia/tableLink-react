@@ -7,23 +7,18 @@ export const myAccountRepository = {
    * 사용자 기본 정보 조회
    */
   async getUserInfo(userId) {
-    try {
-      const response = await fetch('/api/users/info', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-      });
+    const response = await fetch('/api/users/info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId })
+    });
 
-      if (!response.ok) {
-        throw new Error(`사용자 정보 조회 실패: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data.user;
-    } catch (error) {
-      console.error('❌ getUserInfo 실패:', error);
-      throw error;
+    if (!response.ok) {
+      throw new Error(`사용자 정보 조회 실패: ${response.status}`);
     }
+
+    const data = await response.json();
+    return data.user;
   },
 
   /**

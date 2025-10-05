@@ -2,14 +2,14 @@
  * Service Layer: 비즈니스 로직 처리
  */
 
+import myAccountRepository from '../repositories/myAccountRepository.js';
+
 export const myAccountService = {
   /**
    * ViewModel 생성
    */
   async createViewModel(userId) {
     try {
-      const { myAccountRepository } = await import('../repositories/myAccountRepository.js');
-
       // 병렬로 데이터 조회
       const [userInfo, orders, reviews] = await Promise.all([
         myAccountRepository.getUserInfo(userId),
