@@ -1,3 +1,4 @@
+
 // 매장 카드 CSS 임포트
 const mapStoreCardCSS = document.createElement('link');
 mapStoreCardCSS.rel = 'stylesheet';
@@ -129,21 +130,26 @@ export const mapView = {
    */
   renderBottomBar() {
     return `
-      <nav id="bottomBar">
-        <button onclick="renderSubMain()" title="홈">
-          <span style="font-size: 22px;">🏠</span>
+      <nav class="bottom-nav-bar">
+        <button onclick="renderSubMain()" class="nav-item">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">홈</span>
         </button>
-        <button onclick="TLL().catch(console.error)" title="QR주문">
-          <span style="font-size: 22px;">📱</span>
+        <button onclick="TLL()" class="nav-item">
+          <span class="nav-icon">📱</span>
+          <span class="nav-label">QR 주문</span>
         </button>
-        <button id="renderMapBtn" class="active" title="지도">
-          <span style="font-size: 22px;">📍</span>
+        <button onclick="renderMap()" class="nav-item active" id="renderMapBtn">
+          <span class="nav-icon">📍</span>
+          <span class="nav-label">내주변</span>
         </button>
-        <button onclick="renderSearch('')" title="검색">
-          <span style="font-size: 22px;">🔍</span>
+        <button onclick="renderSearch()" class="nav-item">
+          <span class="nav-icon">🔍</span>
+          <span class="nav-label">검색</span>
         </button>
-        <button onclick="renderMyPage()" title="마이페이지">
-          <span style="font-size: 22px;">👤</span>
+        <button class="nav-item" onclick="renderMyPage()">
+          <span class="nav-icon">👤</span>
+          <span class="nav-label">내정보</span>
         </button>
       </nav>
     `;
@@ -297,7 +303,7 @@ export const mapView = {
     provinceSelect.innerHTML = '<option value="">시/도를 선택하세요</option>';
     citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
     districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
-
+    
     citySelect.disabled = true;
     districtSelect.disabled = true;
     confirmLocationBtn.disabled = true;
@@ -310,7 +316,7 @@ export const mapView = {
 
     citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
     districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
-
+    
     citySelect.disabled = true;
     districtSelect.disabled = true;
     confirmLocationBtn.disabled = true;
@@ -331,7 +337,7 @@ export const mapView = {
   populateProvinceSelect(provinces) {
     const provinceSelect = document.getElementById('provinceSelect');
     provinceSelect.innerHTML = '<option value="">시/도를 선택하세요</option>';
-
+    
     provinces.forEach(province => {
       const option = document.createElement('option');
       option.value = province;
@@ -344,7 +350,7 @@ export const mapView = {
     const citySelect = document.getElementById('citySelect');
     citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
     citySelect.disabled = false;
-
+    
     cities.forEach(city => {
       const option = document.createElement('option');
       option.value = city;
@@ -357,7 +363,7 @@ export const mapView = {
     const districtSelect = document.getElementById('districtSelect');
     districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
     districtSelect.disabled = false;
-
+    
     districts.forEach(district => {
       const option = document.createElement('option');
       option.value = district;
@@ -868,7 +874,64 @@ export const mapView = {
           border-radius: 0 0 18px 18px;
         }
 
-        /* 바텀 네비게이션 스타일은 mypage.css에서 관리 */
+        .bottom-nav-bar {
+          position: fixed;
+          bottom: 0;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100%;
+          max-width: 430px;
+          background-color: #fff;
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          padding: 8px 0 12px 0;
+          border-top: 1px solid #eee;
+          box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+          z-index: 1000;
+        }
+
+        .nav-item {
+          background: none;
+          border: none;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          cursor: pointer;
+          padding: 6px 12px;
+          transition: all 0.2s ease;
+          flex: 1;
+        }
+
+        .nav-icon {
+          font-size: 22px;
+          transition: transform 0.2s ease;
+        }
+
+        .nav-label {
+          font-size: 11px;
+          color: #999;
+          font-weight: 500;
+        }
+
+        .nav-item.active .nav-label {
+          color: #007aff;
+          font-weight: 600;
+        }
+
+        .nav-item.active .nav-icon {
+          transform: scale(1.1);
+        }
+
+        .nav-item:active {
+          transform: scale(0.95);
+        }
+        @supports (padding: max(0px)) {
+          .bottom-nav-bar {
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+          }
+
       </style>
     `;
   }

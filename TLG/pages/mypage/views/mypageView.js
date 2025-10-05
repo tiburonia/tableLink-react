@@ -73,18 +73,23 @@ export const mypageView = {
       <nav class="bottom-nav-bar">
         <button onclick="renderSubMain()" class="nav-item">
           <span class="nav-icon">🏠</span>
+          <span class="nav-label">홈</span>
         </button>
         <button onclick="TLL()" class="nav-item">
           <span class="nav-icon">📱</span>
+          <span class="nav-label">QR 주문</span>
         </button>
         <button onclick="renderMap()" class="nav-item">
           <span class="nav-icon">📍</span>
+          <span class="nav-label">내주변</span>
         </button>
         <button onclick="renderSearch()" class="nav-item">
           <span class="nav-icon">🔍</span>
+          <span class="nav-label">검색</span>
         </button>
         <button class="nav-item active">
           <span class="nav-icon">👤</span>
+          <span class="nav-label">내정보</span>
         </button>
       </nav>
     `;
