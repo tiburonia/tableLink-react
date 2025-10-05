@@ -223,9 +223,9 @@ export const mapView = {
         const lng = parseFloat(item.dataset.lng);
         const placeName = item.querySelector('.result-name').textContent.replace('📍 ', '');
 
-        const position = new kakao.maps.LatLng(lat, lng);
+        const position = new naver.maps.LatLng(lat, lng);
         map.setCenter(position);
-        map.setLevel(2);
+        map.setZoom(17);
 
         this.hideSearchResults();
         document.getElementById('searchInput').value = placeName;
@@ -238,9 +238,9 @@ export const mapView = {
         const storeId = parseInt(item.dataset.storeId);
         const store = stores.find(s => s.id === storeId);
         if (store && store.coord) {
-          const position = new kakao.maps.LatLng(store.coord.lat, store.coord.lng);
+          const position = new naver.maps.LatLng(store.coord.lat, store.coord.lng);
           map.setCenter(position);
-          map.setLevel(2);
+          map.setZoom(17);
 
           this.hideSearchResults();
           document.getElementById('searchInput').value = store.name;

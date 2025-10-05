@@ -881,9 +881,9 @@ window.MapPanelUI = {
     this.rebuildStorePanel(map);
 
     // 지도 이벤트 리스너 등록
-    kakao.maps.event.addListener(map, 'dragend', rebuildPanelForViewport);
-    kakao.maps.event.addListener(map, 'zoom_changed', rebuildPanelForViewport);
-    kakao.maps.event.addListener(map, 'idle', () => {
+    naver.maps.Event.addListener(map, 'dragend', rebuildPanelForViewport);
+    naver.maps.Event.addListener(map, 'zoom_changed', rebuildPanelForViewport);
+    naver.maps.Event.addListener(map, 'idle', () => {
       console.log('🗺️ 지도 idle - 최종 패널 재구성');
       rebuildPanelForViewport();
     });

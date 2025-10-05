@@ -45,15 +45,16 @@ export const mapController = {
       // UI 렌더링
       mapView.renderMapUI();
 
-      // 카카오맵 생성
+      // 네이버맵 생성
       const mapContainer = document.getElementById('map');
       const options = {
-        center: new kakao.maps.LatLng(37.5665, 126.9780),
-        level: 3,
-        maxLevel: 12
+        center: new naver.maps.LatLng(37.5665, 126.9780),
+        zoom: 15, // 네이버맵은 zoom 사용 (level 대신)
+        maxZoom: 18,
+        minZoom: 6
       };
 
-      this.state.map = new kakao.maps.Map(mapContainer, options);
+      this.state.map = new naver.maps.Map(mapContainer, options);
       window.currentMap = this.state.map;
 
       // 지도 이벤트 설정
@@ -83,18 +84,18 @@ export const mapController = {
   setupMapEvents() {
     const map = this.state.map;
 
-    // 레벨 변경 이벤트
-    kakao.maps.event.addListener(map, 'zoom_changed', () => {
+    // 줌 레벨 변경 이벤트
+    naver.maps.Event.addListener(map, 'zoom_changed', () => {
       this.handleMapChange();
     });
 
     // 드래그 완료 이벤트
-    kakao.maps.event.addListener(map, 'dragend', () => {
+    naver.maps.Event.addListener(map, 'dragend', () => {
       this.handleMapChange();
     });
 
     // 지도 이동 완료 이벤트
-    kakao.maps.event.addListener(map, 'idle', () => {
+    naver.maps.Event.addListener(map, 'idle', () => {
       this.updateLocationInfo();
     });
 
@@ -287,8 +288,8 @@ export const mapController = {
    * 지도 변경 처리
    */
   async handleMapChange() {
-    const level = this.state.map.getLevel();
-    console.log(`🔄 지도 변경 감지 - 레벨: ${level}`);
+    const level = this.state.map.getZoom();
+    console.log(`🔄 지도 변경 감지 - 줌 레벨: ${level}`);
 
     try {
       // 마커 매니저를 통한 마커 업데이트
@@ -380,9 +381,9 @@ export const mapController = {
    * 지도 위치 설정
    */
   setMapLocation(lat, lng, locationName) {
-    const position = new kakao.maps.LatLng(lat, lng);
+    const position = new naver.maps.LatLng(lat, lng);
     this.state.map.setCenter(position);
-    this.state.map.setLevel(3);
+    this.state.map.setZoom(15);
 
     // 위치 텍스트 업데이트
     mapView.updateLocationText(locationName);

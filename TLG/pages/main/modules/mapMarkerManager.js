@@ -201,7 +201,7 @@ window.MapMarkerManager = {
    * 표준화된 storeData 객체를 사용한 마커 생성
    */
   createStandardizedStoreMarker(storeData, map) {
-    const position = new kakao.maps.LatLng(storeData.coord.lat, storeData.coord.lng);
+    const position = new naver.maps.LatLng(storeData.coord.lat, storeData.coord.lng);
     const isOpen = storeData.isOpen;
     const rating = storeData.ratingAverage ? storeData.ratingAverage.toFixed(1) : '0.0';
     const categoryIcon = this.getCategoryIcon(storeData.category);
@@ -330,15 +330,18 @@ window.MapMarkerManager = {
       </style>
     `;
 
-    const customOverlay = new kakao.maps.CustomOverlay({
+    // 네이버맵 마커 생성 (커스텀 HTML 사용)
+    const marker = new naver.maps.Marker({
       map: map,
       position: position,
-      content: content,
-      yAnchor: 1,
+      icon: {
+        content: content,
+        anchor: new naver.maps.Point(90, 60) // 마커 중심점 조정
+      },
       zIndex: 200
     });
 
-    return customOverlay;
+    return marker;
   },
 
   /**
