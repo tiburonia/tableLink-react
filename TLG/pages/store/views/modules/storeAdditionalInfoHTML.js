@@ -187,7 +187,7 @@ export const storeAdditionalInfoHTML = {
           display: flex;
           align-items: flex-start;
           gap: 14px;
-          padding: 18px 20px;
+          padding: 10px 20px;
           border-bottom: 1px solid #f1f5f9;
           transition: background 0.15s ease;
         }
@@ -301,7 +301,7 @@ export const storeAdditionalInfoHTML = {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 20px;
+          margin-bottom: 10px;
         }
 
         .notices-icon {

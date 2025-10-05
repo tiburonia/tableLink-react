@@ -47,17 +47,18 @@ export const storeView = {
           <div class="storeInfo">
             <div class="store-header-section">
               <div class="store-main-info">
-
+                <div class="store-name-container" style="justify-content: center">
+                <div id="storeName">${store.name}</div>
+                <button id="favoriteBtn" class="favorite-btn">♡</button>
+                </div>
                 <div class="score-row">
                   <div class="rating-container">
                     <span id="reviewStar">★</span>
                     <span id="reviewScore">${displayRating}</span>
                     <span id="reviewLink" class="review-link">리뷰 보기</span>
                   </div>
-                  <button id="favoriteBtn" class="favorite-btn">♡</button>
                 </div>
 
-                <h2 id="storeName">${store.name}</h2>
 
                 <div class="store-status-container">
                   <span class="store-status ${store.isOpen ? "open" : "closed"}">
