@@ -9,30 +9,7 @@
   box-sizing: border-box;
 }
 
-html, body {
-  margin: 0 !important;
-  padding: 0 !important;
-  width: 100% !important;
-  height: 100% !important;
-  overflow: hidden !important;
-  background: #000 !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Pretendard', 'Noto Sans KR', sans-serif !important;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
 
-#main {
-  width: 390px !important;
-  height: 844px !important;
-  position: absolute !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  background: #000 !important;
-  overflow: hidden !important;
-  border-radius: 40px !important;
-  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5) !important;
-}
 
 /* ========== 메인 래퍼 ========== */
 .account-wrapper {
