@@ -25,7 +25,7 @@ export const mapService = {
     const bounds = map.getBounds();
     const level = map.getZoom();
     
-    const sw = bounds.getSW(); // 네이버맵은 getSW(), getNE() 사용
+    const sw = bounds.getSW();
     const ne = bounds.getNE();
     const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
 
@@ -63,7 +63,7 @@ export const mapService = {
     // 매장 검색과 장소 검색 병렬 실행
     const [storeResponse, placeResponse] = await Promise.all([
       mapDataRepository.searchStores(keyword),
-      mapDataRepository.searchPlaces(keyword, center.lat(), center.lng())
+      mapDataRepository.searchPlaces(keyword, center.y, center.x)
     ]);
 
     const stores = storeResponse.stores || [];

@@ -754,11 +754,11 @@ window.MapPanelUI = {
           const isValid = window.mapService ? 
             window.mapService.validateStoreData(store) : 
             store && store.id && store.name;
-          
+
           if (!isValid) {
             console.warn('⚠️ 유효하지 않은 storeData:', store);
           }
-          
+
           return isValid;
         });
 
@@ -905,7 +905,7 @@ window.MapPanelUI = {
 
     // ID 우선 검증 - store_id 또는 id 사용
     let storeId = store.id || store.store_id;
-    
+
     // 숫자 타입으로 변환 시도
     if (typeof storeId === 'string' && !isNaN(storeId)) {
       storeId = parseInt(storeId, 10);
@@ -1029,7 +1029,7 @@ window.MapPanelUI = {
   // 레거시 데이터 변환 함수 (폴백용)
   legacyTransformStoreData(feature) {
     let storeId = feature.id || feature.store_id;
-    
+
     if (typeof storeId === 'string' && !isNaN(storeId)) {
       storeId = parseInt(storeId, 10);
     }

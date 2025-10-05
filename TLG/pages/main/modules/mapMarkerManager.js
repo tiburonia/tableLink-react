@@ -336,7 +336,7 @@ window.MapMarkerManager = {
       position: position,
       icon: {
         content: content,
-        anchor: new naver.maps.Point(90, 60) // 마커 중심점 조정
+        anchor: new naver.maps.Point(90, 60)
       },
       zIndex: 200
     });
