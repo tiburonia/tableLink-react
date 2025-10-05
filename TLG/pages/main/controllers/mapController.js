@@ -1,17 +1,32 @@
 // 모듈 임포트 (조건부)
-let mapService, mapView;
+let mapService, mapView, mapLevelConverter;
 
 try {
   // ES6 모듈 임포트 시도
   const serviceModule = await import('../services/mapService.js');
   const viewModule = await import('../views/mapView.js');
+  const converterModule = await import('../utils/mapLevelConverter.js');
   mapService = serviceModule.mapService;
   mapView = viewModule.mapView;
+  mapLevelConverter = converterModule.mapLevelConverter;
 } catch (error) {
   console.warn('⚠️ ES6 모듈 임포트 실패, 전역 객체 사용:', error);
   // 전역 객체에서 가져오기 (폴백)
   mapService = window.mapService;
   mapView = window.mapView;
+  mapLevelConverter = window.mapLevelConverter;
+}
+
+// 전역 등록 (try/catch 외부에서 항상 실행)
+if (mapLevelConverter) {
+  window.mapLevelConverter = mapLevelConverter;
+} else {
+  // fallback 변환 함수
+  window.mapLevelConverter = {
+    naverZoomToKakaoLevel: (naverZoom) => Math.max(1, Math.min(14, 28 - naverZoom)),
+    kakaoLevelToNaverZoom: (kakaoLevel) => Math.max(6, Math.min(21, 28 - kakaoLevel))
+  };
+  console.warn('⚠️ mapLevelConverter 폴백 사용');
 }
 
 /**
