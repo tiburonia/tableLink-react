@@ -170,8 +170,8 @@ export const myAccountView = {
         </div>
         <div class="card-body loyalty-body">
           <div class="regular-levels-container" id="regularLevelsContainer" data-testid="container-regular-levels">
-            <div class="loading-skeleton modern-skeleton">
-              <div class="skeleton-shimmer"></div>
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
+              <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
               <span>단골 레벨 정보를 불러오는 중...</span>
             </div>
           </div>
@@ -255,8 +255,8 @@ export const myAccountView = {
         </div>
         <div class="card-body activity-body">
           <div class="activity-list modern-list" id="recentOrdersList" data-testid="list-recent-orders">
-            <div class="loading-skeleton modern-skeleton">
-              <div class="skeleton-shimmer"></div>
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
+              <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
               <span>주문 내역을 불러오는 중...</span>
             </div>
           </div>
@@ -287,8 +287,8 @@ export const myAccountView = {
         </div>
         <div class="card-body">
           <div class="personal-info-list modern-info-list" id="personalInfoList" data-testid="list-personal-info">
-            <div class="loading-skeleton modern-skeleton">
-              <div class="skeleton-shimmer"></div>
+            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
+              <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
               <span>개인정보를 불러오는 중...</span>
             </div>
           </div>
@@ -376,8 +376,8 @@ export const myAccountView = {
       `).join('');
     } else {
       container.innerHTML = `
-        <div class="modern-skeleton">
-          <div class="skeleton-shimmer"></div>
+        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
+          <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
           <span>등록된 단골 레벨이 없습니다</span>
         </div>
       `;
@@ -404,8 +404,8 @@ export const myAccountView = {
       `).join('');
     } else {
       activityList.innerHTML = `
-        <div class="modern-skeleton">
-          <div class="skeleton-shimmer"></div>
+        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
+          <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
           <span>최근 주문 내역이 없습니다</span>
         </div>
       `;
