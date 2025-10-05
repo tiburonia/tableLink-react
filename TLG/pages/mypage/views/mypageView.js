@@ -1,4 +1,3 @@
-
 /**
  * MyPage View
  * 마이페이지 메인 뷰 - HTML 생성

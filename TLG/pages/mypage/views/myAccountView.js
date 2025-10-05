@@ -13,9 +13,6 @@ export const myAccountView = {
       return;
     }
     
-    // CSS 로드
-    this.loadStyles();
-    
     // 전역 스타일 리셋
     this.resetGlobalStyles();
     
@@ -26,17 +23,6 @@ export const myAccountView = {
     this.bindData(data);
     
     console.log('✅ myAccountView 렌더링 완료');
-  },
-
-  // CSS 파일 로드
-  loadStyles() {
-    if (!document.getElementById('myAccountStyles')) {
-      const link = document.createElement('link');
-      link.id = 'myAccountStyles';
-      link.rel = 'stylesheet';
-      link.href = '/TLG/pages/mypage/views/styles/myAccount.css';
-      document.head.appendChild(link);
-    }
   },
 
   // 전역 스타일 리셋
