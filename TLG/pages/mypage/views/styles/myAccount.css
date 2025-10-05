@@ -751,12 +751,7 @@
   border-bottom: none;
 }
 
-.info-item:hover {
-  background: rgba(147, 51, 234, 0.05);
-  margin: 0 -16px;
-  padding: 16px 16px;
-  border-radius: 12px;
-}
+
 
 .info-label {
   font-size: 14px;

@@ -77,7 +77,7 @@ export const homeTabView = {
         </nav>
 
         <!-- 그래프 -->
-        <div class="waiting-times-container">
+        <div class="waiting-times-container" style="overflow-x: scroll;">
           <div id="waitingTimesGrid" class="waiting-times-grid">
             ${barsHTML}
           </div>

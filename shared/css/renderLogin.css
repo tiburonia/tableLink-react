@@ -97,7 +97,7 @@
 #loginPanel.expanded {
   top: 0;
   bottom: 0;
-  height: 100vh;
+  height: 100%;
   border-radius: 0;
   z-index: 99;
 }
@@ -481,7 +481,7 @@
       }
 
       .footer-text {
-        color: rgba(255, 255, 255, 0.6);
+        color: rgb(0, 0, 0, 0.6);
         font-size: 12px;
         font-weight: 400;
       }

@@ -97,7 +97,7 @@ export const storeView = {
           </button>
         </div>
 
-        <div id="storeContent">
+        <div id="storeContent" style="padding: 0px 5px;">
           <!-- 초기 로딩 스켈레톤 또는 빈 상태 -->
           <div class="home-tab-loading">로딩 중...</div>
         </div>

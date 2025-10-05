@@ -95,7 +95,7 @@ export const mypageSkeleton = {
         transform: translateX(-50%);
         width: 100%;
         max-width: 430px;
-        height: 100vh;
+        height: 100%;
         background-color: #fafafa;
         overflow: hidden;
         padding-bottom: 80px;
