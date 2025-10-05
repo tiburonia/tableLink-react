@@ -40,10 +40,29 @@ export const mypageSkeleton = {
           </div>
         </div>
 
-        <!-- 바텀 네비게이션 스켈레톤 -->
-        <div class="skeleton-bottom-nav">
-          ${this.createNavItemSkeleton(5)}
-        </div>
+        <!-- 실제 바텀 네비게이션 -->
+        <nav class="bottom-nav-bar">
+          <button onclick="renderSubMain()" class="nav-item">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">홈</span>
+          </button>
+          <button onclick="TLL()" class="nav-item">
+            <span class="nav-icon">📱</span>
+            <span class="nav-label">QR 주문</span>
+          </button>
+          <button onclick="renderMap()" class="nav-item">
+            <span class="nav-icon">📍</span>
+            <span class="nav-label">내주변</span>
+          </button>
+          <button onclick="renderSearch()" class="nav-item">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-label">검색</span>
+          </button>
+          <button class="nav-item active">
+            <span class="nav-icon">👤</span>
+            <span class="nav-label">내정보</span>
+          </button>
+        </nav>
       </div>
 
       <style>
@@ -60,18 +79,6 @@ export const mypageSkeleton = {
       <div class="skeleton-menu-item">
         <div class="skeleton-menu-text skeleton-shimmer"></div>
         <div class="skeleton-menu-arrow skeleton-shimmer"></div>
-      </div>
-    `).join('');
-  },
-
-  /**
-   * 네비게이션 아이템 스켈레톤 생성
-   */
-  createNavItemSkeleton(count) {
-    return Array(count).fill(0).map(() => `
-      <div class="skeleton-nav-item">
-        <div class="skeleton-nav-icon skeleton-shimmer"></div>
-        <div class="skeleton-nav-label skeleton-shimmer"></div>
       </div>
     `).join('');
   },
@@ -200,8 +207,8 @@ export const mypageSkeleton = {
         border-radius: 4px;
       }
 
-      /* 바텀 네비게이션 스켈레톤 */
-      .skeleton-bottom-nav {
+      /* 바텀 네비게이션 */
+      .bottom-nav-bar {
         position: fixed;
         bottom: 0;
         left: 50%;
@@ -215,26 +222,44 @@ export const mypageSkeleton = {
         padding: 8px 0 12px 0;
         border-top: 1px solid #eee;
         box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        z-index: 1000;
       }
 
-      .skeleton-nav-item {
+      .nav-item {
+        background: none;
+        border: none;
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 6px;
-        flex: 1;
+        gap: 4px;
+        cursor: pointer;
         padding: 6px 12px;
+        transition: all 0.2s ease;
+        flex: 1;
       }
 
-      .skeleton-nav-icon {
-        width: 28px;
-        height: 28px;
-        border-radius: 50%;
+      .nav-icon {
+        font-size: 22px;
+        transition: transform 0.2s ease;
       }
 
-      .skeleton-nav-label {
-        width: 40px;
-        height: 12px;
+      .nav-label {
+        font-size: 11px;
+        color: #999;
+        font-weight: 500;
+      }
+
+      .nav-item.active .nav-label {
+        color: #007aff;
+        font-weight: 600;
+      }
+
+      .nav-item.active .nav-icon {
+        transform: scale(1.1);
+      }
+
+      .nav-item:active {
+        transform: scale(0.95);
       }
 
       /* 반응형 */
@@ -244,20 +269,18 @@ export const mypageSkeleton = {
           padding: 24px 16px;
         }
 
-        .skeleton-nav-icon {
-          width: 24px;
-          height: 24px;
+        .nav-label {
+          font-size: 10px;
         }
 
-        .skeleton-nav-label {
-          width: 36px;
-          height: 10px;
+        .nav-icon {
+          font-size: 20px;
         }
       }
 
       /* 안전 영역 (노치 대응) */
       @supports (padding: max(0px)) {
-        .skeleton-bottom-nav {
+        .bottom-nav-bar {
           padding-bottom: max(12px, env(safe-area-inset-bottom));
         }
       }
