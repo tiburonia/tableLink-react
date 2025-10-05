@@ -158,118 +158,202 @@ export const storeAdditionalInfoHTML = {
     return `
       <style>
         .store-additional-info-card {
-          margin-top: 30px;
+          margin-top: 0;
           background: white;
-          border-radius: 12px;
-          padding: 16px;
+          border-radius: 20px;
+          padding: 20px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-          border: 1px solid #f1f5f9;
+          gap: 16px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .store-additional-info-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
         }
 
         .info-row {
           display: flex;
           align-items: flex-start;
-          gap: 8px;
-          line-height: 1.5;
+          gap: 12px;
+          padding: 12px;
+          background: linear-gradient(135deg, #fafafa 0%, #f8f9fa 100%);
+          border-radius: 12px;
+          border: 1px solid #f1f5f9;
+          transition: all 0.2s ease;
+        }
+
+        .info-row:hover {
+          background: linear-gradient(135deg, #f8f9fa 0%, #f3f4f6 100%);
+          border-color: #e2e8f0;
+          transform: translateX(2px);
         }
 
         .info-icon {
-          font-size: 16px;
+          font-size: 20px;
           flex-shrink: 0;
-          margin-top: 1px;
+          margin-top: 2px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
         }
 
         .info-label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #6b7280;
-          min-width: 52px;
+          font-size: 13px;
+          font-weight: 700;
+          color: #64748b;
+          min-width: 56px;
           flex-shrink: 0;
         }
 
         .info-value {
-          font-size: 13px;
-          color: #374151;
+          font-size: 14px;
+          color: #1e293b;
           flex: 1;
           word-break: keep-all;
-          line-height: 1.5;
+          line-height: 1.6;
+          font-weight: 500;
         }
 
         /* 평점 강조 */
+        .info-row:has(.info-label:contains('평점')) {
+          background: linear-gradient(135deg, #fef7cd 0%, #fef3c7 100%);
+          border-color: #fbbf24;
+        }
+
         .info-row:has(.info-label:contains('평점')) .info-value {
-          font-weight: 600;
+          font-weight: 700;
           color: #f59e0b;
         }
 
         /* 연락처 링크 스타일 */
+        .info-row:has(.info-label:contains('연락처')) {
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-color: #3b82f6;
+        }
+
         .info-row:has(.info-label:contains('연락처')) .info-value {
           color: #3b82f6;
-          font-weight: 500;
+          font-weight: 600;
         }
 
         /* 공지사항 스타일 */
         .store-notices {
-          margin-top: 16px;
-          padding-top: 16px;
-          border-top: 1px solid #f1f5f9;
+          margin-top: 8px;
+          padding: 20px;
+          background: white;
+          border-radius: 20px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .store-notices::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #fbbf24 100%);
         }
 
         .notices-header {
-          margin-bottom: 12px;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #f1f5f9;
         }
 
         .notices-title {
           margin: 0;
-          font-size: 16px;
-          font-weight: 700;
-          color: #1f2937;
+          font-size: 17px;
+          font-weight: 800;
+          color: #1e293b;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
+          letter-spacing: -0.3px;
         }
 
         .notices-icon {
-          font-size: 18px;
+          font-size: 20px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
         }
 
         .notices-list {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         .notice-item {
           display: flex;
-          gap: 10px;
-          padding: 12px;
-          background: #f9fafb;
-          border-radius: 8px;
-          border-left: 3px solid #e5e7eb;
-          transition: all 0.2s ease;
+          gap: 12px;
+          padding: 16px;
+          background: white;
+          border-radius: 16px;
+          border: 1.5px solid #f1f5f9;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .notice-item::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: #e5e7eb;
+          transition: all 0.3s ease;
         }
 
         .notice-item:hover {
-          transform: translateX(2px);
-          background: #f3f4f6;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+          border-color: #cbd5e1;
+        }
+
+        .notice-item.notice-important::before {
+          background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
         }
 
         .notice-item.notice-important {
-          border-left-color: #ef4444;
-          background: linear-gradient(to right, #fef2f2 0%, #f9fafb 10%);
+          border-color: #fecaca;
+          background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+        }
+
+        .notice-item.notice-important:hover {
+          border-color: #ef4444;
+        }
+
+        .notice-item.notice-event::before {
+          background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
         }
 
         .notice-item.notice-event {
-          border-left-color: #3b82f6;
-          background: linear-gradient(to right, #eff6ff 0%, #f9fafb 10%);
+          border-color: #bfdbfe;
+          background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+        }
+
+        .notice-item.notice-event:hover {
+          border-color: #3b82f6;
         }
 
         .notice-icon {
-          font-size: 20px;
+          font-size: 24px;
           line-height: 1;
           flex-shrink: 0;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
 
         .notice-content {
@@ -280,47 +364,54 @@ export const storeAdditionalInfoHTML = {
         .notice-header {
           display: flex;
           align-items: center;
-          gap: 6px;
-          margin-bottom: 6px;
+          gap: 8px;
+          margin-bottom: 8px;
         }
 
         .notice-title {
           margin: 0;
-          font-size: 14px;
-          font-weight: 600;
-          color: #1f2937;
-          line-height: 1.3;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1e293b;
+          line-height: 1.4;
         }
 
         .notice-new-badge {
-          display: inline-block;
-          padding: 2px 5px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 3px 8px;
           background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
           color: white;
-          font-size: 9px;
-          font-weight: 700;
-          border-radius: 3px;
+          font-size: 10px;
+          font-weight: 800;
+          border-radius: 8px;
           text-transform: uppercase;
-          letter-spacing: 0.3px;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
         }
 
         .notice-text {
-          margin: 0 0 6px 0;
-          font-size: 12px;
-          color: #4b5563;
-          line-height: 1.4;
+          margin: 0 0 8px 0;
+          font-size: 13px;
+          color: #475569;
+          line-height: 1.6;
+          font-weight: 500;
         }
 
         .notice-meta {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
         }
 
         .notice-date {
           font-size: 11px;
-          color: #9ca3af;
-          font-weight: 500;
+          color: #94a3b8;
+          font-weight: 600;
+          padding: 2px 8px;
+          background: #f8fafc;
+          border-radius: 6px;
         }
 
         .notices-empty {
@@ -328,61 +419,73 @@ export const storeAdditionalInfoHTML = {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 24px 20px;
+          padding: 40px 20px;
           text-align: center;
         }
 
         .empty-icon {
-          font-size: 36px;
-          margin-bottom: 8px;
-          opacity: 0.4;
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.3;
+          filter: grayscale(100%);
         }
 
         .empty-text {
           margin: 0;
-          font-size: 12px;
-          color: #9ca3af;
+          font-size: 14px;
+          color: #94a3b8;
+          font-weight: 500;
         }
 
         @media (max-width: 380px) {
           .store-additional-info-card {
-            padding: 14px;
+            padding: 16px;
+            gap: 14px;
+            border-radius: 16px;
+          }
+
+          .info-row {
+            padding: 10px;
             gap: 10px;
           }
 
           .info-label {
-            font-size: 11px;
-            min-width: 48px;
+            font-size: 12px;
+            min-width: 52px;
           }
 
           .info-value {
-            font-size: 12px;
-          }
-
-          .info-icon {
-            font-size: 15px;
-          }
-
-          .store-notices {
-            margin-top: 14px;
-            padding-top: 14px;
-          }
-
-          .notices-title {
-            font-size: 15px;
-          }
-
-          .notice-item {
-            padding: 10px;
-            gap: 8px;
-          }
-
-          .notice-title {
             font-size: 13px;
           }
 
+          .info-icon {
+            font-size: 18px;
+          }
+
+          .store-notices {
+            padding: 16px;
+            border-radius: 16px;
+          }
+
+          .notices-title {
+            font-size: 16px;
+          }
+
+          .notice-item {
+            padding: 12px;
+            gap: 10px;
+          }
+
+          .notice-title {
+            font-size: 14px;
+          }
+
           .notice-text {
-            font-size: 11px;
+            font-size: 12px;
+          }
+
+          .notice-icon {
+            font-size: 20px;
           }
         }
       </style>
