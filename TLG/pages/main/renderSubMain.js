@@ -1,197 +1,45 @@
+/**
+ * SubMain 렌더링 함수
+ * 레이어드 아키텍처 기반으로 리팩토링
+ */
+
+import { subMainController } from './controllers/subMainController.js';
 
 // TableLink 서브메인 화면 렌더링
 async function renderSubMain() {
-  const main = document.getElementById('main');
-
-  // 스켈레톤 UI 먼저 렌더링
-  main.innerHTML = `
-    <main id="subContent">
-      <!-- 헤더 -->
-      <header id="subHeader">
-        <div class="header-left">
-          <img src="/TableLink.png" alt="TableLink" class="logo" />
-          <span class="logo-text">TableLink</span>
-        </div>
-        <div class="header-right">
-          <button id="weatherBtn" class="header-btn" title="날씨">🌤️</button>
-          <button id="qrBtn" class="header-btn" onclick="TLL().catch(console.error)" title="QR주문">📱</button>
-          <button id="notificationBtn" class="header-btn" onclick="renderNotification()" title="알림">🔔</button>
-        </div>
-      </header>
-
-      <!-- 사용자 인사말 섹션 -->
-      <section id="greetingSection">
-        <div class="greeting-card">
-          <div class="greeting-content">
-            <h2 id="greetingText">안녕하세요! 오늘도 맛있는 하루 되세요 😊</h2>
-            <p id="greetingSubtext">현재 시간: <span id="currentTime"></span></p>
-          </div>
-          <div class="greeting-weather">
-            <div id="weatherWidget" class="weather-widget">
-              <span class="weather-icon">🌤️</span>
-              <span class="weather-temp">--°C</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 이벤트 배너 섹션 -->
-      <section id="eventBannerSection">
-        <div id="eventBannerContainer">
-          <!-- 이벤트 배너가 여기에 렌더링됩니다 -->
-        </div>
-      </section>
-
-      <!-- 퀵 액션 섹션 -->
-      <section id="quickActionsSection">
-        <h2 class="section-title">빠른 실행</h2>
-        <div id="quickActionsContainer">
-          <!-- 스켈레톤 렌더링 -->
-        </div>
-      </section>
-
-      <!-- 단골 & 최근 섹션 -->
-      <section id="favRecentSection">
-        <h2 class="section-title">단골 & 최근 방문</h2>
-        <div id="favRecentContainer">
-          <!-- 스켈레톤 렌더링 -->
-        </div>
-      </section>
-
-      <!-- 내 주변 추천 섹션 -->
-      <section id="nearbySection">
-        <h2 class="section-title">내 주변 추천</h2>
-        <div id="nearbyContainer">
-          <!-- 스켈레톤 렌더링 -->
-        </div>
-        <div id="nearbyLoadMore" style="display: none;">
-          <button id="loadMoreBtn" class="load-more-btn">더보기</button>
-        </div>
-      </section>
-
-      <!-- 혜택 섹션 -->
-      <section id="promoSection">
-        <h2 class="section-title">진행중인 혜택</h2>
-        <div id="promoContainer">
-          <!-- 스켈레톤 렌더링 -->
-        </div>
-      </section>
-
-      <!-- 통계 섹션 -->
-      <section id="statsSection">
-        <h2 class="section-title">나의 이용 현황</h2>
-        <div id="statsContainer">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-icon">📦</div>
-              <div class="stat-value" id="totalOrdersCount">-</div>
-              <div class="stat-label">총 주문</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">⭐</div>
-              <div class="stat-value" id="totalReviewsCount">-</div>
-              <div class="stat-label">작성 리뷰</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">💖</div>
-              <div class="stat-value" id="favoritesCount">-</div>
-              <div class="stat-label">즐겨찾기</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-icon">💰</div>
-              <div class="stat-value" id="totalPointsCount">-</div>
-              <div class="stat-label">보유 포인트</div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    <nav class="bottom-nav-bar">
-      <button id="homeBtn" class="nav-item active" title="홈" onclick="renderSubMain()">
-        <span class="nav-icon">🏠</span>
-      </button>
-      <button id="tllBtn" class="nav-item" title="QR주문" onclick="TLL().catch(console.error)">
-        <span class="nav-icon">📱</span>
-      </button>
-      <button id="renderMapBtn" class="nav-item" title="지도" onclick="renderMap().catch(console.error)">
-        <span class="nav-icon">📍</span>
-      </button>
-      <button id="searchBtn" class="nav-item" title="검색" onclick="renderSearch('')">
-        <span class="nav-icon">🔍</span>
-      </button>
-      <button class="nav-item" onclick="renderMyPage()" title="마이페이지">
-        <span class="nav-icon">👤</span>
-      </button>
-    </nav>
-  `;
-
-  console.log('🏠 서브메인 화면 렌더링 시작');
-
-  // 즉시 실행되는 초기화 함수들
-  initializeGreeting();
-  initializeEventBanner();
-  initializeWeatherWidget();
-
-  // 즉시 스켈레톤 렌더링
-  renderQuickActionsSkeleton();
-  renderFavSkeleton();
-  renderNearbySkeleton();
-  renderPromoSkeleton();
-
-  // 병렬로 데이터 로드 및 에러 처리 개선
   try {
-    const [favorites, recent, nearby, promotions, userStats] = await Promise.allSettled([
-      apiFetchFavorites(),
-      apiFetchRecentStores(),
-      apiFetchNearby({ offset: 0, limit: 10 }),
-      apiFetchPromotions(),
-      apiFetchUserStats()
-    ]);
+    console.log('🏠 서브메인 화면 렌더링 시작');
 
-    // 각 섹션 교체 (에러 처리 포함)
-    replaceQuickActions();
-    await replaceFavSection(
-      favorites.status === 'fulfilled' ? favorites.value : [],
-      recent.status === 'fulfilled' ? recent.value : []
-    );
-    await replaceNearbySection(
-      nearby.status === 'fulfilled' ? nearby.value : { stores: [], hasMore: false }
-    );
-    replacePromoSection(
-      promotions.status === 'fulfilled' ? promotions.value : []
-    );
-    updateUserStats(
-      userStats.status === 'fulfilled' ? userStats.value : null
-    );
+    // 사용자 정보 확인
+    if (!window.userInfo || !window.userInfo.id) {
+      console.error('❌ 사용자 정보가 없습니다');
+      // 전역 에러 메시지 표시
+      showGlobalError('사용자 정보를 불러올 수 없습니다. 다시 로그인해주세요.');
+      return;
+    }
 
-    // 실패한 항목들 로깅
-    [favorites, recent, nearby, promotions, userStats].forEach((result, index) => {
-      if (result.status === 'rejected') {
-        const sections = ['favorites', 'recent', 'nearby', 'promotions', 'userStats'];
-        console.error(`❌ ${sections[index]} 로드 실패:`, result.reason);
-      }
-    });
+    // 컨트롤러 초기화
+    await subMainController.initialize(window.userInfo);
 
+    console.log('✅ 서브메인 화면 렌더링 완료');
   } catch (error) {
-    console.error('❌ 서브메인 데이터 로드 중 오류:', error);
-    showGlobalError('일부 데이터를 불러오는데 실패했습니다. 새로고침해주세요.');
+    console.error('❌ 서브메인 렌더링 실패:', error);
+    // 에러 발생 시 전역 에러 메시지 표시
+    showGlobalError('서브메인 화면을 불러오는데 실패했습니다. 다시 시도해주세요.');
   }
-
-  console.log('✅ 서브메인 화면 렌더링 완료');
 }
 
 // 인사말 초기화
 function initializeGreeting() {
   const currentTime = new Date();
-  const timeString = currentTime.toLocaleTimeString('ko-KR', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
+  const timeString = currentTime.toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit'
   });
-  
+
   const hour = currentTime.getHours();
   let greeting = '안녕하세요!';
-  
+
   if (hour < 12) {
     greeting = '좋은 아침이에요!';
   } else if (hour < 18) {
@@ -199,19 +47,19 @@ function initializeGreeting() {
   } else {
     greeting = '저녁 시간이네요!';
   }
-  
+
   const greetingText = document.getElementById('greetingText');
   const currentTimeEl = document.getElementById('currentTime');
-  
+
   if (greetingText) greetingText.textContent = greeting + ' 오늘도 맛있는 하루 되세요 😊';
   if (currentTimeEl) currentTimeEl.textContent = timeString;
 
   // 1분마다 시간 업데이트
   setInterval(() => {
     const now = new Date();
-    const newTimeString = now.toLocaleTimeString('ko-KR', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    const newTimeString = now.toLocaleTimeString('ko-KR', {
+      hour: '2-digit',
+      minute: '2-digit'
     });
     if (currentTimeEl) currentTimeEl.textContent = newTimeString;
   }, 60000);
@@ -244,7 +92,7 @@ function initializeEventBanner() {
   ];
 
   const randomBanner = banners[Math.floor(Math.random() * banners.length)];
-  
+
   bannerContainer.innerHTML = `
     <div class="event-banner" style="background: ${randomBanner.color};" onclick="handleBannerClick()">
       <div class="banner-content">
@@ -323,25 +171,32 @@ function showGlobalError(message) {
       <button class="error-dismiss" onclick="this.parentElement.parentElement.remove()">✕</button>
     </div>
   `;
-  
+
   const subContent = document.getElementById('subContent');
   if (subContent) {
-    subContent.insertBefore(errorDiv, subContent.firstChild.nextSibling);
+    // subContent의 첫 번째 자식(subHeader) 다음에 삽입
+    const firstChild = subContent.firstChild;
+    if (firstChild) {
+      subContent.insertBefore(errorDiv, firstChild.nextSibling);
+    } else {
+      subContent.appendChild(errorDiv);
+    }
   }
 }
 
 // 사용자 통계 API 호출
 async function apiFetchUserStats() {
   try {
-    if (!userInfo || !userInfo.id) {
+    // userInfo가 전역 변수로 존재한다고 가정
+    if (!window.userInfo || !window.userInfo.id) {
       throw new Error('사용자 정보가 없습니다');
     }
 
     const [ordersRes, reviewsRes, favoritesRes, pointsRes] = await Promise.allSettled([
-      fetch(`/api/orders/users/${userInfo.id}?limit=1000`),
-      fetch(`/api/reviews/users/${userInfo.id}`),
-      fetch(`/api/auth/users/favorites/${userInfo.id}`),
-      fetch(`/api/regular-levels/user/${userInfo.id}/all-points`)
+      fetch(`/api/orders/users/${window.userInfo.id}?limit=1000`),
+      fetch(`/api/reviews/users/${window.userInfo.id}`),
+      fetch(`/api/auth/users/favorites/${window.userInfo.id}`),
+      fetch(`/api/regular-levels/user/${window.userInfo.id}/all-points`)
     ]);
 
     const results = {};
@@ -469,16 +324,17 @@ async function replaceFavSection(favorites, recent) {
   if (!container) return;
 
   const allStores = [];
-  
+
   // 즐겨찾기 매장 추가
   if (Array.isArray(favorites) && favorites.length > 0) {
     allStores.push(...favorites.map(store => ({ ...store, type: 'favorite' })));
   }
-  
+
   // 최근 방문 매장 추가 (즐겨찾기와 중복 제거)
   if (Array.isArray(recent) && recent.length > 0) {
     const favoriteIds = new Set(favorites.map(f => f.id));
     const uniqueRecent = recent.filter(store => !favoriteIds.has(store.id));
+    // 최근 방문은 최대 3개만 보여줌
     allStores.push(...uniqueRecent.slice(0, 3).map(store => ({ ...store, type: 'recent' })));
   }
 
@@ -540,7 +396,7 @@ function renderNearbySkeleton() {
 async function replaceNearbySection(nearbyData) {
   const container = document.getElementById('nearbyContainer');
   const loadMoreContainer = document.getElementById('nearbyLoadMore');
-  
+
   if (!container) return;
 
   const stores = nearbyData?.stores || [];
@@ -553,6 +409,8 @@ async function replaceNearbySection(nearbyData) {
         <div class="empty-subtitle">위치 권한을 확인하거나 다른 지역을 검색해보세요</div>
       </div>
     `;
+    // 더보기 버튼 숨김
+    if (loadMoreContainer) loadMoreContainer.style.display = 'none';
     return;
   }
 
@@ -621,6 +479,7 @@ function replacePromoSection(promotions) {
     return;
   }
 
+  // 첫 번째 프로모션만 표시
   const promo = promotions[0];
   container.innerHTML = `
     <div class="promo-banner enhanced" onclick="handlePromoClick(${promo.id})">
@@ -639,17 +498,28 @@ function replacePromoSection(promotions) {
 async function loadMoreNearbyStores() {
   console.log('🔄 더 많은 주변 매장 로드');
   // TODO: 추가 매장 로드 로직 구현
-}
+  // 현재는 스켈레톤만 렌더링하고 실제 로직은 비어있음
+  const container = document.getElementById('nearbyContainer');
+  if (!container) return;
 
-function selectStoreAndTLL(storeId) {
-  console.log(`🏪 매장 ${storeId} 선택 후 TLL 실행`);
-  // TODO: 매장 선택 후 TLL 실행 로직 구현
-  TLL().catch(console.error);
-}
-
-function handlePromoClick(promoId) {
-  console.log(`🎉 프로모션 ${promoId} 클릭`);
-  // TODO: 프로모션 상세 페이지로 이동
+  const existingHtml = container.innerHTML;
+  container.innerHTML = `
+    <div class="nearby-list">
+      ${existingHtml}
+      ${Array.from({ length: 3 }, () => `
+        <div class="nearby-card skeleton">
+          <div class="nearby-thumb skeleton-shimmer"></div>
+          <div class="nearby-info">
+            <div class="nearby-name skeleton-shimmer"></div>
+            <div class="nearby-details skeleton-shimmer"></div>
+            <div class="nearby-distance skeleton-shimmer"></div>
+          </div>
+          <div class="nearby-qr skeleton-shimmer"></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  // 실제 API 호출 및 데이터 렌더링 로직이 필요
 }
 
 function goToStore(storeId) {
@@ -659,43 +529,68 @@ function goToStore(storeId) {
       .then(storeData => {
         if (storeData.success && storeData.store) {
           renderStore(storeData.store);
+        } else {
+          console.error('매장 정보를 가져오지 못했습니다:', storeData.message);
+          showGlobalError('매장 정보를 불러오는 데 실패했습니다.');
         }
       })
       .catch(error => {
-        console.error('매장 정보 가져오기 실패:', error);
+        console.error('매장 정보 가져오기 API 호출 중 오류:', error);
+        showGlobalError('매장 정보를 불러오는 데 실패했습니다.');
       });
+  } else {
+    console.warn('renderStore 함수가 정의되지 않았습니다.');
   }
+}
+
+function selectStoreAndTLL(storeId) {
+  console.log(`🏪 매장 ${storeId} 선택 후 TLL 실행`);
+  // TODO: 실제 TLL 실행 로직 구현
+  TLL().catch(console.error);
+}
+
+function handlePromoClick(promoId) {
+  console.log(`🎉 프로모션 ${promoId} 클릭`);
+  // TODO: 프로모션 상세 페이지로 이동 로직 구현
+  // 예: fetch(`/api/promotions/${promoId}`).then(res => res.json()).then(data => { ... });
 }
 
 // API 함수들 (기존 유지하되 에러 처리 개선)
 async function apiFetchFavorites() {
   try {
-    if (!userInfo?.id) return [];
-    
-    const response = await fetch(`/api/auth/users/favorites/${userInfo.id}`);
-    if (!response.ok) throw new Error('즐겨찾기 조회 실패');
-    
+    if (!window.userInfo?.id) return [];
+
+    const response = await fetch(`/api/auth/users/favorites/${window.userInfo.id}`);
+    if (!response.ok) {
+      throw new Error(`즐겨찾기 조회 실패: ${response.status}`);
+    }
+
     const data = await response.json();
     return data.stores || [];
   } catch (error) {
     console.error('❌ 즐겨찾기 로드 실패:', error);
+    // 에러 발생 시 빈 배열 반환하여 UI가 깨지지 않도록 함
     return [];
   }
 }
 
 async function apiFetchRecentStores() {
   try {
-    if (!userInfo?.id) return [];
-    
-    const response = await fetch(`/api/orders/users/${userInfo.id}?limit=5`);
-    if (!response.ok) throw new Error('최근 방문 조회 실패');
-    
+    if (!window.userInfo?.id) return [];
+
+    // 최근 방문은 주문 API를 재활용, limit=5로 최근 5개 주문 조회
+    const response = await fetch(`/api/orders/users/${window.userInfo.id}?limit=5`);
+    if (!response.ok) {
+      throw new Error(`최근 방문 조회 실패: ${response.status}`);
+    }
+
     const data = await response.json();
+    // 주문 데이터에서 필요한 정보 추출하여 반환
     return data.orders?.map(order => ({
       id: order.store_id,
       name: order.store_name || '매장명 없음',
-      category: '기타',
-      ratingAverage: '0.0'
+      category: order.category || '기타', // 카테고리 정보가 있다면 사용
+      ratingAverage: order.ratingAverage || '0.0' // 평균 별점 정보가 있다면 사용
     })) || [];
   } catch (error) {
     console.error('❌ 최근 방문 로드 실패:', error);
@@ -706,22 +601,29 @@ async function apiFetchRecentStores() {
 async function apiFetchNearby(options = {}) {
   try {
     const { offset = 0, limit = 10 } = options;
-    
-    // 현재 위치 기반 또는 기본 위치 사용
+
+    // TODO: 실제 사용자 위치 정보를 가져와서 params에 적용해야 함
+    // 현재는 임의의 서울 중심 좌표 사용
     const params = new URLSearchParams({
-      swLat: 37.5665,
-      swLng: 126.9780,
-      neLat: 37.5675,
-      neLng: 126.9790,
-      level: 5
+      swLat: 37.5665, // 남서쪽 위도
+      swLng: 126.9780, // 남서쪽 경도
+      neLat: 37.5675, // 북동쪽 위도
+      neLng: 126.9790, // 북동쪽 경도
+      level: 5 // 지도 레벨 (확대/축소 수준)
+      // offset: offset, // 페이지네이션을 위한 오프셋
+      // limit: limit // 페이지네이션을 위한 제한
     });
-    
+
     const response = await fetch(`/api/stores/viewport?${params}`);
-    if (!response.ok) throw new Error('주변 매장 조회 실패');
-    
+    if (!response.ok) {
+      throw new Error(`주변 매장 조회 실패: ${response.status}`);
+    }
+
     const data = await response.json();
+    // API 응답 구조에 따라 stores 배열과 hasMore 플래그 조정 필요
     return {
       stores: data.stores || [],
+      // hasMore 플래그는 API에서 제공하는 정보나, 현재 불러온 데이터 수와 limit를 비교하여 결정
       hasMore: (data.stores?.length || 0) >= limit
     };
   } catch (error) {
@@ -732,12 +634,24 @@ async function apiFetchNearby(options = {}) {
 
 async function apiFetchPromotions() {
   try {
+    // 실제 프로모션 API 엔드포인트 호출 필요
+    // const response = await fetch('/api/promotions');
+    // if (!response.ok) throw new Error('프로모션 조회 실패');
+    // const data = await response.json();
+    // return data.promotions || [];
+
     // 임시 프로모션 데이터 (실제 API 구현 시 교체)
     return [
       {
         id: 1,
         title: '🎉 신규 회원 특별 혜택',
         description: '첫 주문 시 20% 할인 + 무료 배송',
+        image: '/api/placeholder/300/120' // Placeholder 이미지 URL
+      },
+      {
+        id: 2,
+        title: '🔥 인기 매장 특별 할인',
+        description: '지금 가장 인기있는 매장들을 만나보세요!',
         image: '/api/placeholder/300/120'
       }
     ];
@@ -749,3 +663,25 @@ async function apiFetchPromotions() {
 
 // 전역 함수 등록
 window.renderSubMain = renderSubMain;
+window.initializeGreeting = initializeGreeting;
+window.initializeEventBanner = initializeEventBanner;
+window.initializeWeatherWidget = initializeWeatherWidget;
+window.updateUserStats = updateUserStats;
+window.showGlobalError = showGlobalError;
+window.apiFetchUserStats = apiFetchUserStats;
+window.renderQuickActionsSkeleton = renderQuickActionsSkeleton;
+window.replaceQuickActions = replaceQuickActions;
+window.renderFavSkeleton = renderFavSkeleton;
+window.replaceFavSection = replaceFavSection;
+window.renderNearbySkeleton = renderNearbySkeleton;
+window.replaceNearbySection = replaceNearbySection;
+window.renderPromoSkeleton = renderPromoSkeleton;
+window.replacePromoSection = replacePromoSection;
+window.loadMoreNearbyStores = loadMoreNearbyStores;
+window.goToStore = goToStore;
+window.selectStoreAndTLL = selectStoreAndTLL;
+window.handlePromoClick = handlePromoClick;
+window.apiFetchFavorites = apiFetchFavorites;
+window.apiFetchRecentStores = apiFetchRecentStores;
+window.apiFetchNearby = apiFetchNearby;
+window.apiFetchPromotions = apiFetchPromotions;

@@ -112,8 +112,12 @@
   <script src="/TLG/utils/globalKeyboardEvents.js"></script>
   <script src="/TLG/utils/regularLevelManager.js"></script>
   <!-- 혜택 상세보기 스크립트 - 위에서 이미 로드됨, 중복 제거 -->
-  <!-- 서브 메인 화면 렌더링 함수 추가 -->
-  <script src="TLG/pages/main/renderSubMain.js"></script>
+  <!-- 서브 메인 화면 렌더링 함수 (레이어드 아키텍처) -->
+  <script type="module" src="TLG/pages/main/repositories/subMainRepository.js"></script>
+  <script type="module" src="TLG/pages/main/services/subMainService.js"></script>
+  <script type="module" src="TLG/pages/main/views/subMainView.js"></script>
+  <script type="module" src="TLG/pages/main/controllers/subMainController.js"></script>
+  <script type="module" src="TLG/pages/main/renderSubMain.js"></script>
   <script type="module" src="TLG/pages/pay/TLL.js"></script>
 
   <!-- 앱 초기화 스크립트 (AuthManager에서 제공) -->
