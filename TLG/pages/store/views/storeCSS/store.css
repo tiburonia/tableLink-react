@@ -173,6 +173,12 @@ body {
   gap: 4px;
 }
 
+.store-name-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .score-row {
   display: flex;
   align-items: center;
