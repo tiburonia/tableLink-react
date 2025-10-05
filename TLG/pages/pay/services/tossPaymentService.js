@@ -93,7 +93,9 @@ export const tossPaymentService = {
    */
   async requestPayment(orderData, paymentMethod = '카드') {
     try {
-      console.log('💳 토스페이먼츠 결제 요청:', { orderData, paymentMethod });
+      console.log('💳 토스페이먼츠 결제 요청 시작');
+      console.log('📋 주문 데이터:', orderData);
+      console.log('💰 결제 수단:', paymentMethod);
 
       if (!tossPayments) {
         await this.initializeTossPayments();
@@ -112,23 +114,27 @@ export const tossPaymentService = {
         failUrl: failUrl || `${window.location.origin}/toss-fail.html`
       };
 
-      console.log('📤 결제 요청 데이터:', paymentConfig);
+      console.log('📤 결제 요청 설정:', paymentConfig);
 
-      // 결제 수단에 따라 다른 메서드 호출
-      let result;
-      switch (paymentMethod) {
-        case '카드':
-          result = await tossPayments.requestPayment('카드', paymentConfig);
-          break;
-        case '계좌이체':
-          result = await tossPayments.requestPayment('계좌이체', paymentConfig);
-          break;
-        case '간편결제':
-          result = await tossPayments.requestPayment('토스페이', paymentConfig);
-          break;
-        default:
-          result = await tossPayments.requestPayment('카드', paymentConfig);
-      }
+      // 토스페이먼츠 결제 수단 매핑
+      const tossPaymentMethodMap = {
+        '카드': '카드',
+        '신용/체크카드': '카드',
+        '계좌이체': '계좌이체',
+        '가상계좌': '가상계좌',
+        '휴대폰': '휴대폰',
+        '간편결제': '토스페이',
+        '문화상품권': '문화상품권',
+        '도서문화상품권': '도서문화상품권',
+        '게임문화상품권': '게임문화상품권'
+      };
+
+      const tossMethod = tossPaymentMethodMap[paymentMethod] || '카드';
+      console.log(`🎯 토스페이먼츠 결제 수단 매핑: ${paymentMethod} → ${tossMethod}`);
+
+      // 결제 요청
+      console.log(`💳 토스페이먼츠 API 호출: requestPayment('${tossMethod}', ...)`);
+      const result = await tossPayments.requestPayment(tossMethod, paymentConfig);
 
       console.log('✅ 토스페이먼츠 결제 요청 완료:', result);
       return result;

@@ -147,15 +147,26 @@ export class PaymentController {
     
     paymentMethods.forEach(method => {
       method.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         const selectedMethod = e.currentTarget.dataset.method;
         
+        // 모든 결제 수단에서 active 클래스 제거
         paymentMethods.forEach(m => m.classList.remove('active'));
+        
+        // 선택된 결제 수단에 active 클래스 추가
         e.currentTarget.classList.add('active');
         
+        // 선택된 결제 수단 저장
         this.selectedPaymentMethod = selectedMethod;
-        console.log('✅ 결제 수단 선택:', selectedMethod);
+        
+        console.log('✅ 결제 수단 선택됨:', selectedMethod);
+        console.log('💾 현재 저장된 결제 수단:', this.selectedPaymentMethod);
       });
     });
+    
+    console.log('🎯 결제 수단 선택 이벤트 리스너 설정 완료');
   }
 
   /**
@@ -243,6 +254,7 @@ export class PaymentController {
    */
   async handlePaymentConfirmation() {
     console.log('💳 결제 확인 처리 시작');
+    console.log('🎯 선택된 결제 수단:', this.selectedPaymentMethod);
 
     try {
       const userInfo = getUserInfoSafely();
@@ -265,6 +277,8 @@ export class PaymentController {
       }
 
       console.log('📤 결제 준비 데이터 구성 시작');
+      console.log('📝 사용할 결제 수단:', this.selectedPaymentMethod);
+      
       const prepareData = paymentService.prepareTossPaymentData(
         userInfo,
         this.orderData,
@@ -276,7 +290,7 @@ export class PaymentController {
       prepareData.customerName = userInfo.name || '고객';
       prepareData.customerEmail = userInfo.email || 'customer@tablelink.com';
 
-      console.log('💳 Toss Payments 결제 플로우 실행');
+      console.log('💳 Toss Payments 결제 플로우 실행 - 결제수단:', this.selectedPaymentMethod);
       await tossPaymentService.executePaymentFlow(prepareData, this.selectedPaymentMethod);
 
       console.log('✅ 결제 처리 완료');
@@ -284,6 +298,7 @@ export class PaymentController {
     } catch (error) {
       console.log('❌ 결제 처리 취소:', error);
       
+      const confirmPayBtn = document.getElementById('confirmPayBtn');
       if (confirmPayBtn) {
         confirmPayBtn.disabled = false;
         confirmPayBtn.innerHTML = `
