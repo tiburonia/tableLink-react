@@ -8,6 +8,10 @@ export const myAccountView = {
   // 메인 컨테이너 렌더링
   render(data) {
     const main = document.getElementById('main');
+    if (!main) {
+      console.error('❌ main 요소를 찾을 수 없습니다');
+      return;
+    }
     
     // CSS 로드
     this.loadStyles();
@@ -20,6 +24,8 @@ export const myAccountView = {
     
     // 데이터 바인딩
     this.bindData(data);
+    
+    console.log('✅ myAccountView 렌더링 완료');
   },
 
   // CSS 파일 로드

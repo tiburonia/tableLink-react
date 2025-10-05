@@ -193,6 +193,16 @@ export const myAccountController = {
     }
   },
 
+  handleEditProfile(e) {
+    e.preventDefault();
+    alert('프로필 수정 기능은 개발 중입니다.');
+  }derEditPersonalInfo === 'function') {
+      window.renderEditPersonalInfo(window.userInfo || { id: 'user1' });
+    } else {
+      alert('개인정보 수정 기능을 불러올 수 없습니다.');
+    }
+  },
+
   // 선택적 스크립트 로드
   async loadOptionalScript(funcName, src) {
     if (typeof window[funcName] === 'function') return;
