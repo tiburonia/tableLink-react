@@ -282,7 +282,7 @@ export class PaymentController {
       console.log('✅ 결제 처리 완료');
 
     } catch (error) {
-      console.error('❌ 결제 처리 실패:', error);
+      console.log('❌ 결제 처리 취소:', error);
       
       if (confirmPayBtn) {
         confirmPayBtn.disabled = false;
@@ -292,7 +292,6 @@ export class PaymentController {
         `;
       }
 
-      this.handlePaymentFailure(error);
     }
   }
 
@@ -306,38 +305,7 @@ export class PaymentController {
     this.setupFailureEventListeners();
   }
 
-  /**
-   * 실패 화면 이벤트 리스너
-   */
-  setupFailureEventListeners() {
-    const retryPayment = document.getElementById('retryPayment');
-    const backToOrder = document.getElementById('backToOrder');
-    const backToMain = document.getElementById('backToMain');
-
-    if (retryPayment) {
-      retryPayment.addEventListener('click', () => {
-        this.initializePayment(this.currentOrder, this.store, this.tableNum);
-      });
-    }
-
-    if (backToOrder) {
-      backToOrder.addEventListener('click', () => {
-        this.handleBackNavigation();
-      });
-    }
-
-    if (backToMain) {
-      backToMain.addEventListener('click', () => {
-        if (typeof window.renderMap === 'function') {
-          window.renderMap();
-        } else if (typeof renderMap === 'function') {
-          renderMap();
-        } else {
-          window.location.href = '/';
-        }
-      });
-    }
-  }
+ 
 }
 
 // 전역 등록 (하위 호환성)
