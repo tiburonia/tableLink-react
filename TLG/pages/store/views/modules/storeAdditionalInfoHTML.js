@@ -142,6 +142,7 @@ export const storeAdditionalInfoHTML = {
         .native-store-info-container {
           background: #ffffff;
           padding: 0;
+          margin: 0 -16px;
         }
 
         /* 평점 섹션 */
