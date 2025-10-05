@@ -107,21 +107,21 @@ async function renderSubMain() {
       </section>
     </main>
 
-    <nav id="bottomBar">
-      <button id="homeBtn" class="active" title="홈" onclick="renderSubMain()">
-        <span style="font-size: 22px;">🏠</span>
+    <nav class="bottom-nav-bar">
+      <button id="homeBtn" class="nav-item active" title="홈" onclick="renderSubMain()">
+        <span class="nav-icon">🏠</span>
       </button>
-      <button id="tllBtn" title="QR주문" onclick="TLL().catch(console.error)">
-        <span style="font-size: 22px;">📱</span>
+      <button id="tllBtn" class="nav-item" title="QR주문" onclick="TLL().catch(console.error)">
+        <span class="nav-icon">📱</span>
       </button>
-      <button id="renderMapBtn" title="지도" onclick="renderMap().catch(console.error)">
-        <span style="font-size: 22px;">📍</span>
+      <button id="renderMapBtn" class="nav-item" title="지도" onclick="renderMap().catch(console.error)">
+        <span class="nav-icon">📍</span>
       </button>
-      <button id="searchBtn" title="검색" onclick="renderSearch('')">
-        <span style="font-size: 22px;">🔍</span>
+      <button id="searchBtn" class="nav-item" title="검색" onclick="renderSearch('')">
+        <span class="nav-icon">🔍</span>
       </button>
-      <button onclick="renderMyPage()" title="마이페이지">
-        <span style="font-size: 22px;">👤</span>
+      <button class="nav-item" onclick="renderMyPage()" title="마이페이지">
+        <span class="nav-icon">👤</span>
       </button>
     </nav>
   `;

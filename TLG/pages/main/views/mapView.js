@@ -1,4 +1,3 @@
-
 // 매장 카드 CSS 임포트
 const mapStoreCardCSS = document.createElement('link');
 mapStoreCardCSS.rel = 'stylesheet';
@@ -298,7 +297,7 @@ export const mapView = {
     provinceSelect.innerHTML = '<option value="">시/도를 선택하세요</option>';
     citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
     districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
-    
+
     citySelect.disabled = true;
     districtSelect.disabled = true;
     confirmLocationBtn.disabled = true;
@@ -311,7 +310,7 @@ export const mapView = {
 
     citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
     districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
-    
+
     citySelect.disabled = true;
     districtSelect.disabled = true;
     confirmLocationBtn.disabled = true;
@@ -332,7 +331,7 @@ export const mapView = {
   populateProvinceSelect(provinces) {
     const provinceSelect = document.getElementById('provinceSelect');
     provinceSelect.innerHTML = '<option value="">시/도를 선택하세요</option>';
-    
+
     provinces.forEach(province => {
       const option = document.createElement('option');
       option.value = province;
@@ -345,7 +344,7 @@ export const mapView = {
     const citySelect = document.getElementById('citySelect');
     citySelect.innerHTML = '<option value="">시/군/구를 선택하세요</option>';
     citySelect.disabled = false;
-    
+
     cities.forEach(city => {
       const option = document.createElement('option');
       option.value = city;
@@ -358,7 +357,7 @@ export const mapView = {
     const districtSelect = document.getElementById('districtSelect');
     districtSelect.innerHTML = '<option value="">읍/면/동을 선택하세요</option>';
     districtSelect.disabled = false;
-    
+
     districts.forEach(district => {
       const option = document.createElement('option');
       option.value = district;
@@ -869,94 +868,7 @@ export const mapView = {
           border-radius: 0 0 18px 18px;
         }
 
-        #bottomBar {
-          position: fixed;
-          bottom: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 100%;
-          max-width: 430px;
-          height: 78px;
-          background: linear-gradient(145deg, rgba(255,255,255,0.98), rgba(250,252,255,0.95));
-          border-top: 1px solid rgba(255,255,255,0.3);
-          box-shadow: 0 -8px 32px rgba(41, 126, 252, 0.08), 0 -4px 16px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
-          display: flex;
-          justify-content: space-around;
-          align-items: center;
-          z-index: 1001;
-          padding: 8px 16px 12px 16px;
-          box-sizing: border-box;
-          border-radius: 24px 24px 0 0;
-          backdrop-filter: blur(20px);
-          gap: 8px;
-        }
-
-        #bottomBar button {
-          position: relative;
-          flex: 1;
-          height: 52px;
-          min-width: 0;
-          border: none;
-          outline: none;
-          border-radius: 16px;
-          background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
-          color: #6B7280;
-          font-size: 20px;
-          font-family: inherit;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          overflow: hidden;
-          border: 1px solid rgba(255, 255, 255, 0.4);
-        }
-
-        #bottomBar button::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(135deg, rgba(41, 126, 252, 0.1), rgba(99, 102, 241, 0.05));
-          opacity: 0;
-          transition: opacity 0.3s ease;
-          border-radius: inherit;
-        }
-
-        #bottomBar button:hover {
-          transform: translateY(-2px);
-          background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
-          color: #297efc;
-          box-shadow: 0 8px 25px rgba(41, 126, 252, 0.15), 0 3px 10px rgba(0, 0, 0, 0.1);
-          border-color: rgba(41, 126, 252, 0.2);
-        }
-
-        #bottomBar button:hover::before {
-          opacity: 1;
-        }
-
-        #bottomBar button:active {
-          transform: translateY(0);
-          background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-          color: #1e40af;
-          box-shadow: 0 4px 15px rgba(41, 126, 252, 0.2), inset 0 2px 4px rgba(41, 126, 252, 0.1);
-        }
-
-        #bottomBar button.active {
-          background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-          color: white;
-          transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(220, 38, 38, 0.25), 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #bottomBar button.active::before {
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
-          opacity: 1;
-        }
+        /* 바텀 네비게이션 스타일은 mypage.css에서 관리 */
       </style>
     `;
   }
