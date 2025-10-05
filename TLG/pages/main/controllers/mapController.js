@@ -85,8 +85,10 @@ export const mapController = {
     const map = this.state.map;
 
     // 줌 레벨 변경 이벤트
-    naver.maps.Event.addListener(map, 'zoom_changed', () => {
-      this.handleMapChange();
+    naver.maps.Event.addListener(map, 'zoom_changed', async () => {
+      const currentZoom = this.state.map.getZoom();
+      console.log(`🔄 지도 변경 감지 - 줌 레벨: ${currentZoom}`);
+      await this.handleMapChange();
     });
 
     // 드래그 완료 이벤트

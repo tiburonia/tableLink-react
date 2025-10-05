@@ -1,4 +1,3 @@
-
 /**
  * 지도 데이터 접근 레포지토리
  * API 호출과 데이터 소스 접근만 담당
@@ -7,19 +6,22 @@ export const mapDataRepository = {
   /**
    * 뷰포트 기반 매장 데이터 조회
    */
-  async fetchViewportStores(level, bbox) {
-    const params = new URLSearchParams({
-      level: level.toString(),
-      bbox: bbox
-    });
+  async fetchViewportStores(bounds, zoom) {
+    try {
+      const bbox = `${bounds.minLng},${bounds.minLat},${bounds.maxLng},${bounds.maxLat}`;
+      const response = await fetch(
+        `/api/clusters/clusters?zoom=${zoom}&bbox=${bbox}`
+      );
 
-    const response = await fetch(`/api/clusters/clusters?${params}`);
-    
-    if (!response.ok) {
-      throw new Error(`매장 데이터 조회 실패: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`매장 데이터 조회 실패: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('fetchViewportStores 오류:', error);
+      throw error;
     }
-
-    return await response.json();
   },
 
   /**
@@ -27,7 +29,7 @@ export const mapDataRepository = {
    */
   async searchStores(query) {
     const response = await fetch(`/api/stores/search?query=${encodeURIComponent(query)}`);
-    
+
     if (!response.ok) {
       throw new Error(`매장 검색 실패: ${response.status}`);
     }
@@ -40,7 +42,7 @@ export const mapDataRepository = {
    */
   async searchPlaces(query, lat, lng, radius = 20000) {
     const response = await fetch(`/api/stores/search-place?query=${encodeURIComponent(query)}&x=${lng}&y=${lat}&radius=${radius}`);
-    
+
     if (!response.ok) {
       throw new Error(`장소 검색 실패: ${response.status}`);
     }

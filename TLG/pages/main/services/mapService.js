@@ -1,4 +1,3 @@
-
 // 모듈 임포트 (조건부)
 let mapDataRepository;
 
@@ -23,8 +22,8 @@ export const mapService = {
     }
 
     const bounds = map.getBounds();
-    const level = map.getZoom();
-    
+    const level = map.getLevel(); // 카카오맵 getZoom() -> 네이버맵 getLevel()
+
     const sw = bounds.getSW();
     const ne = bounds.getNE();
     const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
@@ -59,7 +58,7 @@ export const mapService = {
     console.log(`🔍 통합 검색: "${keyword}"`);
 
     const center = map.getCenter();
-    
+
     // 매장 검색과 장소 검색 병렬 실행
     const [storeResponse, placeResponse] = await Promise.all([
       mapDataRepository.searchStores(keyword),
@@ -104,7 +103,7 @@ export const mapService = {
   transformStoreData(feature) {
     // ID 우선순위: id > store_id
     let storeId = feature.id || feature.store_id;
-    
+
     if (typeof storeId === 'string' && !isNaN(storeId)) {
       storeId = parseInt(storeId, 10);
     }
@@ -151,7 +150,7 @@ export const mapService = {
    */
   validateStoreData(storeData) {
     if (!storeData) return false;
-    
+
     const required = ['id', 'name', 'coord'];
     return required.every(field => {
       if (field === 'coord') {

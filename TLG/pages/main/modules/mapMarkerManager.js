@@ -1,4 +1,3 @@
-
 // 지도 마커 관리자 - View Layer (레이어드 아키텍처 적용)
 // Controller와 Service를 통한 데이터 처리, 통일된 storeData 객체 사용
 
@@ -25,8 +24,9 @@ window.MapMarkerManager = {
   /**
    * 메인 진입점 - 레벨 변경시 호출 (Controller 연동)
    */
-  async handleMapLevelChange(level, map) {
-    console.log(`🔄 [MapMarkerManager] 지도 레벨 ${level} 변경 - 마커 업데이트 시작`);
+  async handleMapLevelChange(map) {
+    const currentLevel = map.getZoom();
+    console.log(`🔄 [MapMarkerManager] 지도 줌 레벨 ${currentLevel} 변경 - 마커 업데이트 시작`);
 
     // 지도 인스턴스 유효성 검사
     if (!map) {
@@ -52,16 +52,16 @@ window.MapMarkerManager = {
       console.log('🔄 [MapMarkerManager] 기존 작업 취소 후 새 작업 시작');
       this.shouldCancel = true;
       clearTimeout(this.debounceTimer);
-      this.debounceTimer = setTimeout(() => this.handleMapLevelChange(level, map), 150);
+      this.debounceTimer = setTimeout(() => this.handleMapLevelChange(map), 150);
       return;
     }
 
     this.isLoading = true;
     this.shouldCancel = false;
-    this.currentLevel = level;
+    this.currentLevel = currentLevel;
 
     try {
-      const newBounds = map.getBounds();
+      const newBounds = this.getViewportBounds(map);
 
       // 뷰포트 기반 diff 업데이트
       if (this.shouldUpdateForViewportChange(newBounds)) {
@@ -69,7 +69,7 @@ window.MapMarkerManager = {
       }
 
       // Service Layer를 통한 매장 데이터 조회 및 마커 업데이트
-      await this.refreshMarkersWithService(map, level);
+      await this.refreshMarkersWithService(map, currentLevel);
       this.currentBounds = newBounds;
 
     } catch (error) {
@@ -81,7 +81,7 @@ window.MapMarkerManager = {
     }
 
     if (!this.shouldCancel) {
-      console.log(`✅ [MapMarkerManager] 지도 레벨 ${level} 마커 업데이트 완료`);
+      console.log(`✅ [MapMarkerManager] 지도 레벨 ${currentLevel} 마커 업데이트 완료`);
     }
   },
 
@@ -91,14 +91,9 @@ window.MapMarkerManager = {
   shouldUpdateForViewportChange(newBounds) {
     if (!this.currentBounds) return true;
 
-    const oldSW = this.currentBounds.getSouthWest();
-    const oldNE = this.currentBounds.getNorthEast();
-    const newSW = newBounds.getSouthWest();
-    const newNE = newBounds.getNorthEast();
-
     // 뷰포트가 30% 이상 변경되면 업데이트
-    const latDiff = Math.abs(oldNE.getLat() - newNE.getLat()) / Math.abs(oldNE.getLat() - oldSW.getLat());
-    const lngDiff = Math.abs(oldNE.getLng() - newNE.getLng()) / Math.abs(oldNE.getLng() - oldSW.getLng());
+    const latDiff = Math.abs(this.currentBounds.maxLat - newBounds.maxLat) / Math.abs(this.currentBounds.maxLat - this.currentBounds.minLat);
+    const lngDiff = Math.abs(this.currentBounds.maxLng - newBounds.maxLng) / Math.abs(this.currentBounds.maxLng - this.currentBounds.minLng);
 
     return latDiff > 0.3 || lngDiff > 0.3;
   },
@@ -268,8 +263,8 @@ window.MapMarkerManager = {
           width: 32px;
           height: 32px;
           border-radius: 8px;
-          background: ${isOpen 
-            ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)' 
+          background: ${isOpen
+            ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
             : 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)'
           };
           display: flex;
@@ -386,8 +381,8 @@ window.MapMarkerManager = {
     const required = ['id', 'name', 'coord'];
     const isValid = required.every(field => {
       if (field === 'coord') {
-        return storeData.coord && 
-               typeof storeData.coord.lat === 'number' && 
+        return storeData.coord &&
+               typeof storeData.coord.lat === 'number' &&
                typeof storeData.coord.lng === 'number';
       }
       return storeData.hasOwnProperty(field) && storeData[field];
@@ -451,5 +446,21 @@ window.MapMarkerManager = {
 
     console.log('🔍 [MapMarkerManager] 의존성 상태:', dependencies);
     return dependencies;
+  },
+
+  /**
+   * 뷰포트 좌표 가져오기 메서드 (네이버 지도 API 호환)
+   */
+  getViewportBounds(map) {
+    const bounds = map.getBounds();
+    const sw = bounds.getSW ? bounds.getSW() : bounds._sw; // 네이버 지도 API
+    const ne = bounds.getNE ? bounds.getNE() : bounds._ne;
+
+    return {
+      minLng: sw.lng || sw.x,
+      minLat: sw.lat || sw.y,
+      maxLng: ne.lng || ne.x,
+      maxLat: ne.lat || ne.y
+    };
   }
 };

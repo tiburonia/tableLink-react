@@ -699,7 +699,7 @@ window.MapPanelUI = {
 
     try {
       const bounds = map.getBounds();
-      const level = map.getLevel();
+      const level = map.getZoom(); // 네이버 지도: getZoom() 사용
 
       // bbox 형식으로 파라미터 구성
       const bbox = `${bounds.getSouthWest().getLng()},${bounds.getSouthWest().getLat()},${bounds.getNorthEast().getLng()},${bounds.getNorthEast().getLat()}`;
@@ -746,13 +746,13 @@ window.MapPanelUI = {
 
           // 레거시 형식이면 변환
           console.log('🔄 레거시 데이터 변환:', feature.name);
-          return window.mapService ? 
-            window.mapService.transformStoreData(feature) : 
+          return window.mapService ?
+            window.mapService.transformStoreData(feature) :
             this.legacyTransformStoreData(feature);
         })
         .filter(store => {
-          const isValid = window.mapService ? 
-            window.mapService.validateStoreData(store) : 
+          const isValid = window.mapService ?
+            window.mapService.validateStoreData(store) :
             store && store.id && store.name;
 
           if (!isValid) {
@@ -776,7 +776,7 @@ window.MapPanelUI = {
     if (!storeListContainer) return;
 
     const bounds = map.getBounds();
-    const level = map.getLevel();
+    const level = map.getZoom(); // 네이버 지도: getZoom() 사용
     console.log(`🔄 뷰포트 기반 패널 재구성 - 레벨: ${level}, 범위: (${bounds.getSouthWest().getLat()},${bounds.getSouthWest().getLng()}) ~ (${bounds.getNorthEast().getLat()},${bounds.getNorthEast().getLng()})`);
 
     // 기존 컨텐츠 제거
@@ -825,7 +825,7 @@ window.MapPanelUI = {
       // 모든 카드를 한번에 DOM에 추가
       storeListContainer.innerHTML = cardFragments.join('');
 
-      console.log(`✅ 뷰포트 기반 패널 완전 재구성 완료: ${cardFragments.length}개 매장 카드`);
+      console.log(`✅ 뷰포트 기반 패널 재구성 완료: ${cardFragments.length}개 매장 카드`);
 
       // 필터 상태 초기화 후 재적용
       this.resetFilters();
@@ -937,13 +937,13 @@ window.MapPanelUI = {
       store_id: storeId  // 호환성을 위해 둘 다 설정
     };
 
-    console.log('🏪 매장 카드 생성 성공:', { 
-      name: storeName, 
+    console.log('🏪 매장 카드 생성 성공:', {
+      name: storeName,
       id: storeId,
       type: typeof storeId,
       originalData: { hasId: !!store.id, hasStoreId: !!store.store_id },
-      normalizedStore: { 
-        id: normalizedStore.id, 
+      normalizedStore: {
+        id: normalizedStore.id,
         store_id: normalizedStore.store_id,
         name: normalizedStore.name
       }
@@ -1049,9 +1049,9 @@ window.MapPanelUI = {
       reviewCount: feature.review_count || 0,
       favoriteCount: 0,
       isOpen: feature.is_open !== false,
-      coord: { 
-        lat: parseFloat(feature.lat), 
-        lng: parseFloat(feature.lng) 
+      coord: {
+        lat: parseFloat(feature.lat),
+        lng: parseFloat(feature.lng)
       },
       region: {
         sido: feature.sido,
