@@ -17,10 +17,11 @@ export const myAccountController = {
     console.log('🔧 myAccountController.init() 시작');
 
     // 중복 초기화 방지
-    if (this.initialized) {
+   /* if (this.initialized) {
       console.log('⚠️ Controller 이미 초기화됨');
       return;
-    }
+    }   
+    */
 
     try {
       // 1. 의존성 스크립트 로드
