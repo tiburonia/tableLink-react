@@ -1,11 +1,11 @@
-
 /**
  * MyPage Controller
- * 마이페이지 전체 흐름 제어
+ * 마이페이지 메인 컨트롤러 - 사용자 인터랙션 처리
  */
 
 import { mypageService } from '../services/mypageService.js';
 import { mypageView } from '../views/mypageView.js';
+import { mypageSkeleton } from '../views/mypageSkeleton.js';
 
 export const mypageController = {
   /**
@@ -13,7 +13,23 @@ export const mypageController = {
    */
   async renderMyPage() {
     try {
-      console.log('🏠 마이페이지 렌더링 시작');
+      console.log('🏠 마이페이지 렌더링 시작 (레이어드 아키텍처)');
+
+      const main = document.getElementById('main');
+      if (!main) {
+        throw new Error('main 요소를 찾을 수 없습니다');
+      }
+
+      // 1. 스켈레톤 표시
+      main.innerHTML = mypageSkeleton.render();
+      console.log('⏳ 마이페이지 스켈레톤 로딩 중...');
+
+      // 2. 스타일 주입
+      mypageView.injectStyles();
+
+      // 3. 데이터 가져오기
+      const mypageData = await mypageService.fetchMypageData();
+
 
       // 사용자 정보 확인
       if (!window.userInfo || !window.userInfo.id) {
@@ -24,22 +40,22 @@ export const mypageController = {
         return;
       }
 
-      const main = document.getElementById('main');
-      if (!main) {
-        console.error('❌ #main 요소를 찾을 수 없습니다');
-        return;
-      }
+      // const main = document.getElementById('main');
+      // if (!main) {
+      //   console.error('❌ #main 요소를 찾을 수 없습니다');
+      //   return;
+      // }
 
       // 1. 데이터 로드 (Service Layer) - window.userInfo.id는 users.id (PK)
       const userPk = window.userInfo.userId;
       console.log('👤 사용자 PK로 마이페이지 데이터 로드:', userPk);
-      const data = await mypageService.loadMypageData(userPk); // hasReview 포함
+      // const data = await mypageService.loadMypageData(userPk); // hasReview 포함
 
       // 2. 스타일 주입
-      mypageView.injectStyles();
+      // mypageView.injectStyles(); // 이미 위에서 주입함
 
       // 3. HTML 렌더링 (View Layer)
-      main.innerHTML = mypageView.renderHTML(data);
+      main.innerHTML = mypageView.renderHTML(mypageData); // mypageData를 사용하도록 수정
 
       // 4. 패널 핸들링 설정
       this.setupPanelHandling();
@@ -226,7 +242,7 @@ export const mypageController = {
   setupEventListeners() {
     // 퀵 액션 버튼들
     this.attachQuickActionListeners();
-    
+
     // 전체보기 버튼들
     this.attachViewAllListeners();
   },
