@@ -203,14 +203,7 @@ window.MapMarkerManager = {
 
     const markerId = `store-${storeData.id}`;
 
-    console.log(`🏷️ [MapMarkerManager] 표준화된 마커 생성:`, {
-      id: storeData.id,
-      name: storeData.name,
-      category: storeData.category,
-      rating: rating,
-      isOpen: isOpen,
-      coord: storeData.coord
-    });
+   
 
     const content = `
       <div id="${markerId}" class="standardized-store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(storeData).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">

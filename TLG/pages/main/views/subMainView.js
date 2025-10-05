@@ -184,20 +184,25 @@ export const subMainView = {
   renderBottomNav() {
     return `
       <nav class="bottom-nav-bar">
-        <button id="homeBtn" class="nav-item active" title="홈" onclick="renderSubMain()">
+        <button onclick="renderSubMain()" class="nav-item">
           <span class="nav-icon">🏠</span>
+          <span class="nav-label">홈</span>
         </button>
-        <button id="tllBtn" class="nav-item" title="QR주문" onclick="TLL().catch(console.error)">
+        <button onclick="TLL()" class="nav-item">
           <span class="nav-icon">📱</span>
+          <span class="nav-label">QR 주문</span>
         </button>
-        <button id="renderMapBtn" class="nav-item" title="지도" onclick="renderMap().catch(console.error)">
+        <button onclick="renderMap()" class="nav-item active" id="renderMapBtn">
           <span class="nav-icon">📍</span>
+          <span class="nav-label">내주변</span>
         </button>
-        <button id="searchBtn" class="nav-item" title="검색" onclick="renderSearch('')">
+        <button onclick="renderSearch()" class="nav-item">
           <span class="nav-icon">🔍</span>
+          <span class="nav-label">검색</span>
         </button>
-        <button class="nav-item" onclick="renderMyPage()" title="마이페이지">
+        <button class="nav-item" onclick="renderMyPage()">
           <span class="nav-icon">👤</span>
+          <span class="nav-label">내정보</span>
         </button>
       </nav>
     `;
