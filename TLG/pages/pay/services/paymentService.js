@@ -12,11 +12,11 @@ export const paymentService = {
   /**
    * 주문 데이터 준비 및 검증
    */
-  prepareOrderData(currentOrder, store, tableNum) {
+  prepareOrderData(currentOrder) {
     console.log('📋 주문 데이터 준비 시작');
 
     // 매장 메뉴 데이터 파싱
-    let menuData = this.parseMenuData(store.menu);
+    let menuData = this.parseMenuData(currentOrder.items);
 
     // 주문 아이템 처리
     const items = this.processOrderItems(currentOrder, menuData);
@@ -38,14 +38,14 @@ export const paymentService = {
   /**
    * 메뉴 데이터 파싱
    */
-  parseMenuData(menu) {
-    if (Array.isArray(menu)) {
-      return menu;
+  parseMenuData(items) {
+    if (Array.isArray(items)) {
+      return items;
     }
     
-    if (typeof menu === 'string') {
+    if (typeof items === 'string') {
       try {
-        return JSON.parse(menu);
+        return JSON.parse(items);
       } catch (error) {
         console.warn('⚠️ 매장 메뉴 JSON 파싱 실패:', error);
         return [];

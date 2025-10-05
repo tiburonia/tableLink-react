@@ -21,17 +21,17 @@ export class PaymentController {
   /**
    * 결제 화면 초기화 및 렌더링
    */
-  async initializePayment(currentOrder, store, tableNum) {
+  async initializePayment(currentOrder) {
     console.log('🔄 결제 컨트롤러 초기화');
 
     try {
       // 데이터 저장
       this.currentOrder = currentOrder;
-      this.store = store;
-      this.tableNum = tableNum;
+      this.store = currentOrder.store_id;
+      this.tableNum = currentOrder.table_Number;
 
       // 주문 데이터 준비
-      this.orderData = paymentService.prepareOrderData(currentOrder, store, tableNum);
+      this.orderData = paymentService.prepareOrderData(currentOrder);
       console.log('✅ 주문 데이터 준비 완료:', this.orderData);
 
       // UI 렌더링

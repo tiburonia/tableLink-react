@@ -13,8 +13,8 @@ let paymentControllerInstance = null;
  * @param {Object} store - 매장 정보
  * @param {number} tableNum - 테이블 번호
  */
-async function renderPay(currentOrder, store, tableNum) {
-  console.log('🔄 renderPay 호출:', { currentOrder, store, tableNum });
+async function renderPay(currentOrder) {
+  console.log('🔄 renderPay 호출:', { currentOrder});
 
   try {
     // 입력 데이터 검증
@@ -23,7 +23,7 @@ async function renderPay(currentOrder, store, tableNum) {
       throw new Error('주문 데이터가 없습니다.');
     }
 
-    if (!store?.name) {
+    if (!currentOrder.store_id) {
       throw new Error('매장 정보가 올바르지 않습니다.');
     }
 
@@ -31,7 +31,7 @@ async function renderPay(currentOrder, store, tableNum) {
     paymentControllerInstance = new PaymentController();
 
     // 결제 화면 초기화
-    await paymentControllerInstance.initializePayment(currentOrder, store, tableNum);
+    await paymentControllerInstance.initializePayment(currentOrder);
 
     console.log('✅ renderPay 완료');
 

@@ -37,8 +37,11 @@ export const tllRepository = {
   async getStoreInfo(storeId) {
     try {
       console.log(`🔍 매장 ${storeId} 기본 정보 조회 중...`);
+      //전역 userInfo 이용해서 url파라미터 추가
       
-      const response = await fetch(`/api/stores/${storeId}`, {
+      const apiUrl = `/api/stores/${storeId}?userId=${window.AuthManager?.getUserInfo()?.userId || ''}`;
+      
+      const response = await fetch(apiUrl, {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache'
