@@ -47,7 +47,7 @@ export const storeView = {
           <div class="storeInfo">
             <div class="store-header-section">
               <div class="store-main-info">
-                <div class="store-name-container" style="justify-content: center">
+                <div class="store-name-container">
                 <div id="storeName">${store.name}</div>
                 <button id="favoriteBtn" class="favorite-btn">♡</button>
                 </div>

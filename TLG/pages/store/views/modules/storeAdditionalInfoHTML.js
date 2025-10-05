@@ -11,15 +11,6 @@ export const storeAdditionalInfoHTML = {
 
     return `
       <div class="native-store-info-container">
-        <!-- 평점 및 리뷰 -->
-        <div class="info-rating-section">
-          <div class="rating-group">
-            <span class="rating-star">⭐</span>
-            <span class="rating-value">${additionalInfo.rating.average}</span>
-            <span class="rating-reviews">리뷰 ${additionalInfo.rating.count.toLocaleString()}개 〉</span>
-          </div>
-        </div>
-
         <!-- 상세 정보 리스트 -->
         <div class="info-detail-list">
           ${this.renderLocationItem(additionalInfo.address)}
