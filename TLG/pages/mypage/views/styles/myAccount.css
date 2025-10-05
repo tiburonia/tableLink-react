@@ -1,29 +1,37 @@
-/* MyAccount Page - Native App Style */
-/* 네이티브 앱 스타일의 깔끔하고 모던한 디자인 */
+
+/* MyAccount Page - Premium Native App Style */
+/* 실제 네이티브 앱처럼 보이는 프리미엄 디자인 */
 
 /* ========== 전역 리셋 ========== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 html, body {
   margin: 0 !important;
   padding: 0 !important;
   width: 100% !important;
   height: 100% !important;
   overflow: hidden !important;
-  position: static !important;
-  background: #f5f7fa !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif !important;
+  background: #000 !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Pretendard', 'Noto Sans KR', sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #main {
   width: 390px !important;
-  height: 760px !important;
+  height: 844px !important;
   position: absolute !important;
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%) !important;
-  background: #ffffff !important;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
-  border-radius: 20px !important;
+  background: #000 !important;
   overflow: hidden !important;
+  border-radius: 40px !important;
+  box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5) !important;
 }
 
 /* ========== 메인 래퍼 ========== */
@@ -31,8 +39,28 @@ html, body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
   position: relative;
+  overflow: hidden;
+}
+
+/* 배경 그라데이션 효과 */
+.account-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at 30% 20%, rgba(147, 51, 234, 0.15) 0%, transparent 50%),
+              radial-gradient(circle at 70% 80%, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
+  animation: gradientShift 20s ease infinite;
+  pointer-events: none;
+}
+
+@keyframes gradientShift {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  50% { transform: translate(10%, 10%) rotate(180deg); }
 }
 
 /* ========== 헤더 ========== */
@@ -40,62 +68,70 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 60px 24px 20px 24px;
   background: transparent;
-  color: white;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  position: relative;
+  z-index: 10;
 }
 
 .account-header h1 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
+  font-size: 32px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fff 0%, #e0e0e0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -1px;
 }
 
 .back-btn {
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .back-btn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.15);
   transform: scale(1.05);
+}
+
+.back-btn:active {
+  transform: scale(0.95);
 }
 
 .back-btn svg {
   width: 24px;
   height: 24px;
-  color: white;
+  color: #fff;
+  stroke-width: 2.5;
 }
 
 .header-spacer {
-  width: 40px;
+  width: 48px;
 }
 
 /* ========== 스크롤 컨텐츠 ========== */
 .account-content {
   flex: 1;
   overflow-y: auto;
-  padding: 20px;
-  background: #f5f7fa;
-  border-radius: 24px 24px 0 0;
-  margin-top: -20px;
+  overflow-x: hidden;
+  padding: 0 20px 40px 20px;
+  position: relative;
+  z-index: 5;
 }
 
 .account-content::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .account-content::-webkit-scrollbar-track {
@@ -103,20 +139,27 @@ html, body {
 }
 
 .account-content::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.account-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* ========== 프로필 카드 ========== */
 .profile-card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 28px;
+  padding: 28px;
+  margin-bottom: 24px;
   display: flex;
   align-items: center;
-  gap: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  gap: 20px;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   position: relative;
   overflow: hidden;
 }
@@ -127,8 +170,18 @@ html, body {
   top: 0;
   left: 0;
   right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #667eea, #764ba2);
+  height: 2px;
+  background: linear-gradient(90deg, 
+    rgba(147, 51, 234, 0.8) 0%, 
+    rgba(59, 130, 246, 0.8) 50%,
+    rgba(147, 51, 234, 0.8) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 
 .profile-avatar {
@@ -137,23 +190,30 @@ html, body {
 }
 
 .avatar-img {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  border: 3px solid white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  object-fit: cover;
 }
 
 .status-indicator {
   position: absolute;
-  bottom: 2px;
-  right: 2px;
-  width: 16px;
-  height: 16px;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
   background: #10b981;
-  border: 3px solid white;
+  border: 3px solid #1a1a1a;
   border-radius: 50%;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
 .profile-info {
@@ -161,57 +221,62 @@ html, body {
 }
 
 .user-name {
-  margin: 0 0 4px 0;
-  font-size: 20px;
+  margin: 0 0 6px 0;
+  font-size: 24px;
   font-weight: 700;
-  color: #1f2937;
+  color: #fff;
+  letter-spacing: -0.5px;
 }
 
 .user-email {
-  margin: 0 0 8px 0;
-  font-size: 13px;
-  color: #6b7280;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
 }
 
 .vip-badge {
   display: inline-block;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+  padding: 8px 16px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
 }
 
 .badge-text {
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  letter-spacing: 0.5px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #000;
+  letter-spacing: 1px;
 }
 
 .edit-profile-btn {
-  background: rgba(102, 126, 234, 0.1);
-  border: none;
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
+  background: rgba(147, 51, 234, 0.2);
+  border: 1px solid rgba(147, 51, 234, 0.4);
+  border-radius: 16px;
+  width: 48px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
 .edit-profile-btn:hover {
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(147, 51, 234, 0.3);
   transform: scale(1.05);
+}
+
+.edit-profile-btn:active {
+  transform: scale(0.95);
 }
 
 .edit-profile-btn svg {
   width: 20px;
   height: 20px;
-  color: #667eea;
+  color: #c084fc;
 }
 
 /* ========== 통계 그리드 ========== */
@@ -219,18 +284,19 @@ html, body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .stat-card {
-  background: white;
-  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
   padding: 20px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  gap: 10px;
+  backdrop-filter: blur(20px);
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -244,29 +310,31 @@ html, body {
   right: 0;
   height: 3px;
   background: currentColor;
-  opacity: 0.3;
+  opacity: 0.5;
 }
 
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .stat-card.primary {
-  color: #667eea;
+  color: #a78bfa;
 }
 
 .stat-card.secondary {
-  color: #8b5cf6;
+  color: #60a5fa;
 }
 
 .stat-card.tertiary {
-  color: #10b981;
+  color: #34d399;
 }
 
 .stat-icon {
-  font-size: 28px;
+  font-size: 32px;
   line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 .stat-content {
@@ -277,95 +345,107 @@ html, body {
 }
 
 .stat-number {
-  font-size: 18px;
-  font-weight: 700;
-  color: #1f2937;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
 }
 
 .stat-label {
-  font-size: 12px;
-  color: #6b7280;
-  font-weight: 500;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* ========== 모던 카드 공통 ========== */
 .modern-card {
-  background: white;
-  border-radius: 20px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  margin-bottom: 24px;
   overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
 }
 
 .modern-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .header-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  font-size: 24px;
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(59, 130, 246, 0.2));
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  box-shadow: 0 8px 24px rgba(147, 51, 234, 0.3);
 }
 
 .header-text h3 {
-  margin: 0 0 2px 0;
-  font-size: 16px;
+  margin: 0 0 4px 0;
+  font-size: 18px;
   font-weight: 700;
-  color: #1f2937;
+  color: #fff;
+  letter-spacing: -0.5px;
 }
 
 .header-text p {
   margin: 0;
-  font-size: 12px;
-  color: #9ca3af;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
 }
 
 .modern-btn {
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: 10px;
-  padding: 8px 16px;
+  background: rgba(147, 51, 234, 0.15);
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  border-radius: 12px;
+  padding: 10px 18px;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   font-size: 13px;
-  font-weight: 600;
-  color: #667eea;
+  font-weight: 700;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .modern-btn:hover {
-  background: rgba(102, 126, 234, 0.15);
-  transform: scale(1.02);
+  background: rgba(147, 51, 234, 0.25);
+  transform: translateX(4px);
+}
+
+.modern-btn:active {
+  transform: translateX(2px) scale(0.98);
 }
 
 .modern-btn svg {
   width: 16px;
   height: 16px;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
 }
 
 .modern-btn:hover svg {
@@ -373,7 +453,7 @@ html, body {
 }
 
 .card-body {
-  padding: 0 24px 24px 24px;
+  padding: 24px;
 }
 
 .card-body.no-padding {
@@ -382,28 +462,28 @@ html, body {
 
 /* ========== 단골 레벨 카드 ========== */
 .loyalty-gradient-header {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-  border-bottom: 1px solid #f59e0b;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.2);
 }
 
 .loyalty-icon {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3) !important;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.3), rgba(245, 158, 11, 0.3)) !important;
+  border: 1px solid rgba(251, 191, 36, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(251, 191, 36, 0.3) !important;
 }
 
 .loyalty-btn {
-  background: rgba(245, 158, 11, 0.1) !important;
-  border-color: #f59e0b !important;
-  color: #d97706 !important;
+  background: rgba(251, 191, 36, 0.15) !important;
+  border-color: rgba(251, 191, 36, 0.3) !important;
+  color: #fbbf24 !important;
 }
 
 .loyalty-btn:hover {
-  background: rgba(245, 158, 11, 0.2) !important;
+  background: rgba(251, 191, 36, 0.25) !important;
 }
 
 .loyalty-body {
-  padding: 20px !important;
-  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  background: transparent !important;
 }
 
 .regular-levels-container {
@@ -413,10 +493,10 @@ html, body {
 }
 
 .regular-level-item {
-  background: white;
-  border-radius: 14px;
-  padding: 16px;
-  border: 2px solid #f59e0b;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 16px;
+  padding: 20px;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -429,75 +509,78 @@ html, body {
   top: 0;
   bottom: 0;
   width: 4px;
-  background: linear-gradient(180deg, #f59e0b, #d97706);
+  background: linear-gradient(180deg, #fbbf24, #f59e0b);
+  box-shadow: 0 0 16px rgba(251, 191, 36, 0.5);
 }
 
 .regular-level-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(245, 158, 11, 0.2);
+  transform: translateX(4px);
+  background: rgba(251, 191, 36, 0.12);
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 .level-store-name {
   font-weight: 700;
-  color: #111827;
-  margin-bottom: 8px;
+  color: #fff;
+  margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .level-badge {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 12px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #000;
+  padding: 8px 14px;
+  border-radius: 10px;
   font-size: 11px;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+  font-weight: 800;
+  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.4);
+  letter-spacing: 0.5px;
 }
 
 .level-progress {
-  font-size: 13px;
-  color: #92400e;
-  margin-bottom: 6px;
+  font-size: 14px;
+  color: #fbbf24;
+  margin-bottom: 8px;
   font-weight: 600;
 }
 
 .level-benefits {
-  font-size: 12px;
-  color: #d97706;
+  font-size: 13px;
+  color: rgba(251, 191, 36, 0.8);
   font-weight: 600;
-  background: rgba(245, 158, 11, 0.1);
-  padding: 4px 10px;
+  background: rgba(251, 191, 36, 0.08);
+  padding: 6px 12px;
   border-radius: 8px;
   display: inline-block;
 }
 
 /* ========== 활동 카드 ========== */
 .activity-gradient-header {
-  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-  border-bottom: 1px solid #10b981;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.15) 100%);
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .activity-icon {
-  background: linear-gradient(135deg, #10b981, #059669) !important;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(5, 150, 105, 0.3)) !important;
+  border: 1px solid rgba(16, 185, 129, 0.4) !important;
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3) !important;
 }
 
 .activity-btn {
-  background: rgba(16, 185, 129, 0.1) !important;
-  border-color: #10b981 !important;
-  color: #059669 !important;
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+  color: #34d399 !important;
 }
 
 .activity-btn:hover {
-  background: rgba(16, 185, 129, 0.2) !important;
+  background: rgba(16, 185, 129, 0.25) !important;
 }
 
 .activity-body {
-  padding: 20px !important;
-  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  background: transparent !important;
 }
 
 .modern-list {
@@ -507,10 +590,10 @@ html, body {
 }
 
 .activity-item {
-  background: white;
-  border-radius: 14px;
-  padding: 16px;
-  border: 2px solid #10b981;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 16px;
+  padding: 20px;
   transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
@@ -524,24 +607,26 @@ html, body {
   bottom: 0;
   width: 4px;
   background: linear-gradient(180deg, #10b981, #059669);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.5);
 }
 
 .activity-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2);
+  transform: translateX(4px);
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
 }
 
 .activity-store {
   font-weight: 700;
-  color: #111827;
-  margin-bottom: 6px;
-  font-size: 15px;
+  color: #fff;
+  margin-bottom: 8px;
+  font-size: 16px;
 }
 
 .activity-items {
-  font-size: 13px;
-  color: #047857;
-  margin-bottom: 10px;
+  font-size: 14px;
+  color: #34d399;
+  margin-bottom: 12px;
   font-weight: 500;
 }
 
@@ -549,19 +634,19 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .activity-date {
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 500;
 }
 
 .activity-total {
   font-weight: 700;
-  color: #059669;
-  background: rgba(16, 185, 129, 0.1);
-  padding: 4px 10px;
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 6px 12px;
   border-radius: 8px;
 }
 
@@ -570,30 +655,30 @@ html, body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0;
-  padding: 12px;
+  padding: 16px;
 }
 
 .modern-item {
   background: none;
   border: none;
-  padding: 16px 8px;
+  padding: 20px 12px;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
-  border-radius: 14px;
-  margin: 4px;
+  border-radius: 16px;
 }
 
 .item-background {
   position: absolute;
   inset: 0;
-  background: #f8fafc;
-  border-radius: 12px;
+  background: rgba(147, 51, 234, 0.08);
+  border-radius: 16px;
   transition: all 0.3s ease;
   opacity: 0;
+  border: 1px solid transparent;
 }
 
 .item-hover-effect {
@@ -603,22 +688,23 @@ html, body {
   transform: translate(-50%, -50%) scale(0);
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(102, 126, 234, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(147, 51, 234, 0.2) 0%, transparent 70%);
   border-radius: 50%;
-  transition: transform 0.3s ease;
+  transition: transform 0.4s ease;
   pointer-events: none;
 }
 
 .modern-item:hover .item-background {
   opacity: 1;
+  border-color: rgba(147, 51, 234, 0.2);
 }
 
 .modern-item:hover .item-hover-effect {
-  transform: translate(-50%, -50%) scale(1);
+  transform: translate(-50%, -50%) scale(1.5);
 }
 
-.modern-item:hover {
-  transform: translateY(-2px);
+.modern-item:active {
+  transform: scale(0.95);
 }
 
 .item-content {
@@ -627,45 +713,46 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .menu-icon {
-  font-size: 24px;
+  font-size: 28px;
   transition: transform 0.3s ease;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 .modern-item:hover .menu-icon {
-  transform: scale(1.1);
+  transform: scale(1.15) rotate(5deg);
 }
 
 .menu-label {
   font-size: 12px;
   font-weight: 600;
-  color: #374151;
+  color: rgba(255, 255, 255, 0.8);
   text-align: center;
 }
 
 .menu-badge {
   position: absolute;
-  top: -6px;
-  right: -6px;
+  top: -4px;
+  right: -4px;
   background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
   font-size: 10px;
-  font-weight: 700;
-  padding: 3px 6px;
-  border-radius: 10px;
-  min-width: 18px;
+  font-weight: 800;
+  padding: 4px 7px;
+  border-radius: 12px;
+  min-width: 20px;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
-  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+  border: 2px solid #1a1a1a;
 }
 
 /* ========== 개인정보 섹션 ========== */
 .info-gradient {
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-  border-bottom: 1px solid #818cf8;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(129, 140, 248, 0.15) 100%);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 .modern-info-list {
@@ -678,8 +765,8 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid #f3f4f6;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.2s ease;
 }
 
@@ -688,88 +775,110 @@ html, body {
 }
 
 .info-item:hover {
-  background: rgba(102, 126, 234, 0.03);
+  background: rgba(147, 51, 234, 0.05);
   margin: 0 -16px;
-  padding: 14px 16px;
-  border-radius: 10px;
+  padding: 16px 16px;
+  border-radius: 12px;
 }
 
 .info-label {
   font-size: 14px;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.5);
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .info-label::before {
   content: '';
   width: 6px;
   height: 6px;
-  background: #667eea;
+  background: #a78bfa;
   border-radius: 50%;
+  box-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
 }
 
 .info-value {
   font-size: 14px;
-  color: #1f2937;
-  font-weight: 600;
-}
-
-/* ========== 애니메이션 ========== */
-@keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
+  color: #fff;
+  font-weight: 700;
 }
 
 /* ========== 로그아웃 섹션 ========== */
 .logout-section {
-  margin-top: 12px;
+  margin-top: 16px;
   padding-bottom: 20px;
 }
 
 .logout-btn {
   width: 100%;
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  border-radius: 14px;
-  padding: 16px;
-  color: #dc2626;
-  font-size: 15px;
-  font-weight: 600;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 18px;
+  color: #ef4444;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
+  backdrop-filter: blur(20px);
 }
 
 .logout-btn:hover {
-  background: #fecaca;
-  border-color: #fca5a5;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.3);
+}
+
+.logout-btn:active {
+  transform: translateY(0);
 }
 
 .logout-btn svg {
-  width: 20px;
+  width: 22px;
+  height: 22px;
+}
+
+/* ========== 스켈레톤 로딩 ========== */
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-text {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.05) 25%, 
+    rgba(255, 255, 255, 0.1) 50%, 
+    rgba(255, 255, 255, 0.05) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+  border-radius: 8px;
   height: 20px;
+  width: 100%;
 }
 
 /* ========== 반응형 ========== */
 @media (max-width: 430px) {
   .account-content {
-    padding: 16px;
+    padding: 0 16px 40px 16px;
   }
 
   .profile-card {
-    padding: 20px;
+    padding: 24px;
   }
 
   .stats-grid {
-    gap: 8px;
+    gap: 10px;
   }
 
   .stat-card {
@@ -781,6 +890,17 @@ html, body {
   }
 
   .modern-item {
-    padding: 12px 6px;
+    padding: 16px 8px;
+  }
+}
+
+/* ========== 안전 영역 (노치 대응) ========== */
+@supports (padding: max(0px)) {
+  .account-header {
+    padding-top: max(60px, env(safe-area-inset-top));
+  }
+
+  .account-content {
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
   }
 }
