@@ -909,13 +909,7 @@ window.MapPanelUI = {
       return '';
     }
 
-    console.log('🔍 매장 카드 생성 시작:', {
-      storeName: store.name,
-      originalId: store.id,
-      originalStoreId: store.store_id,
-      storeKeys: Object.keys(store)
-    });
-
+  
     // ID 우선 검증 - store_id 또는 id 사용
     let storeId = store.id || store.store_id;
 
@@ -950,24 +944,13 @@ window.MapPanelUI = {
       store_id: storeId  // 호환성을 위해 둘 다 설정
     };
 
-    console.log('🏪 매장 카드 생성 성공:', {
-      name: storeName,
-      id: storeId,
-      type: typeof storeId,
-      originalData: { hasId: !!store.id, hasStoreId: !!store.store_id },
-      normalizedStore: {
-        id: normalizedStore.id,
-        store_id: normalizedStore.store_id,
-        name: normalizedStore.name
-      }
-    });
+   
 
     // renderStore 함수 호출을 위한 안전한 데이터 처리
     let storeDataForRender;
     try {
       const jsonString = JSON.stringify(normalizedStore);
       storeDataForRender = jsonString.replace(/"/g, '&quot;');
-      console.log('📄 JSON 직렬화 성공, 길이:', jsonString.length);
     } catch (jsonError) {
       console.error('❌ JSON 직렬화 실패:', jsonError);
       // 최소한의 데이터만 전달
