@@ -99,9 +99,9 @@ export const myAccountController = {
   handleBack(e) {
     e.preventDefault();
     if (typeof window.renderMyPage === 'function') {
-      window.renderMyPage();
+      renderMyPage();
     } else {
-      window.history.back();
+      throw error
     }
   },
 

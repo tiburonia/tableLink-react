@@ -29,7 +29,6 @@ export const mypageEventHandler = {
     }
 
     // 패널 핸들링 설정
-    mypagePanelManager.setup();
 
     // 퀵 액션 버튼 이벤트
     this.attachQuickActionListeners();
