@@ -294,9 +294,9 @@ export const mapController = {
     console.log(`🔄 지도 변경 감지 - 줌 레벨: ${level}`);
 
     try {
-      // 마커 매니저를 통한 마커 업데이트
+      // 마커 매니저를 통한 마커 업데이트 - map 객체만 전달
       if (window.MapMarkerManager && typeof window.MapMarkerManager.handleMapLevelChange === 'function') {
-        window.MapMarkerManager.handleMapLevelChange(level, this.state.map);
+        window.MapMarkerManager.handleMapLevelChange(this.state.map);
       }
 
       // 패널 업데이트

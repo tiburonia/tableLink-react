@@ -701,8 +701,12 @@ window.MapPanelUI = {
       const bounds = map.getBounds();
       const level = map.getZoom(); // 네이버 지도: getZoom() 사용
 
+      // 네이버 지도 API: getSW(), getNE() 사용
+      const sw = bounds.getSW();
+      const ne = bounds.getNE();
+      
       // bbox 형식으로 파라미터 구성
-      const bbox = `${bounds.getSouthWest().getLng()},${bounds.getSouthWest().getLat()},${bounds.getNorthEast().getLng()},${bounds.getNorthEast().getLat()}`;
+      const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
 
       const params = new URLSearchParams({
         level: level,
@@ -777,7 +781,11 @@ window.MapPanelUI = {
 
     const bounds = map.getBounds();
     const level = map.getZoom(); // 네이버 지도: getZoom() 사용
-    console.log(`🔄 뷰포트 기반 패널 재구성 - 레벨: ${level}, 범위: (${bounds.getSouthWest().getLat()},${bounds.getSouthWest().getLng()}) ~ (${bounds.getNorthEast().getLat()},${bounds.getNorthEast().getLng()})`);
+    
+    // 네이버 지도 API: getSW(), getNE() 사용
+    const sw = bounds.getSW();
+    const ne = bounds.getNE();
+    console.log(`🔄 뷰포트 기반 패널 재구성 - 레벨: ${level}, 범위: (${sw.lat()},${sw.lng()}) ~ (${ne.lat()},${ne.lng()})`);
 
     // 기존 컨텐츠 제거
     storeListContainer.innerHTML = '';

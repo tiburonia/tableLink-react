@@ -22,7 +22,7 @@ export const mapService = {
     }
 
     const bounds = map.getBounds();
-    const level = map.getLevel(); // 카카오맵 getZoom() -> 네이버맵 getLevel()
+    const level = map.getZoom(); // 네이버 지도: getZoom() 사용
 
     const sw = bounds.getSW();
     const ne = bounds.getNE();
