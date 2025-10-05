@@ -1,5 +1,6 @@
+
 /**
- * 매장 추가 정보 HTML 모듈 (Compact 버전)
+ * 매장 추가 정보 HTML 모듈 (네이티브 앱 스타일)
  */
 export const storeAdditionalInfoHTML = {
   /**
@@ -9,144 +10,206 @@ export const storeAdditionalInfoHTML = {
     if (!additionalInfo) return '';
 
     return `
-      <div class="store-additional-info-card">
-        ${this.renderInfoRow('📍', '주소', additionalInfo.address)}
-        ${this.renderInfoRow('⭐', '평점', `${additionalInfo.rating.average} (${additionalInfo.rating.count.toLocaleString()} 리뷰)`)}
-        ${this.renderInfoRow('📝', '소개', additionalInfo.description)}
-        ${this.renderOperatingHours(additionalInfo.operatingHours)}
-        ${this.renderFacilities(additionalInfo.facilities)}
-        ${this.renderPaymentMethods(additionalInfo.payment)}
-        ${this.renderInfoRow('📞', '연락처', additionalInfo.contact)}
+      <div class="native-store-info-container">
+        <!-- 주요 정보 카드 -->
+        <div class="info-main-card">
+          <!-- 평점 및 위치 -->
+          <div class="info-highlight-row">
+            <div class="rating-box">
+              <span class="rating-star">⭐</span>
+              <span class="rating-value">${additionalInfo.rating.average}</span>
+              <span class="rating-reviews">리뷰 ${additionalInfo.rating.count.toLocaleString()}개</span>
+            </div>
+            <div class="location-badge">
+              <span class="location-icon">📍</span>
+              <span class="location-text">${this.formatAddress(additionalInfo.address)}</span>
+            </div>
+          </div>
+
+          <!-- 매장 소개 -->
+          ${additionalInfo.description ? `
+            <div class="description-section">
+              <p class="description-text">${additionalInfo.description}</p>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- 상세 정보 리스트 -->
+        <div class="info-detail-list">
+          ${this.renderDetailItem('🏠', '주소', additionalInfo.address, true)}
+          ${this.renderOperatingHoursItem(additionalInfo.operatingHours)}
+          ${this.renderDetailItem('📞', '전화', additionalInfo.contact, false, `tel:${additionalInfo.contact}`)}
+          ${this.renderFacilitiesItem(additionalInfo.facilities)}
+          ${this.renderPaymentItem(additionalInfo.payment)}
+        </div>
+
+        <!-- 공지사항 섹션 -->
+        ${notices ? this.renderNoticesSection(notices) : ''}
       </div>
-      ${notices ? this.renderNotices(notices) : ''}
       ${this.getStyles()}
     `;
   },
 
   /**
-   * 기본 정보 행 렌더링
+   * 주소 간략화
    */
-  renderInfoRow(icon, label, value) {
+  formatAddress(address) {
+    if (!address) return '주소 정보 없음';
+    const parts = address.split(' ');
+    if (parts.length > 3) {
+      return parts.slice(-3).join(' ');
+    }
+    return address;
+  },
+
+  /**
+   * 상세 정보 아이템 렌더링
+   */
+  renderDetailItem(icon, label, value, multiline = false, link = null) {
+    if (!value || value === '정보 없음' || value === '연락처 정보 없음') return '';
+
+    const content = link 
+      ? `<a href="${link}" class="detail-value-link">${value}</a>`
+      : `<span class="detail-value ${multiline ? 'multiline' : ''}">${value}</span>`;
+
     return `
-      <div class="info-row">
-        <span class="info-icon">${icon}</span>
-        <span class="info-label">${label}</span>
-        <span class="info-value">${value}</span>
+      <div class="detail-item">
+        <div class="detail-header">
+          <span class="detail-icon">${icon}</span>
+          <span class="detail-label">${label}</span>
+        </div>
+        ${content}
       </div>
     `;
   },
 
   /**
-   * 영업시간 행
+   * 영업시간 아이템 렌더링
    */
-  renderOperatingHours(hours) {
+  renderOperatingHoursItem(hours) {
+    if (!hours || !hours.weekday) return '';
+
     return `
-      <div class="info-row">
-        <span class="info-icon">🕐</span>
-        <span class="info-label">영업시간</span>
-        <span class="info-value">
-          평일 ${hours.weekday} / 주말 ${hours.weekend}
-        </span>
+      <div class="detail-item">
+        <div class="detail-header">
+          <span class="detail-icon">🕐</span>
+          <span class="detail-label">영업시간</span>
+        </div>
+        <div class="hours-content">
+          <div class="hours-row">
+            <span class="hours-day">평일</span>
+            <span class="hours-time">${hours.weekday}</span>
+          </div>
+          <div class="hours-row">
+            <span class="hours-day">주말</span>
+            <span class="hours-time">${hours.weekend}</span>
+          </div>
+          ${hours.holiday ? `
+            <div class="hours-row">
+              <span class="hours-day">공휴일</span>
+              <span class="hours-time">${hours.holiday}</span>
+            </div>
+          ` : ''}
+        </div>
       </div>
     `;
   },
 
   /**
-   * 편의시설 행
+   * 편의시설 아이템 렌더링
    */
-  renderFacilities(facilities) {
+  renderFacilitiesItem(facilities) {
     if (!facilities || facilities.length === 0) return '';
 
-    const facilitiesText = facilities
-      .filter(f => f.available)
-      .map(f => f.name)
-      .join(', ');
-
-    if (!facilitiesText) return '';
+    const available = facilities.filter(f => f.available);
+    if (available.length === 0) return '';
 
     return `
-      <div class="info-row">
-        <span class="info-icon">🏪</span>
-        <span class="info-label">편의시설</span>
-        <span class="info-value">${facilitiesText}</span>
+      <div class="detail-item">
+        <div class="detail-header">
+          <span class="detail-icon">🏪</span>
+          <span class="detail-label">편의시설</span>
+        </div>
+        <div class="facilities-tags">
+          ${available.map(f => `
+            <span class="facility-tag">${f.name}</span>
+          `).join('')}
+        </div>
       </div>
     `;
   },
 
   /**
-   * 결제 수단 행
+   * 결제 수단 아이템 렌더링
    */
-  renderPaymentMethods(payment) {
+  renderPaymentItem(payment) {
     if (!payment || payment.length === 0) return '';
 
-    const paymentText = payment.join(', ');
-
     return `
-      <div class="info-row">
-        <span class="info-icon">💳</span>
-        <span class="info-label">결제</span>
-        <span class="info-value">${paymentText}</span>
+      <div class="detail-item">
+        <div class="detail-header">
+          <span class="detail-icon">💳</span>
+          <span class="detail-label">결제</span>
+        </div>
+        <div class="payment-tags">
+          ${payment.map(method => `
+            <span class="payment-tag">${this.getPaymentIcon(method)} ${method}</span>
+          `).join('')}
+        </div>
       </div>
     `;
+  },
+
+  /**
+   * 결제 아이콘 반환
+   */
+  getPaymentIcon(method) {
+    const iconMap = {
+      '현금': '💵',
+      '카드': '💳',
+      '간편결제': '📱',
+      '계좌이체': '🏦'
+    };
+    return iconMap[method] || '💳';
   },
 
   /**
    * 공지사항 섹션 렌더링
    */
-  renderNotices(notices) {
-    if (!notices || notices.length === 0) {
-      return this.renderEmptyNotices();
-    }
+  renderNoticesSection(notices) {
+    if (!notices || notices.length === 0) return '';
 
     return `
-      <div class="store-notices">
+      <div class="notices-container">
         <div class="notices-header">
-          <h3 class="notices-title">
-            <span class="notices-icon">📢</span>
-            공지사항
-          </h3>
+          <span class="notices-icon">📢</span>
+          <h3 class="notices-title">공지사항</h3>
         </div>
         <div class="notices-list">
-          ${notices.map(notice => this.renderNoticeItem(notice)).join('')}
+          ${notices.map(notice => this.renderNoticeCard(notice)).join('')}
         </div>
       </div>
     `;
   },
 
   /**
-   * 공지사항 항목 렌더링
+   * 공지사항 카드 렌더링
    */
-  renderNoticeItem(notice) {
+  renderNoticeCard(notice) {
     const typeClass = notice.type === 'important' ? 'notice-important' : 'notice-event';
-    const newBadge = notice.isNew ? '<span class="notice-new-badge">NEW</span>' : '';
+    const newBadge = notice.isNew ? '<span class="new-badge">NEW</span>' : '';
 
     return `
-      <div class="notice-item ${typeClass}">
-        <div class="notice-icon">${notice.icon}</div>
-        <div class="notice-content">
-          <div class="notice-header">
+      <div class="notice-card ${typeClass}">
+        <div class="notice-top">
+          <div class="notice-title-row">
+            <span class="notice-icon">${notice.icon}</span>
             <h4 class="notice-title">${notice.title}</h4>
             ${newBadge}
           </div>
-          <p class="notice-text">${notice.content}</p>
-          <div class="notice-meta">
-            <span class="notice-date">${notice.formattedDate}</span>
-          </div>
+          <span class="notice-date">${notice.formattedDate}</span>
         </div>
-      </div>
-    `;
-  },
-
-  /**
-   * 빈 공지사항 렌더링
-   */
-  renderEmptyNotices() {
-    return `
-      <div class="store-notices empty">
-        <div class="notices-empty">
-          <span class="empty-icon">📭</span>
-          <p class="empty-text">현재 공지사항이 없습니다</p>
-        </div>
+        <p class="notice-content">${notice.content}</p>
       </div>
     `;
   },
@@ -157,135 +220,247 @@ export const storeAdditionalInfoHTML = {
   getStyles() {
     return `
       <style>
-        .store-additional-info-card {
+        .native-store-info-container {
           margin-top: 0;
-          background: white;
-          border-radius: 20px;
-          padding: 20px;
           display: flex;
           flex-direction: column;
-          gap: 16px;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-          border: 1px solid rgba(226, 232, 240, 0.8);
-          position: relative;
-          overflow: hidden;
+          gap: 8px;
         }
 
-        .store-additional-info-card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
+        /* 메인 정보 카드 */
+        .info-main-card {
+          background: white;
+          border-radius: 0;
+          padding: 20px;
+          border-bottom: 8px solid #f8f9fa;
         }
 
-        .info-row {
+        /* 하이라이트 행 */
+        .info-highlight-row {
           display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 12px;
-          background: linear-gradient(135deg, #fafafa 0%, #f8f9fa 100%);
-          border-radius: 12px;
-          border: 1px solid #f1f5f9;
-          transition: all 0.2s ease;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #f1f5f9;
         }
 
-        .info-row:hover {
-          background: linear-gradient(135deg, #f8f9fa 0%, #f3f4f6 100%);
-          border-color: #e2e8f0;
-          transform: translateX(2px);
+        .rating-box {
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
 
-        .info-icon {
+        .rating-star {
+          font-size: 18px;
+          color: #fbbf24;
+        }
+
+        .rating-value {
           font-size: 20px;
-          flex-shrink: 0;
-          margin-top: 2px;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-        }
-
-        .info-label {
-          font-size: 13px;
           font-weight: 700;
-          color: #64748b;
-          min-width: 56px;
-          flex-shrink: 0;
+          color: #111827;
+          letter-spacing: -0.5px;
         }
 
-        .info-value {
-          font-size: 14px;
-          color: #1e293b;
-          flex: 1;
-          word-break: keep-all;
-          line-height: 1.6;
+        .rating-reviews {
+          font-size: 13px;
+          color: #6b7280;
           font-weight: 500;
         }
 
-        /* 평점 강조 */
-        .info-row:has(.info-label:contains('평점')) {
-          background: linear-gradient(135deg, #fef7cd 0%, #fef3c7 100%);
-          border-color: #fbbf24;
+        .location-badge {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: #f1f5f9;
+          padding: 6px 12px;
+          border-radius: 16px;
+          max-width: 180px;
         }
 
-        .info-row:has(.info-label:contains('평점')) .info-value {
-          font-weight: 700;
-          color: #f59e0b;
+        .location-icon {
+          font-size: 14px;
+          flex-shrink: 0;
         }
 
-        /* 연락처 링크 스타일 */
-        .info-row:has(.info-label:contains('연락처')) {
-          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-          border-color: #3b82f6;
+        .location-text {
+          font-size: 12px;
+          font-weight: 500;
+          color: #475569;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .info-row:has(.info-label:contains('연락처')) .info-value {
+        /* 매장 소개 */
+        .description-section {
+          margin-top: 8px;
+        }
+
+        .description-text {
+          margin: 0;
+          font-size: 14px;
+          color: #374151;
+          line-height: 1.6;
+          word-break: keep-all;
+        }
+
+        /* 상세 정보 리스트 */
+        .info-detail-list {
+          background: white;
+          border-radius: 0;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .detail-item {
+          padding: 16px 20px;
+          border-bottom: 1px solid #f1f5f9;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .detail-item:last-child {
+          border-bottom: none;
+        }
+
+        .detail-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .detail-icon {
+          font-size: 18px;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        .detail-label {
+          font-size: 14px;
+          font-weight: 600;
+          color: #374151;
+        }
+
+        .detail-value {
+          font-size: 14px;
+          color: #1e293b;
+          line-height: 1.5;
+          padding-left: 26px;
+          font-weight: 500;
+        }
+
+        .detail-value.multiline {
+          word-break: keep-all;
+          line-height: 1.6;
+        }
+
+        .detail-value-link {
+          font-size: 14px;
           color: #3b82f6;
+          text-decoration: none;
+          padding-left: 26px;
+          font-weight: 600;
+          transition: color 0.2s ease;
+        }
+
+        .detail-value-link:hover {
+          color: #2563eb;
+        }
+
+        /* 영업시간 */
+        .hours-content {
+          padding-left: 26px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .hours-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .hours-day {
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 500;
+          min-width: 50px;
+        }
+
+        .hours-time {
+          font-size: 14px;
+          color: #1e293b;
           font-weight: 600;
         }
 
-        /* 공지사항 스타일 */
-        .store-notices {
-          margin-top: 8px;
-          padding: 20px;
-          background: white;
-          border-radius: 20px;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-          border: 1px solid rgba(226, 232, 240, 0.8);
-          position: relative;
-          overflow: hidden;
+        /* 편의시설 태그 */
+        .facilities-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          padding-left: 26px;
         }
 
-        .store-notices::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, #ef4444 0%, #f59e0b 50%, #fbbf24 100%);
+        .facility-tag {
+          background: #f1f5f9;
+          color: #475569;
+          font-size: 12px;
+          font-weight: 500;
+          padding: 6px 12px;
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+        }
+
+        /* 결제 수단 태그 */
+        .payment-tags {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          padding-left: 26px;
+        }
+
+        .payment-tag {
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          color: #1e40af;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 6px 12px;
+          border-radius: 16px;
+          border: 1px solid #bfdbfe;
+        }
+
+        /* 공지사항 컨테이너 */
+        .notices-container {
+          background: white;
+          border-radius: 0;
+          padding: 20px;
+          margin-top: 8px;
+          border-bottom: 8px solid #f8f9fa;
         }
 
         .notices-header {
-          margin-bottom: 16px;
-          padding-bottom: 12px;
-          border-bottom: 2px solid #f1f5f9;
-        }
-
-        .notices-title {
-          margin: 0;
-          font-size: 17px;
-          font-weight: 800;
-          color: #1e293b;
           display: flex;
           align-items: center;
-          gap: 10px;
-          letter-spacing: -0.3px;
+          gap: 8px;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 1px solid #f1f5f9;
         }
 
         .notices-icon {
           font-size: 20px;
           filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+        }
+
+        .notices-title {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #111827;
+          letter-spacing: -0.3px;
         }
 
         .notices-list {
@@ -294,198 +469,125 @@ export const storeAdditionalInfoHTML = {
           gap: 12px;
         }
 
-        .notice-item {
-          display: flex;
-          gap: 12px;
-          padding: 16px;
-          background: white;
-          border-radius: 16px;
-          border: 1.5px solid #f1f5f9;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          position: relative;
-          overflow: hidden;
+        /* 공지사항 카드 */
+        .notice-card {
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 14px 16px;
+          border: 1px solid #e2e8f0;
+          transition: all 0.2s ease;
         }
 
-        .notice-item::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 4px;
-          background: #e5e7eb;
-          transition: all 0.3s ease;
+        .notice-card:active {
+          background: #f1f5f9;
+          transform: scale(0.99);
         }
 
-        .notice-item:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-          border-color: #cbd5e1;
-        }
-
-        .notice-item.notice-important::before {
-          background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
-        }
-
-        .notice-item.notice-important {
-          border-color: #fecaca;
+        .notice-card.notice-important {
           background: linear-gradient(135deg, #fef2f2 0%, #ffffff 100%);
+          border-color: #fecaca;
         }
 
-        .notice-item.notice-important:hover {
-          border-color: #ef4444;
-        }
-
-        .notice-item.notice-event::before {
-          background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
-        }
-
-        .notice-item.notice-event {
-          border-color: #bfdbfe;
+        .notice-card.notice-event {
           background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+          border-color: #bfdbfe;
         }
 
-        .notice-item.notice-event:hover {
-          border-color: #3b82f6;
+        .notice-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 8px;
+          gap: 12px;
         }
 
-        .notice-icon {
-          font-size: 24px;
-          line-height: 1;
-          flex-shrink: 0;
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-        }
-
-        .notice-content {
+        .notice-title-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
           flex: 1;
           min-width: 0;
         }
 
-        .notice-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 8px;
+        .notice-icon {
+          font-size: 18px;
+          flex-shrink: 0;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
         }
 
         .notice-title {
           margin: 0;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 700;
-          color: #1e293b;
+          color: #111827;
           line-height: 1.4;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
 
-        .notice-new-badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 3px 8px;
+        .new-badge {
           background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
           color: white;
           font-size: 10px;
           font-weight: 800;
-          border-radius: 8px;
+          padding: 3px 6px;
+          border-radius: 6px;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
-          box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-        }
-
-        .notice-text {
-          margin: 0 0 8px 0;
-          font-size: 13px;
-          color: #475569;
-          line-height: 1.6;
-          font-weight: 500;
-        }
-
-        .notice-meta {
-          display: flex;
-          align-items: center;
-          gap: 8px;
+          letter-spacing: 0.3px;
+          flex-shrink: 0;
+          box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
         }
 
         .notice-date {
           font-size: 11px;
           color: #94a3b8;
           font-weight: 600;
-          padding: 2px 8px;
-          background: #f8fafc;
-          border-radius: 6px;
+          flex-shrink: 0;
         }
 
-        .notices-empty {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 40px 20px;
-          text-align: center;
-        }
-
-        .empty-icon {
-          font-size: 48px;
-          margin-bottom: 12px;
-          opacity: 0.3;
-          filter: grayscale(100%);
-        }
-
-        .empty-text {
+        .notice-content {
           margin: 0;
-          font-size: 14px;
-          color: #94a3b8;
-          font-weight: 500;
+          font-size: 13px;
+          color: #475569;
+          line-height: 1.5;
+          word-break: keep-all;
         }
 
+        /* 반응형 */
         @media (max-width: 380px) {
-          .store-additional-info-card {
+          .info-main-card,
+          .notices-container {
             padding: 16px;
-            gap: 14px;
-            border-radius: 16px;
           }
 
-          .info-row {
-            padding: 10px;
-            gap: 10px;
+          .detail-item {
+            padding: 14px 16px;
           }
 
-          .info-label {
-            font-size: 12px;
-            min-width: 52px;
+          .info-highlight-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
           }
 
-          .info-value {
-            font-size: 13px;
+          .location-badge {
+            max-width: 100%;
           }
 
-          .info-icon {
+          .rating-value {
             font-size: 18px;
           }
 
-          .store-notices {
-            padding: 16px;
-            border-radius: 16px;
+          .detail-value,
+          .detail-value-link {
+            padding-left: 0;
           }
 
-          .notices-title {
-            font-size: 16px;
-          }
-
-          .notice-item {
-            padding: 12px;
-            gap: 10px;
-          }
-
-          .notice-title {
-            font-size: 14px;
-          }
-
-          .notice-text {
-            font-size: 12px;
-          }
-
-          .notice-icon {
-            font-size: 20px;
+          .hours-content,
+          .facilities-tags,
+          .payment-tags {
+            padding-left: 0;
           }
         }
       </style>
@@ -496,4 +598,4 @@ export const storeAdditionalInfoHTML = {
 // 전역 등록
 window.storeAdditionalInfoHTML = storeAdditionalInfoHTML;
 
-console.log('✅ storeAdditionalInfoHTML 모듈 로드 완료 (Compact 버전)');
+console.log('✅ storeAdditionalInfoHTML 모듈 로드 완료 (네이티브 앱 스타일)');
