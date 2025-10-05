@@ -142,7 +142,7 @@ body {
   box-sizing: border-box;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 0 20px 90px 20px;
+  padding: 0px 0px 90px 0px;
   scroll-behavior: smooth;
   will-change: scroll-position;
 }
