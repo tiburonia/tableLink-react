@@ -24,8 +24,9 @@ export const mapService = {
     const bounds = map.getBounds();
     const level = map.getZoom(); // 네이버 지도: getZoom() 사용
 
-    const sw = bounds.getSW();
-    const ne = bounds.getNE();
+    // 네이버 지도 API: getSW(), getNE() 또는 _sw, _ne 프로퍼티 사용
+    const sw = bounds.getSW ? bounds.getSW() : bounds._sw;
+    const ne = bounds.getNE ? bounds.getNE() : bounds._ne;
     const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
 
     console.log(`📱 매장 데이터 조회: level=${level}, bbox=${bbox}`);
