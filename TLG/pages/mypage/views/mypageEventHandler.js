@@ -1,4 +1,3 @@
-
 /**
  * MyPage Event Handler
  * 마이페이지 이벤트 처리 및 패널 핸들링
@@ -8,15 +7,33 @@ import { mypagePanelManager } from './mypagePanelManager.js';
 
 export const mypageEventHandler = {
   /**
-   * 이벤트 핸들러 초기화
+   * 이벤트 리스너 초기화
    */
   initialize() {
+    console.log('🎯 마이페이지 이벤트 핸들러 초기화');
+
+    // 설정 버튼 이벤트 리스너 등록
+    const settingsBtn = document.querySelector('.settings-btn-icon');
+    if (settingsBtn) {
+      settingsBtn.onclick = async (e) => {
+        e.preventDefault();
+        try {
+          const { default: renderMyAccount } = await import('../renderMyAccount.js');
+          await renderMyAccount();
+        } catch (error) {
+          console.error('❌ renderMyAccount 로드 실패:', error);
+          alert('계정 페이지를 불러올 수 없습니다.');
+        }
+      };
+      console.log('✅ 설정 버튼 이벤트 리스너 등록 완료');
+    }
+
     // 패널 핸들링 설정
     mypagePanelManager.setup();
 
     // 퀵 액션 버튼 이벤트
     this.attachQuickActionListeners();
-    
+
     // 전체보기 버튼 이벤트
     this.attachViewAllListeners();
 

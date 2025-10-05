@@ -19,7 +19,7 @@ export const mypageView = {
         <span class="login-link" onclick="${isLoggedIn ? '' : 'renderLogin()'}">
           ${isLoggedIn ? displayName : '로그인해 주세요 >'}
         </span>
-        <button class="settings-btn-icon" onclick="renderMyAccount()">⚙️</button>
+        <button class="settings-btn-icon">⚙️</button>
       </header>
       <div id="mypageContainer" style="overflow-y: auto; height: 610px;">
       <!-- 예약/이용예정 카드 -->
