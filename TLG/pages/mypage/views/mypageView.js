@@ -21,7 +21,7 @@ export const mypageView = {
         </span>
         <button class="settings-btn-icon" onclick="renderMyAccount()">⚙️</button>
       </header>
-
+      <div id="mypageContainer" style="overflow-y: auto; height: 610px;">
       <!-- 예약/이용예정 카드 -->
       <section class="mypage-reserve-card">
         <div class="reserve-icon">😢</div>
@@ -68,6 +68,7 @@ export const mypageView = {
           </li>
         </ul>
       </section>
+      </div>
 
       <!-- 바텀 네비게이션 -->
       <nav class="bottom-nav-bar">
