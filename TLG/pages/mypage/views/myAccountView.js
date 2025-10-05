@@ -1,7 +1,10 @@
-// View Layer: DOM 렌더링 전담
-// 순수하게 UI 렌더링만 수행, 비즈니스 로직 없음
 
-const myAccountView = {
+/**
+ * View Layer: DOM 렌더링 전담
+ * 순수하게 UI 렌더링만 수행, 비즈니스 로직 없음
+ */
+
+export const myAccountView = {
   // 메인 컨테이너 렌더링
   render(data) {
     const main = document.getElementById('main');
@@ -436,10 +439,5 @@ const myAccountView = {
     `;
   }
 };
-
-// 전역 등록
-if (typeof window !== 'undefined') {
-  window.myAccountView = myAccountView;
-}
 
 export default myAccountView;

@@ -1,7 +1,10 @@
-// Service Layer: 비즈니스 로직 전담
-// 데이터 변환, 계산, 검증 등
 
-const myAccountService = {
+/**
+ * Service Layer: 비즈니스 로직 전담
+ * 데이터 변환, 계산, 검증 등
+ */
+
+export const myAccountService = {
   // VIP 레벨 계산
   calculateVipLevel(point) {
     if (point >= 100000) return 'PLATINUM';
@@ -237,10 +240,5 @@ const myAccountService = {
     }
   }
 };
-
-// 전역 등록
-if (typeof window !== 'undefined') {
-  window.myAccountService = myAccountService;
-}
 
 export default myAccountService;

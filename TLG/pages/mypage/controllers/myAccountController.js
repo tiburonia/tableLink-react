@@ -1,7 +1,14 @@
-// Controller Layer: 이벤트 처리 전담 (<200 LOC)
-// 순수하게 이벤트 핸들링과 의존성 조율만 수행
 
-const myAccountController = {
+/**
+ * Controller Layer: 이벤트 처리 전담
+ * 순수하게 이벤트 핸들링과 의존성 조율만 수행
+ */
+
+import myAccountRepository from '../repositories/myAccountRepository.js';
+import myAccountService from '../services/myAccountService.js';
+import myAccountView from '../views/myAccountView.js';
+
+export const myAccountController = {
   // 초기화 플래그
   initialized: false,
 
@@ -21,13 +28,10 @@ const myAccountController = {
 
       // 2. 데이터 로드 및 뷰 렌더링
       const userId = window.userInfo?.id || 'user1';
-      const viewModel = await window.myAccountService.buildAccountViewModel(
-        userId,
-        window.myAccountRepository
-      );
+      const viewModel = await myAccountService.buildAccountViewModel(userId, myAccountRepository);
 
       // 3. 뷰 렌더링
-      window.myAccountView.render(viewModel);
+      myAccountView.render(viewModel);
 
       // 4. 이벤트 리스너 등록
       this.setupEventListeners();
@@ -46,7 +50,7 @@ const myAccountController = {
   async loadDependencies() {
     const scripts = [
       { name: 'renderMyPage', src: '/TLG/pages/mypage/renderMyPage.js' },
-      { name: 'renderAllOrderHTML', src: '/TLG/pages/store/order/renderAllOrderHTML.js' }
+      { name: 'renderAllOrderHTML', src: '/TLG/pages/store/views/order/renderAllOrderHTML.js' }
     ];
 
     for (const script of scripts) {
@@ -200,10 +204,5 @@ const myAccountController = {
     }
   }
 };
-
-// 전역 등록
-if (typeof window !== 'undefined') {
-  window.myAccountController = myAccountController;
-}
 
 export default myAccountController;

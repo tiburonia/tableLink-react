@@ -1,7 +1,10 @@
-// Repository Layer: API 호출 전담
-// 순수하게 데이터만 가져오고, 변환은 Service에서 처리
 
-const myAccountRepository = {
+/**
+ * Repository Layer: API 호출 전담
+ * 순수하게 데이터만 가져오고, 변환은 Service에서 처리
+ */
+
+export const myAccountRepository = {
   // 사용자 기본 정보 조회
   async fetchUserInfo(userId) {
     try {
@@ -96,10 +99,5 @@ const myAccountRepository = {
     }
   }
 };
-
-// 전역 등록
-if (typeof window !== 'undefined') {
-  window.myAccountRepository = myAccountRepository;
-}
 
 export default myAccountRepository;
