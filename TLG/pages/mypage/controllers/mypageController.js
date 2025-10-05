@@ -6,6 +6,7 @@
 
 import { mypageService } from '../services/mypageService.js';
 import { mypageView } from '../views/mypageView.js';
+import { mypageSkeleton } from '../views/mypageSkeleton.js';
 
 export const mypageController = {
   /**
@@ -29,6 +30,9 @@ export const mypageController = {
         console.error('❌ #main 요소를 찾을 수 없습니다');
         return;
       }
+
+      // 0. 스켈레톤 UI 렌더링
+      main.innerHTML = mypageSkeleton.render();
 
       // 1. 데이터 로드 (Service Layer) - window.userInfo.id는 users.id (PK)
       const userPk = window.userInfo.userId;
