@@ -1,7 +1,7 @@
 
 /**
  * View Layer: DOM 렌더링 전담
- * 순수하게 UI 렌더링만 수행, 비즈니스 로직 없음
+ * 프리미엄 네이티브 앱 스타일 UI
  */
 
 export const myAccountView = {
@@ -67,12 +67,12 @@ export const myAccountView = {
     `;
   },
 
-  // 헤더 템플릿
+  // 헤더 템플릿 - 네이티브 앱 스타일
   getHeaderTemplate() {
     return `
       <header class="account-header" data-testid="account-header">
         <button class="back-btn" id="backBtn" data-testid="button-back">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <polyline points="15,18 9,12 15,6"></polyline>
           </svg>
         </button>
@@ -82,7 +82,7 @@ export const myAccountView = {
     `;
   },
 
-  // 프로필 카드 템플릿
+  // 프로필 카드 템플릿 - 네이티브 앱 스타일
   getProfileCardTemplate() {
     return `
       <div class="profile-card" data-testid="profile-card">
@@ -106,7 +106,7 @@ export const myAccountView = {
     `;
   },
 
-  // 통계 그리드 템플릿
+  // 통계 그리드 템플릿 - 네이티브 앱 스타일
   getStatsGridTemplate() {
     return `
       <div class="stats-grid" data-testid="stats-grid">
@@ -135,7 +135,7 @@ export const myAccountView = {
     `;
   },
 
-  // 단골 레벨 템플릿
+  // 단골 레벨 템플릿 - 네이티브 앱 스타일
   getRegularLevelsTemplate() {
     return `
       <div class="modern-card loyalty-card" data-testid="card-loyalty">
@@ -156,8 +156,8 @@ export const myAccountView = {
         </div>
         <div class="card-body loyalty-body">
           <div class="regular-levels-container" id="regularLevelsContainer" data-testid="container-regular-levels">
-            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
-              <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
+            <div class="skeleton-loader">
+              <div class="skeleton-shimmer"></div>
               <span>단골 레벨 정보를 불러오는 중...</span>
             </div>
           </div>
@@ -166,7 +166,7 @@ export const myAccountView = {
     `;
   },
 
-  // 퀵 메뉴 템플릿
+  // 퀵 메뉴 템플릿 - 네이티브 앱 스타일
   getQuickMenuTemplate() {
     return `
       <div class="modern-card quick-menu-card" data-testid="card-quick-menu">
@@ -220,7 +220,7 @@ export const myAccountView = {
     `;
   },
 
-  // 최근 활동 템플릿
+  // 최근 활동 템플릿 - 네이티브 앱 스타일
   getRecentActivityTemplate() {
     return `
       <div class="modern-card activity-card" data-testid="card-activity">
@@ -241,8 +241,8 @@ export const myAccountView = {
         </div>
         <div class="card-body activity-body">
           <div class="activity-list modern-list" id="recentOrdersList" data-testid="list-recent-orders">
-            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
-              <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
+            <div class="skeleton-loader">
+              <div class="skeleton-shimmer"></div>
               <span>주문 내역을 불러오는 중...</span>
             </div>
           </div>
@@ -251,7 +251,7 @@ export const myAccountView = {
     `;
   },
 
-  // 개인정보 템플릿
+  // 개인정보 템플릿 - 네이티브 앱 스타일
   getPersonalInfoTemplate() {
     return `
       <div class="modern-card info-card" data-testid="card-personal-info">
@@ -273,8 +273,8 @@ export const myAccountView = {
         </div>
         <div class="card-body">
           <div class="personal-info-list modern-info-list" id="personalInfoList" data-testid="list-personal-info">
-            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
-              <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
+            <div class="skeleton-loader">
+              <div class="skeleton-shimmer"></div>
               <span>개인정보를 불러오는 중...</span>
             </div>
           </div>
@@ -283,7 +283,7 @@ export const myAccountView = {
     `;
   },
 
-  // 로그아웃 템플릿
+  // 로그아웃 템플릿 - 네이티브 앱 스타일
   getLogoutTemplate() {
     return `
       <div class="logout-section">
@@ -362,9 +362,9 @@ export const myAccountView = {
       `).join('');
     } else {
       container.innerHTML = `
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
-          <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
-          <span>등록된 단골 레벨이 없습니다</span>
+        <div class="empty-state">
+          <div class="empty-icon">🏆</div>
+          <span class="empty-text">등록된 단골 레벨이 없습니다</span>
         </div>
       `;
     }
@@ -390,9 +390,9 @@ export const myAccountView = {
       `).join('');
     } else {
       activityList.innerHTML = `
-        <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); border-radius: 12px; padding: 20px; text-align: center; color: #9ca3af; font-weight: 500; position: relative; overflow: hidden; border: 1px solid #e5e7eb;">
-          <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent); animation: shimmer 1.5s infinite;"></div>
-          <span>최근 주문 내역이 없습니다</span>
+        <div class="empty-state">
+          <div class="empty-icon">📈</div>
+          <span class="empty-text">최근 주문 내역이 없습니다</span>
         </div>
       `;
     }
