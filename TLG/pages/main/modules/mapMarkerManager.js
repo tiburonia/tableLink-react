@@ -208,23 +208,14 @@ window.MapMarkerManager = {
     const content = `
       <div id="${markerId}" class="native-store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(storeData).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
         <div class="marker-card">
-          <div class="marker-icon-wrapper">
-            <div class="marker-icon">
-              <span class="icon-emoji">${categoryIcon}</span>
-            </div>
+          <div class="marker-icon">
+            <span class="icon-emoji">${categoryIcon}</span>
           </div>
           <div class="marker-content">
-            <div class="store-name">${storeData.name && storeData.name.length > 9 ? storeData.name.substring(0, 9) + '...' : storeData.name}</div>
+            <div class="store-name">${storeData.name && storeData.name.length > 7 ? storeData.name.substring(0, 7) + '...' : storeData.name}</div>
             <div class="store-meta">
-              <span class="rating-badge">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                </svg>
-                ${rating}
-              </span>
-              <span class="status-badge ${isOpen ? 'open' : 'closed'}">
-                ${isOpen ? '영업중' : '준비중'}
-              </span>
+              <span class="rating-badge">⭐ ${rating}</span>
+              <span class="status-dot ${isOpen ? 'open' : 'closed'}"></span>
             </div>
           </div>
         </div>
@@ -235,78 +226,43 @@ window.MapMarkerManager = {
           position: relative;
           cursor: pointer;
           z-index: 200;
-          transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-          filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.12));
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
         }
 
         .native-store-marker:hover {
           z-index: 9999 !important;
-          transform: translateY(-4px) scale(1.06);
-          filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.18));
+          transform: translateY(-2px) scale(1.03);
+          filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
         }
 
         .native-store-marker:active {
-          transform: translateY(-2px) scale(1.02);
+          transform: translateY(-1px) scale(1.01);
           transition: all 0.1s ease;
         }
 
         .marker-card {
-          background: rgba(255, 255, 255, 0.98);
-          border-radius: 16px;
-          padding: 10px 12px;
+          background: rgba(255, 255, 255, 0.96);
+          border-radius: 10px;
+          padding: 6px 8px;
           display: flex;
           align-items: center;
-          gap: 10px;
-          min-width: 150px;
-          max-width: 200px;
-          backdrop-filter: blur(20px) saturate(180%);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          position: relative;
-          overflow: hidden;
-        }
-
-        .marker-card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0) 50%);
-          pointer-events: none;
+          gap: 6px;
+          min-width: 100px;
+          max-width: 130px;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(0, 0, 0, 0.08);
         }
 
         .native-store-marker:hover .marker-card {
           background: rgba(255, 255, 255, 1);
-          border-color: rgba(99, 102, 241, 0.3);
-        }
-
-        .marker-icon-wrapper {
-          position: relative;
-          flex-shrink: 0;
-        }
-
-        .marker-icon-wrapper::before {
-          content: '';
-          position: absolute;
-          inset: -4px;
-          background: ${isOpen
-            ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.15) 100%)'
-            : 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(248, 113, 113, 0.15) 100%)'
-          };
-          border-radius: 12px;
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        }
-
-        .native-store-marker:hover .marker-icon-wrapper::before {
-          opacity: 1;
+          border-color: rgba(99, 102, 241, 0.2);
         }
 
         .marker-icon {
-          width: 38px;
-          height: 38px;
-          border-radius: 10px;
+          width: 26px;
+          height: 26px;
+          border-radius: 6px;
           background: ${isOpen
             ? 'linear-gradient(135deg, #10b981 0%, #34d399 100%)'
             : 'linear-gradient(135deg, #ef4444 0%, #f87171 100%)'
@@ -315,24 +271,17 @@ window.MapMarkerManager = {
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-          position: relative;
-          box-shadow: 0 2px 8px ${isOpen ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};
-          transition: all 0.3s ease;
+          box-shadow: 0 1px 3px ${isOpen ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'};
+          transition: all 0.2s ease;
         }
 
         .native-store-marker:hover .marker-icon {
-          transform: scale(1.08) rotate(-5deg);
-          box-shadow: 0 4px 16px ${isOpen ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'};
+          transform: scale(1.05);
         }
 
         .icon-emoji {
-          font-size: 18px;
-          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-          transition: transform 0.3s ease;
-        }
-
-        .native-store-marker:hover .icon-emoji {
-          transform: scale(1.1);
+          font-size: 14px;
+          filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
         }
 
         .marker-content {
@@ -341,97 +290,61 @@ window.MapMarkerManager = {
         }
 
         .store-name {
-          font-weight: 700;
-          font-size: 14px;
+          font-weight: 600;
+          font-size: 11px;
           color: #1f2937;
-          line-height: 1.3;
-          margin-bottom: 4px;
+          line-height: 1.2;
+          margin-bottom: 2px;
           overflow: hidden;
           white-space: nowrap;
           text-overflow: ellipsis;
-          letter-spacing: -0.2px;
         }
 
         .store-meta {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 4px;
         }
 
         .rating-badge {
-          display: flex;
-          align-items: center;
-          gap: 3px;
-          padding: 3px 7px;
-          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 700;
-          color: white;
+          font-size: 9px;
+          font-weight: 600;
+          color: #f59e0b;
           line-height: 1;
         }
 
-        .rating-badge svg {
+        .status-dot {
+          width: 5px;
+          height: 5px;
+          border-radius: 50%;
           flex-shrink: 0;
         }
 
-        .status-badge {
-          padding: 3px 7px;
-          border-radius: 6px;
-          font-weight: 700;
-          font-size: 10px;
-          line-height: 1;
-          letter-spacing: -0.2px;
+        .status-dot.open {
+          background: #10b981;
+          box-shadow: 0 0 4px rgba(16, 185, 129, 0.4);
         }
 
-        .status-badge.open {
-          background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(52, 211, 153, 0.15) 100%);
-          color: #065f46;
-          border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-
-        .status-badge.closed {
-          background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(248, 113, 113, 0.15) 100%);
-          color: #7f1d1d;
-          border: 1px solid rgba(239, 68, 68, 0.2);
+        .status-dot.closed {
+          background: #ef4444;
+          box-shadow: 0 0 4px rgba(239, 68, 68, 0.4);
         }
 
         .marker-pointer {
           position: absolute;
-          bottom: -8px;
+          bottom: -5px;
           left: 50%;
           transform: translateX(-50%);
           width: 0;
           height: 0;
-          border-left: 8px solid transparent;
-          border-right: 8px solid transparent;
-          border-top: 8px solid rgba(255, 255, 255, 0.98);
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+          border-left: 5px solid transparent;
+          border-right: 5px solid transparent;
+          border-top: 5px solid rgba(255, 255, 255, 0.96);
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
         }
 
         .native-store-marker:hover .marker-pointer {
           border-top-color: rgba(255, 255, 255, 1);
-        }
-
-        @keyframes markerPulse {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.05);
-            opacity: 0.9;
-          }
-        }
-
-        .native-store-marker.open .marker-icon-wrapper::after {
-          content: '';
-          position: absolute;
-          inset: -6px;
-          background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, transparent 70%);
-          border-radius: 50%;
-          animation: markerPulse 2s ease-in-out infinite;
-          z-index: -1;
         }
       </style>
     `;
@@ -442,7 +355,7 @@ window.MapMarkerManager = {
       position: position,
       icon: {
         content: content,
-        anchor: new naver.maps.Point(90, 60)
+        anchor: new naver.maps.Point(65, 40)
       },
       zIndex: 200
     });
