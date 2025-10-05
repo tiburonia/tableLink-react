@@ -28,7 +28,7 @@ export const myAccountController = {
 
       // 2. 데이터 로드 및 뷰 렌더링
       const userId = window.userInfo?.id || 'user1';
-      const viewModel = await myAccountService.buildAccountViewModel(userId, myAccountRepository);
+      const viewModel = await myAccountService.createViewModel(userId);
 
       // 3. 뷰 렌더링
       myAccountView.render(viewModel);
