@@ -15,19 +15,16 @@ export const paymentService = {
   prepareOrderData(currentOrder) {
     console.log('📋 주문 데이터 준비 시작');
 
-    // 매장 메뉴 데이터 파싱
-    let menuData = this.parseMenuData(currentOrder.items);
-
     // 주문 아이템 처리
-    const items = this.processOrderItems(currentOrder, menuData);
+    const items = this.processOrderItems(currentOrder);
     const total = items.reduce((sum, item) => sum + item.totalPrice, 0);
 
     return {
-      storeId: store.id || store.store_id,
-      storeName: store.name,
-      store: store.name,
-      tableNum: tableNum,
-      table: tableNum,
+      storeId: currentOrder.store_id,
+      storeName: currentOrder.store_name,
+      store: currentOrder.store_name,
+      tableNum: currentOrder.table_number,
+      table: currentOrder.table_number,
       total: total,
       items: items,
       itemCount: items.length,
