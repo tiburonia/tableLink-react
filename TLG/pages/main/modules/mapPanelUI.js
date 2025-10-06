@@ -321,10 +321,10 @@ window.MapPanelUI = {
       const midPoint = 300;
 
       if (currentHeight < midPoint) {
-        storePanel.style.height = '60px';
+        storePanel.style.height = '120px';
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
-        currentHeight = 60;
+        currentHeight = 120;
       } else {
         storePanel.style.height = '630px';
         storePanel.classList.add('expanded');
@@ -382,10 +382,10 @@ window.MapPanelUI = {
       const midPoint = 300;
 
       if (currentHeight < midPoint) {
-        storePanel.style.height = '60px';
+        storePanel.style.height = '120px';
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
-        currentHeight = 60;
+        currentHeight = 120;
         console.log('📱 모바일 패널 접힘');
       } else {
         storePanel.style.height = '630px';
