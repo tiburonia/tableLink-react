@@ -33,6 +33,10 @@
   border: 1.1px solid #f1f2fb;
 }
 
+#mapStorePanel.initial-render {
+  height: 400px;
+}
+
 #mapStorePanel.collapsed {
   height: 120px;
 }

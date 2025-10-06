@@ -282,12 +282,32 @@ window.MapPanelUI = {
     let isDragging = false;
     let startY;
     let startHeight;
-    let currentHeight = storePanel.classList.contains('collapsed') ? 120 : 630;
-
-    // 패널 상태 초기화
-    storePanel.style.height = `${currentHeight}px`;
-    if (currentHeight === 120) storePanel.classList.add('collapsed');
-    else storePanel.classList.add('expanded');
+    
+    // 최초 렌더링 검증 (sessionStorage 사용)
+    const isFirstRender = !sessionStorage.getItem('mapPanelRendered');
+    let currentHeight;
+    
+    if (isFirstRender) {
+      // 최초 렌더링: initial-render 클래스 추가
+      storePanel.classList.add('initial-render');
+      currentHeight = 400;
+      
+      // 세션 스토리지에 렌더링 완료 표시
+      sessionStorage.setItem('mapPanelRendered', 'true');
+      
+      // 3초 후 initial-render 클래스 제거하고 collapsed 상태로 전환
+      setTimeout(() => {
+        storePanel.classList.remove('initial-render');
+        storePanel.classList.add('collapsed');
+        storePanel.style.height = '120px';
+        currentHeight = 120;
+      }, 3000);
+    } else {
+      // 이후 렌더링: collapsed 상태로 시작
+      currentHeight = 120;
+      storePanel.classList.add('collapsed');
+      storePanel.style.height = `${currentHeight}px`;
+    }
 
     // 마우스 이벤트
     panelHandle.addEventListener('mousedown', (e) => {
