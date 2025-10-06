@@ -23,9 +23,17 @@ export const searchController = {
 
     this.setupEventListeners();
 
-    // 초기 검색어가 있으면 검색
+    // 초기 검색어가 있으면 검색, 없으면 입력창에 포커스
     if (initialQuery.trim()) {
       setTimeout(() => this.performSearch(initialQuery), 100);
+    } else {
+      // 검색 입력창에 즉시 포커스
+      setTimeout(() => {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+          searchInput.focus();
+        }
+      }, 100);
     }
 
     console.log('✅ 검색 컨트롤러 초기화 완료');

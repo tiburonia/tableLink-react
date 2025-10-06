@@ -146,9 +146,11 @@ export const mapController = {
     const searchBtn = document.getElementById('searchBtn');
     const clearBtn = document.getElementById('clearBtn');
 
-    // 실시간 검색
-    searchInput.addEventListener('input', (e) => {
-      this.handleSearchInput(e.target.value.trim());
+    // 검색바 클릭 시 검색 페이지로 이동
+    searchInput.addEventListener('click', () => {
+      if (typeof renderSearch === 'function') {
+        renderSearch('');
+      }
     });
 
     // 검색 버튼
@@ -162,7 +164,11 @@ export const mapController = {
     // 엔터 키 검색
     searchInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
-        this.performSearch(searchInput.value.trim());
+        e.preventDefault();
+        const query = searchInput.value.trim();
+        if (typeof renderSearch === 'function') {
+          renderSearch(query);
+        }
       }
     });
 
