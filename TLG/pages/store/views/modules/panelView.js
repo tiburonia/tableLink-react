@@ -44,13 +44,13 @@ export const panelView = {
   expandPanel(panel) {
     panelRepository.togglePanelClass(panel, 'collapsed', false);
     panelRepository.togglePanelClass(panel, 'expanded', true);
-    panelRepository.setPanelPosition(panel, 85);
+    panelRepository.setPanelPosition(panel, 75);
     
     // 헤더 스타일 변경
     const header = document.querySelector('.store-fixed-header');
     if (header) {
-      header.style.background = '#fafafa';
-      header.style.borderBottom = '1px solid #d1d5db';
+      header.style.background = 'white';
+      header.style.height = '108px';
     }
   },
 
@@ -66,7 +66,7 @@ export const panelView = {
     const header = document.querySelector('.store-fixed-header');
     if (header) {
       header.style.background = '';
-      header.style.borderBottom = '';
+      header.style.height = '75px';
     }
   },
 

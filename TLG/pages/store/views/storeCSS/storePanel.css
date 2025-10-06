@@ -17,8 +17,8 @@
 }
 
 #storePanel.expanded {
-  top: 85px;
-  height: calc(100vh - 85px);
+  top: 75px;
+  height: calc(100vh - 75px);
 }
 
 #panelHandle {
