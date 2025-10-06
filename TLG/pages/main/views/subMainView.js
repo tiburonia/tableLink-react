@@ -192,7 +192,7 @@ export const subMainView = {
           <span class="nav-icon">📱</span>
           <span class="nav-label">QR 주문</span>
         </button>
-        <button onclick="renderMap()" class="nav-item active" id="renderMapBtn">
+        <button onclick="renderMap()" class="nav-item" id="renderMapBtn">
           <span class="nav-icon">📍</span>
           <span class="nav-label">내주변</span>
         </button>

@@ -187,10 +187,6 @@ export const searchView = {
           <span class="nav-icon">📍</span>
           <span class="nav-label">내주변</span>
         </button>
-        <button class="nav-item active">
-          <span class="nav-icon">🔍</span>
-          <span class="nav-label">검색</span>
-        </button>
         <button onclick="renderMyPage()" class="nav-item">
           <span class="nav-icon">👤</span>
           <span class="nav-label">내정보</span>
