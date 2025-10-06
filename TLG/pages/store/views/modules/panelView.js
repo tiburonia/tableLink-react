@@ -49,13 +49,6 @@ export const panelView = {
     const panelServiceModule = await import('../../services/panelService.js');
     const expandedTop = panelServiceModule.panelService.calculateExpandedTop();
     panelRepository.setPanelPosition(panel, expandedTop);
-
-    // 헤더 스타일 변경 (확장 시)
-    const storeHeader = document.querySelector('.store-fixed-header');
-    if (storeHeader) {
-      storeHeader.style.background = '#e0e3f3';
-      storeHeader.style.borderBottom = '1px solid #d1d5db';
-    }
   },
 
   /**
@@ -65,13 +58,6 @@ export const panelView = {
     panelRepository.togglePanelClass(panel, 'expanded', false);
     panelRepository.togglePanelClass(panel, 'collapsed', true);
     panelRepository.setPanelPosition(panel, 200);
-
-    // 헤더 스타일 삭제 (축소 시)
-    const storeHeader = document.querySelector('.store-fixed-header');
-    if (storeHeader) {
-      storeHeader.style.background = '';
-      storeHeader.style.borderBottom = '';
-    }
   },
 
   /**
