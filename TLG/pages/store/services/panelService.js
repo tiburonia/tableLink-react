@@ -1,4 +1,3 @@
-
 // 패널 서비스 - 비즈니스 로직 및 계산
 let panelRepository;
 
@@ -27,7 +26,7 @@ export const panelService = {
     const bottomBarHeight = elements.bottomBar ? elements.bottomBar.offsetHeight : 70;
     const handleHeight = elements.panelHandle ? elements.panelHandle.offsetHeight : 24;
     const panelPadding = 0;
-    
+
     return vh - top - bottomBarHeight - handleHeight - panelPadding;
   },
 
@@ -36,7 +35,7 @@ export const panelService = {
    */
   calculateContentMinHeight(elements, containerHeight) {
     if (!elements.storeNavBar) return 400;
-    
+
     const navBarOffset = elements.storeNavBar.offsetTop;
     return navBarOffset > 0 ? (containerHeight + navBarOffset) : 400;
   },
@@ -77,11 +76,11 @@ export const panelService = {
    */
   calculateFinalPosition(deltaY) {
     const threshold = 50;
-    
+
     if (Math.abs(deltaY) > threshold) {
       return deltaY > 0 ? 0 : 200; // 확장 or 축소
     }
-    
+
     return null; // 유지
   },
 
@@ -93,12 +92,12 @@ export const panelService = {
     if (deltaY > 0 && panelState.isCollapsed) {
       return { action: 'expand', preventScroll: true };
     }
-    
+
     // 위로 스크롤 (축소)
     if (deltaY < 0 && panelState.isExpanded && scrollTop <= 0) {
       return { action: 'collapse', preventScroll: true };
     }
-    
+
     return { action: 'scroll', preventScroll: false };
   },
 
