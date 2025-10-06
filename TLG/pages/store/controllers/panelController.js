@@ -114,6 +114,7 @@ export const panelController = {
       if (!panelService.isDragActive()) return;
 
       const currentY = e.touches[0].clientY;
+      panelService.state.currentY = currentY;
       const deltaY = panelService.calculateDragDelta(currentY, panelService.state.startY);
       const top = panelView.getPanelTop(this.elements.panel);
       const panelState = panelService.getPanelState(top);
@@ -145,7 +146,7 @@ export const panelController = {
       const finalPosition = panelService.calculateFinalPosition(deltaY);
 
       if (finalPosition !== null) {
-        if (finalPosition === 0) {
+        if (finalPosition === 85) {
           panelView.expandPanel(this.elements.panel);
         } else {
           panelView.collapsePanel(this.elements.panel);
@@ -153,10 +154,10 @@ export const panelController = {
       } else {
         // 원래 상태 유지
         const currentTop = panelView.getPanelTop(this.elements.panel);
-        if (currentTop < 100) {
-          panelView.setPanelTop(this.elements.panel, 0);
+        if (currentTop < 142) {
+          panelView.expandPanel(this.elements.panel);
         } else {
-          panelView.setPanelTop(this.elements.panel, 200);
+          panelView.collapsePanel(this.elements.panel);
         }
       }
 

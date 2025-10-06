@@ -45,8 +45,8 @@ export const panelService = {
    */
   getPanelState(top) {
     return {
-      isExpanded: top === 0,
-      isCollapsed: top !== 0
+      isExpanded: top <= 85,
+      isCollapsed: top > 85
     };
   },
 
@@ -62,11 +62,11 @@ export const panelService = {
    */
   calculateNewTopWhileDragging(deltaY, currentTop, isExpanded, isCollapsed) {
     if (isExpanded && deltaY < 0) {
-      // 확장 상태에서 위로 드래그
-      return Math.max(0, Math.min(200, -deltaY));
+      // 확장 상태에서 아래로 드래그 (위치값 증가)
+      return Math.max(85, Math.min(200, 85 - deltaY));
     } else if (isCollapsed && deltaY > 0) {
-      // 축소 상태에서 아래로 드래그
-      return Math.max(0, 200 - deltaY);
+      // 축소 상태에서 위로 드래그 (위치값 감소)
+      return Math.max(85, Math.min(200, 200 - deltaY));
     }
     return null; // 스크롤 허용
   },
@@ -78,7 +78,7 @@ export const panelService = {
     const threshold = 50;
 
     if (Math.abs(deltaY) > threshold) {
-      return deltaY > 0 ? 0 : 200; // 확장 or 축소
+      return deltaY > 0 ? 85 : 200; // 확장(85px) or 축소(200px)
     }
 
     return null; // 유지
