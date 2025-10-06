@@ -60,12 +60,12 @@ body {
   left: 0;
   width: 100%;
   max-width: 390px;
-  height: 75px;
+  height: 85px;
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
   padding: 0 12px;
-  z-index: 8;
+  z-index: 1000;
   pointer-events: none;
 }
 
@@ -75,6 +75,7 @@ body {
 
 #backBtn,
 #TLL {
+  position: relative;
   width: 44px;
   height: 44px;
   background: rgba(255, 255, 255, 0.01);

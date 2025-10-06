@@ -48,9 +48,13 @@ export const panelView = {
     
     // 헤더 스타일 변경
     const header = document.querySelector('.store-fixed-header');
+    const backBtn = document.querySelector('#backBtn');
+    const TLL = document.querySelector('#TLL')
     if (header) {
       header.style.background = 'white';
-      header.style.height = '108px';
+      header.style.height = '98px';
+      backBtn.style.top = '-23px';
+      TLL.style.top = '-23px';
     }
   },
 
@@ -64,9 +68,14 @@ export const panelView = {
     
     // 헤더 스타일 초기화
     const header = document.querySelector('.store-fixed-header');
+    const backBtn = document.querySelector('#backBtn');
+    const TLL = document.querySelector('#TLL')
     if (header) {
       header.style.background = '';
       header.style.height = '75px';
+      backBtn.style.top = ''
+      TLL.style.top = '';
+
     }
   },
 
