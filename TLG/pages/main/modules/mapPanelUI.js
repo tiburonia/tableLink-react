@@ -266,11 +266,11 @@ window.MapPanelUI = {
     let isDragging = false;
     let startY;
     let startHeight;
-    let currentHeight = storePanel.classList.contains('collapsed') ? 60 : 630;
+    let currentHeight = storePanel.classList.contains('collapsed') ? 120 : 630;
 
     // 패널 상태 초기화
     storePanel.style.height = `${currentHeight}px`;
-    if (currentHeight === 60) storePanel.classList.add('collapsed');
+    if (currentHeight === 120) storePanel.classList.add('collapsed');
     else storePanel.classList.add('expanded');
 
     // 마우스 이벤트
