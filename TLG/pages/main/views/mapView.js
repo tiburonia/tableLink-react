@@ -44,7 +44,7 @@ export const mapView = {
   renderSearchBar() {
     return `
       <div id="searchBar">
-        <div class="search-container">
+        <div class="search-container" onclick="renderSearch()">
           <button id="searchBtn">🔍</button>
           <input id="searchInput" type="text" placeholder="매장명, 카테고리 또는 위치 검색...">
         </div>
