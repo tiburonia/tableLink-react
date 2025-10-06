@@ -515,6 +515,70 @@ export const mapController = {
       clearTimeout(this.state.searchTimeout);
       this.state.searchTimeout = null;
     }
+  },
+
+  /**
+   * 필터 이벤트 설정 업데이트
+   */
+  setupFilterEvents() {
+    const filterToggleBtn = document.getElementById('mapFilterToggleBtn');
+    const filterContainer = document.getElementById('mapFilterContainer');
+
+    if (filterToggleBtn && filterContainer) {
+      filterToggleBtn.addEventListener('click', () => {
+        filterContainer.classList.toggle('collapsed');
+        filterToggleBtn.classList.toggle('collapsed');
+      });
+    }
+
+    // 필터 탭 클릭 이벤트
+    document.querySelectorAll('.map-filter-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.map-filter-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        // TODO: 필터링 로직 추가
+      });
+    });
+  },
+
+  /**
+   * 매장 카드 렌더링 함수
+   */
+  renderStoreCards(stores) {
+    const container = document.getElementById('mapStorePanelContainer');
+    if (!container) {
+      console.error('❌ 매장 패널 컨테이너를 찾을 수 없습니다');
+      return;
+    }
+
+    container.innerHTML = ''; // 기존 내용 초기화
+
+    if (stores && stores.length > 0) {
+      stores.forEach(store => {
+        const storeElement = document.createElement('div');
+        storeElement.className = 'store-card'; // CSS 클래스 적용
+        storeElement.innerHTML = `
+          <h3>${store.name}</h3>
+          <p>${store.address}</p>
+          <p>전화: ${store.phone || '정보 없음'}</p>
+          <p>영업시간: ${store.operatingHours || '정보 없음'}</p>
+          <button class="store-details-btn" data-store-id="${store.id}">상세보기</button>
+        `;
+        container.appendChild(storeElement);
+
+        // 상세보기 버튼 이벤트 리스너 추가
+        storeElement.querySelector('.store-details-btn').addEventListener('click', (e) => {
+          const storeId = e.target.dataset.storeId;
+          // TODO: 상세 정보 렌더링 로직 구현
+          console.log(`매장 상세보기 클릭: ${storeId}`);
+          if (window.MapPanelUI && typeof window.MapPanelUI.renderStoreDetails === 'function') {
+            window.MapPanelUI.renderStoreDetails(storeId);
+          }
+        });
+      });
+    } else {
+      container.innerHTML = '<p>주변에 매장이 없습니다.</p>';
+    }
   }
 };
 

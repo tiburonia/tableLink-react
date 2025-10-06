@@ -2,47 +2,53 @@
 window.MapPanelUI = {
   renderPanelHTML() {
     return `
-      <div id="storePanel" class="collapsed">
+      <div id="mapStorePanel" class="collapsed">
         <div id="panelHandle"></div>
-        <button id="filterToggleBtn" class="filter-toggle-btn expanded">
+        <button id="mapFilterToggleBtn" class="filter-toggle-btn expanded">
           <span class="toggle-icon">▼</span>
         </button>
-        <div id="filterContainer">
+        <div id="mapFilterContainer">
           <div class="filter-row">
             <div class="filter-label">카테고리</div>
             <div class="filter-tabs category-filter">
-              <button class="filter-tab active" data-filter="all" data-type="category">전체</button>
-              <button class="filter-tab" data-filter="한식" data-type="category">한식</button>
-              <button class="filter-tab" data-filter="중식" data-type="category">중식</button>
-              <button class="filter-tab" data-filter="일식" data-type="category">일식</button>
-              <button class="filter-tab" data-filter="양식" data-type="category">양식</button>
-              <button class="filter-tab" data-filter="카페" data-type="category">카페</button>
-              <button class="filter-tab" data-filter="치킨" data-type="category">치킨</button>
+              <button class="map-filter-tab active" data-filter="all" data-type="category">전체</button>
+              <button class="map-filter-tab" data-filter="한식" data-type="category">한식</button>
+              <button class="map-filter-tab" data-filter="중식" data-type="category">중식</button>
+              <button class="map-filter-tab" data-filter="일식" data-type="category">일식</button>
+              <button class="map-filter-tab" data-filter="양식" data-type="category">양식</button>
+              <button class="map-filter-tab" data-filter="카페" data-type="category">카페</button>
+              <button class="map-filter-tab" data-filter="치킨" data-type="category">치킨</button>
             </div>
           </div>
           <div class="filter-row">
             <div class="filter-label">운영 상태</div>
             <div class="filter-tabs status-filter">
-              <button class="filter-tab active" data-filter="all" data-type="status">전체</button>
-              <button class="filter-tab" data-filter="open" data-type="status">운영중</button>
-              <button class="filter-tab" data-filter="closed" data-type="status">운영중지</button>
+              <button class="map-filter-tab active" data-filter="all" data-type="status">전체</button>
+              <button class="map-filter-tab" data-filter="open" data-type="status">운영중</button>
+              <button class="map-filter-tab" data-filter="closed" data-type="status">운영중지</button>
             </div>
           </div>
           <div class="filter-row">
             <div class="filter-label">별점</div>
             <div class="filter-tabs rating-filter">
-              <button class="filter-tab active" data-filter="all" data-type="rating">전체</button>
-              <button class="filter-tab" data-filter="4+" data-type="rating">4점 이상</button>
-              <button class="filter-tab" data-filter="3+" data-type="rating">3점 이상</button>
-              <button class="filter-tab" data-filter="2+" data-type="rating">2점 이상</button>
+              <button class="map-filter-tab active" data-filter="all" data-type="rating">전체</button>
+              <button class="map-filter-tab" data-filter="4+" data-type="rating">4점 이상</button>
+              <button class="map-filter-tab" data-filter="3+" data-type="rating">3점 이상</button>
+              <button class="map-filter-tab" data-filter="2+" data-type="rating">2점 이상</button>
             </div>
           </div>
         </div>
-        <div id="storeListContainer">
-          <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
-            <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            매장 정보를 불러오는 중...
-          </div>
+        <div id="mapStoreListContainer"></div>
+      </div>
+    `;
+  },
+
+  showLoading() {
+    return `
+      <div id="mapStorePanelContainer">
+        <div class="map-panel-loading">
+          <div class="map-panel-loading-spinner"></div>
+          매장 정보를 불러오는 중...
         </div>
       </div>
     `;
@@ -57,8 +63,8 @@ window.MapPanelUI = {
           100% { transform: rotate(360deg); }
         }
 
-        /* 패널 */
-        #storePanel {
+        /* 지도 패널 */
+        #mapStorePanel {
           position: fixed;
           bottom: 46px;
           left: 50%;
@@ -74,11 +80,11 @@ window.MapPanelUI = {
           z-index: 1002;
           border: 1.1px solid #f1f2fb;
         }
-        #storePanel.collapsed { height: 60px; }
-        #storePanel.expanded { height: 630px; }
+        #mapStorePanel.collapsed { height: 60px; }
+        #mapStorePanel.expanded { height: 630px; }
 
         /* 필터 컨테이너 */
-        #filterContainer {
+        #mapFilterContainer {
           padding: 8px 12px 0 12px;
           background: #fff;
           border-bottom: 1px solid #f1f2fb;
@@ -88,7 +94,7 @@ window.MapPanelUI = {
           transition: all 0.3s ease;
         }
 
-        #filterContainer.collapsed {
+        #mapFilterContainer.collapsed {
           max-height: 0;
           padding: 0 12px;
           overflow: hidden;
@@ -152,7 +158,7 @@ window.MapPanelUI = {
           display: none;
         }
 
-        .filter-tab {
+        .map-filter-tab {
           flex-shrink: 0;
           padding: 8px 16px;
           border: none;
@@ -166,12 +172,12 @@ window.MapPanelUI = {
           white-space: nowrap;
         }
 
-        .filter-tab:hover {
+        .map-filter-tab:hover {
           background: #e9ecef;
           color: #495057;
         }
 
-        .filter-tab.active {
+        .map-filter-tab.active {
           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
           font-weight: 600;
@@ -190,7 +196,7 @@ window.MapPanelUI = {
         }
 
         /* 가게 목록 스크롤 영역 */
-        #storeListContainer {
+        #mapStoreListContainer {
           height: calc(100% - 170px);
           overflow-y: auto;
           padding: 8px 4px 20px 4px;
@@ -200,10 +206,10 @@ window.MapPanelUI = {
           -ms-overflow-style: none;
         }
 
-        #storeListContainer.filter-collapsed {
+        #mapStoreListContainer.filter-collapsed {
           height: calc(100% - 60px);
         }
-        #storeListContainer::-webkit-scrollbar {
+        #mapStoreListContainer::-webkit-scrollbar {
           display: none;
         }
 
@@ -386,14 +392,34 @@ window.MapPanelUI = {
           color: #666;
           margin-top: -8px;
         }
+        
+        /* 로딩 스피너 */
+        .map-panel-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          color: #666;
+          font-size: 14px;
+        }
 
+        .map-panel-loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid #f3f4f6;
+          border-top-color: #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin-bottom: 10px;
+        }
       </style>
     `;
   },
 
   // 필터링 이벤트 설정
   setupFilterEvents() {
-    const allFilterTabs = document.querySelectorAll('.filter-tab');
+    const allFilterTabs = document.querySelectorAll('.map-filter-tab');
 
     allFilterTabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
@@ -404,7 +430,7 @@ window.MapPanelUI = {
         const filterType = clickedTab.getAttribute('data-type');
 
         // 같은 타입의 다른 탭 비활성화
-        document.querySelectorAll(`.filter-tab[data-type="${filterType}"]`).forEach(t => t.classList.remove('active'));
+        document.querySelectorAll(`.map-filter-tab[data-type="${filterType}"]`).forEach(t => t.classList.remove('active'));
 
         // 클릭된 탭 활성화
         clickedTab.classList.add('active');
@@ -422,9 +448,9 @@ window.MapPanelUI = {
 
   // 필터 영역 토글 기능 설정
   setupFilterToggle() {
-    const filterToggleBtn = document.getElementById('filterToggleBtn');
-    const filterContainer = document.getElementById('filterContainer');
-    const storeListContainer = document.getElementById('storeListContainer');
+    const filterToggleBtn = document.getElementById('mapFilterToggleBtn');
+    const filterContainer = document.getElementById('mapFilterContainer');
+    const storeListContainer = document.getElementById('mapStoreListContainer');
 
     if (!filterToggleBtn || !filterContainer || !storeListContainer) {
       console.warn('⚠️ 필터 토글 요소를 찾을 수 없습니다');
@@ -458,7 +484,7 @@ window.MapPanelUI = {
   // 현재 설정된 모든 필터 값에 따라 매장 필터링
   applyFilters() {
     const activeFilters = {};
-    document.querySelectorAll('.filter-tab.active').forEach(tab => {
+    document.querySelectorAll('.map-filter-tab.active').forEach(tab => {
       const type = tab.getAttribute('data-type');
       const filterValue = tab.getAttribute('data-filter');
       if (filterValue !== 'all') {
@@ -466,7 +492,7 @@ window.MapPanelUI = {
       }
     });
 
-    const storeCards = document.querySelectorAll('.storeCard');
+    const storeCards = document.querySelectorAll('#mapStoreListContainer .storeCard');
 
     storeCards.forEach(card => {
       const storeCategory = card.dataset.category;
@@ -506,14 +532,14 @@ window.MapPanelUI = {
     });
 
     // 필터링 결과 로깅
-    const visibleCards = document.querySelectorAll('.storeCard[style*="flex"], .storeCard:not([style*="none"])');
+    const visibleCards = document.querySelectorAll('#mapStoreListContainer .storeCard[style*="flex"], #mapStoreListContainer .storeCard:not([style*="none"])');
     console.log('🔍 필터링 적용:', activeFilters);
     console.log('📊 필터링 결과 - 총', visibleCards.length, '개 매장 표시');
   },
 
   // 패널 드래그 기능 설정
   setupPanelDrag() {
-    const storePanel = document.getElementById('storePanel');
+    const storePanel = document.getElementById('mapStorePanel');
     const panelHandle = document.getElementById('panelHandle');
     let isDragging = false;
     let startY;
@@ -666,21 +692,21 @@ window.MapPanelUI = {
       e.preventDefault();
     });
 
-    const filterContainer = document.getElementById('filterContainer');
+    const filterContainer = document.getElementById('mapFilterContainer');
     if (filterContainer) {
       filterContainer.addEventListener('click', (e) => {
         e.stopPropagation();
       });
     }
 
-    const storeListContainer = document.getElementById('storeListContainer');
+    const storeListContainer = document.getElementById('mapStoreListContainer');
     if (storeListContainer) {
       storeListContainer.addEventListener('click', (e) => {
         e.stopPropagation();
       });
     }
 
-    const filterToggleBtn = document.getElementById('filterToggleBtn');
+    const filterToggleBtn = document.getElementById('mapFilterToggleBtn');
     if (filterToggleBtn) {
       filterToggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -702,14 +728,14 @@ window.MapPanelUI = {
       const naverZoom = map.getZoom(); // 네이버 지도: getZoom() 사용 (6-21)
 
       // 네이버 줌을 카카오 레벨로 변환 (1-14)
-      const kakaoLevel = window.mapLevelConverter ? 
-        window.mapLevelConverter.naverZoomToKakaoLevel(naverZoom) : 
+      const kakaoLevel = window.mapLevelConverter ?
+        window.mapLevelConverter.naverZoomToKakaoLevel(naverZoom) :
         Math.max(1, Math.min(14, 28 - naverZoom)); // fallback
 
       // 네이버 지도 API: getSW(), getNE() 또는 _sw, _ne 프로퍼티 사용
       const sw = bounds.getSW ? bounds.getSW() : bounds._sw;
       const ne = bounds.getNE ? bounds.getNE() : bounds._ne;
-      
+
       // bbox 형식으로 파라미터 구성
       const bbox = `${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`;
 
@@ -781,12 +807,12 @@ window.MapPanelUI = {
 
   // 뷰포트 기반 패널 완전 재구성 (개별 매장만)
   async rebuildStorePanel(map) {
-    const storeListContainer = document.getElementById('storeListContainer');
+    const storeListContainer = document.getElementById('mapStoreListContainer');
     if (!storeListContainer) return;
 
     const bounds = map.getBounds();
     const naverZoom = map.getZoom(); // 네이버 지도: getZoom() 사용 (6-21)
-    
+
     // 네이버 지도 API: getSW(), getNE() 또는 _sw, _ne 프로퍼티 사용
     const sw = bounds.getSW ? bounds.getSW() : bounds._sw;
     const ne = bounds.getNE ? bounds.getNE() : bounds._ne;
@@ -796,12 +822,7 @@ window.MapPanelUI = {
     storeListContainer.innerHTML = '';
 
     // 로딩 상태 표시
-    storeListContainer.innerHTML = `
-      <div class="loading-message" style="text-align: center; padding: 20px; color: #666;">
-        <div class="loading-spinner" style="margin: 0 auto 10px auto; width: 30px; height: 30px; border: 3px solid #e0e0e0; border-top: 3px solid #297efc; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        뷰포트 매장을 불러오는 중...
-      </div>
-    `;
+    storeListContainer.innerHTML = this.showLoading();
 
     try {
       // 뷰포트 매장 데이터 새로 로딩
@@ -909,7 +930,7 @@ window.MapPanelUI = {
       return '';
     }
 
-  
+
     // ID 우선 검증 - store_id 또는 id 사용
     let storeId = store.id || store.store_id;
 
@@ -941,10 +962,10 @@ window.MapPanelUI = {
     const normalizedStore = {
       ...store,
       id: storeId,
-      store_id: storeId  // 호환성을 위해 둘 다 설정
+      store_id: storeId // 호환성을 위해 둘 다 설정
     };
 
-   
+
 
     // renderStore 함수 호출을 위한 안전한 데이터 처리
     let storeDataForRender;
@@ -996,12 +1017,12 @@ window.MapPanelUI = {
   // 필터 상태 초기화
   resetFilters() {
     // 모든 필터 탭을 '전체'로 초기화
-    document.querySelectorAll('.filter-tab').forEach(tab => {
+    document.querySelectorAll('.map-filter-tab').forEach(tab => {
       tab.classList.remove('active');
     });
 
     // 각 필터 타입의 '전체' 탭을 활성화
-    document.querySelectorAll('.filter-tab[data-filter="all"]').forEach(tab => {
+    document.querySelectorAll('.map-filter-tab[data-filter="all"]').forEach(tab => {
       tab.classList.add('active');
     });
 
@@ -1070,7 +1091,7 @@ window.MapPanelUI = {
   // 초기화 함수
   init() {
     // 패널 DOM 및 스타일 렌더링
-    if (!document.getElementById('storePanel')) {
+    if (!document.getElementById('mapStorePanel')) {
       document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
       document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
     }

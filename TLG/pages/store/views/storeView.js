@@ -10,7 +10,16 @@ import { menuHTML } from "./modules/menuHTML.js";
 const storeCSSLink = document.createElement("link");
 storeCSSLink.rel = "stylesheet";
 storeCSSLink.href = "/TLG/pages/store/views/storeCSS/store.css";
-document.head.appendChild(storeCSSLink);
+if (!document.querySelector('link[href="/TLG/pages/store/views/storeCSS/store.css"]')) {
+  document.head.appendChild(storeCSSLink);
+}
+
+const storePanelCSSLink = document.createElement("link");
+storePanelCSSLink.rel = "stylesheet";
+storePanelCSSLink.href = "/TLG/pages/store/views/storeCSS/storePanel.css";
+if (!document.querySelector('link[href="/TLG/pages/store/views/storeCSS/storePanel.css"]')) {
+  document.head.appendChild(storePanelCSSLink);
+}
 
 export const storeView = {
   /**
