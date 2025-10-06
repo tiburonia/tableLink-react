@@ -3,9 +3,6 @@
  * 마이페이지 전체 흐름 제어
  */
 
-import { mypageService } from '../services/mypageService.js';
-import { mypageView } from '../views/mypageView.js';
-import { mypageSkeleton } from '../views/mypageSkeleton.js';
 import { mypageEventHandler } from '../views/mypageEventHandler.js';
 
 export const mypageController = {
@@ -14,7 +11,22 @@ export const mypageController = {
    */
   async renderMyPage() {
     try {
-      console.log('🏠 마이페이지 렌더링 시작');
+      console.log('🏠 마이페이지 컨트롤러 실행');
+
+      const main = document.getElementById('main');
+      if (!main) {
+        throw new Error('main 요소를 찾을 수 없습니다');
+      }
+
+      // 1. 스켈레톤 즉시 표시 (사전 로드된 모듈 사용)
+      console.log('💀 스켈레톤 렌더링 시작');
+      const { mypageSkeleton } = await import('../views/mypageSkeleton.js');
+      main.innerHTML = mypageSkeleton.render();
+      console.log('💀 스켈레톤 렌더링 완료');
+
+      // 2. 나머지 모듈 로드 (스켈레톤 표시 후)
+      const { mypageView } = await import('../views/mypageView.js');
+      const { mypageService } = await import('../services/mypageService.js');
 
       // 사용자 정보 확인
       if (!window.userInfo || !window.userInfo.id) {
@@ -24,15 +36,6 @@ export const mypageController = {
         }
         return;
       }
-
-      const main = document.getElementById('main');
-      if (!main) {
-        console.error('❌ #main 요소를 찾을 수 없습니다');
-        return;
-      }
-
-      // 0. 스켈레톤 UI 렌더링
-      main.innerHTML = mypageSkeleton.render();
 
       // 1. 데이터 로드 (Service Layer) - window.userInfo.id는 users.id (PK)
       const userPk = window.userInfo.userId;
