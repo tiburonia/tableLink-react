@@ -1,3 +1,4 @@
+
 export const OrderView = {
   escapeHtml(text) {
     const div = document.createElement('div');
@@ -27,20 +28,19 @@ export const OrderView = {
     return `
       <div class="tll-header">
         <button class="back-btn" id="backBtn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19 12H5m7-7l-7 7 7 7"/>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
           </svg>
-          뒤로
         </button>
         <div class="store-info">
           <h1>${store.name}</h1>
           <p>${tableName}</p>
         </div>
         <div class="cart-indicator" id="cartIndicator">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
             <path d="M7 18c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zM1 2v2h2l3.6 7.59-1.35 2.41C5.08 14.42 5.37 15 6 15h12v-2H6l1.1-2h7.45c.75 0 1.42-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2z"/>
           </svg>
-          <span id="cartCount">0</span>
+          <span id="cartCount" class="cart-badge">0</span>
         </div>
       </div>
     `;
@@ -61,10 +61,7 @@ export const OrderView = {
 
   renderCategoryTabs(menuByCategory) {
     const categories = Object.keys(menuByCategory);
-
-    if (categories.length <= 1) {
-      return '';
-    }
+    if (categories.length <= 1) return '';
 
     return categories.map((category, index) => `
       <button class="category-tab ${index === 0 ? 'active' : ''}" 
@@ -90,15 +87,20 @@ export const OrderView = {
     const itemPrice = item.price || 0;
     
     return `
-      <div class="menu-item" 
-           data-menu-id="${menuId}">
+      <div class="menu-item" data-menu-id="${menuId}">
         <div class="menu-info">
           <h4>${this.escapeHtml(item.name)}</h4>
-          <p>${this.escapeHtml(item.description || '')}</p>
-          <div class="menu-price">${itemPrice.toLocaleString()}원</div>
-          <div class="cook-station-badge">${cookStation}</div>
+          <p class="menu-desc">${this.escapeHtml(item.description || '')}</p>
+          <div class="menu-footer">
+            <div class="menu-price">${itemPrice.toLocaleString()}원</div>
+            <div class="cook-station-badge">${cookStation}</div>
+          </div>
         </div>
-        <button class="add-btn">+</button>
+        <button class="add-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+          </svg>
+        </button>
       </div>
     `;
   },
@@ -118,7 +120,8 @@ export const OrderView = {
             ${this.renderEmptyCart()}
           </div>
           <button class="order-btn" id="orderBtn" disabled>
-            주문하기
+            <span>주문하기</span>
+            <span id="orderBtnAmount" class="btn-amount">0원</span>
           </button>
         </div>
       </div>
@@ -143,18 +146,18 @@ export const OrderView = {
     const cartTotal = document.getElementById('cartTotal');
     const cartItems = document.getElementById('cartItems');
     const orderBtn = document.getElementById('orderBtn');
+    const orderBtnAmount = document.getElementById('orderBtnAmount');
 
     const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
     if (cartCount) cartCount.textContent = totalItems;
     if (cartTotal) cartTotal.textContent = `${totalAmount.toLocaleString()}원`;
+    if (orderBtnAmount) orderBtnAmount.textContent = `${totalAmount.toLocaleString()}원`;
 
     if (cartItems) {
-      if (cart.length === 0) {
-        cartItems.innerHTML = this.renderEmptyCart();
-      } else {
-        cartItems.innerHTML = cart.map(item => this.renderCartItem(item)).join('');
-      }
+      cartItems.innerHTML = cart.length === 0 
+        ? this.renderEmptyCart() 
+        : cart.map(item => this.renderCartItem(item)).join('');
     }
 
     if (orderBtn) {
@@ -168,14 +171,19 @@ export const OrderView = {
       <div class="cart-item" data-menu-id="${item.id}">
         <div class="item-info">
           <h4>${this.escapeHtml(item.name)}</h4>
-          <div class="item-price">${item.price.toLocaleString()}원 × ${item.quantity} = ${itemTotal.toLocaleString()}원</div>
+          <div class="item-price">${item.price.toLocaleString()}원</div>
         </div>
         <div class="quantity-controls">
           <button class="qty-btn qty-decrease" data-action="decrease">−</button>
           <span class="quantity">${item.quantity}</span>
           <button class="qty-btn qty-increase" data-action="increase">+</button>
-          <button class="remove-btn" data-action="remove">×</button>
+          <button class="remove-btn" data-action="remove">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+            </svg>
+          </button>
         </div>
+        <div class="item-total">${itemTotal.toLocaleString()}원</div>
       </div>
     `;
   },
@@ -222,13 +230,11 @@ export const OrderView = {
           width: 100%;
           height: 100%;
           max-width: 390px;
-          max-height: 760px;
-          margin: 0 auto;
           background: #f8f9fa;
           display: flex;
           flex-direction: column;
           overflow: hidden;
-          z-index: 1000;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
 
         .tll-header {
@@ -236,31 +242,28 @@ export const OrderView = {
           top: 0;
           z-index: 100;
           background: white;
-          padding: 12px 16px;
-          border-bottom: 1px solid #e9ecef;
+          padding: 16px 20px;
+          border-bottom: 1px solid #f1f5f9;
           display: flex;
           align-items: center;
           justify-content: space-between;
-          min-height: 48px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .back-btn {
-          background: none;
+          background: #f8f9fa;
           border: none;
-          color: #666;
+          color: #1e293b;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 4px;
-          padding: 8px;
-          border-radius: 6px;
-          font-size: 14px;
-          transition: background 0.2s;
+          padding: 10px;
+          border-radius: 10px;
+          transition: all 0.2s;
         }
 
         .back-btn:hover {
-          background: #f1f3f5;
+          background: #e2e8f0;
         }
 
         .store-info {
@@ -271,43 +274,42 @@ export const OrderView = {
 
         .store-info h1 {
           margin: 0;
-          font-size: 16px;
-          font-weight: 600;
-          color: #333;
-          line-height: 1.2;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
         }
 
         .store-info p {
-          margin: 2px 0 0 0;
-          font-size: 12px;
-          color: #666;
+          margin: 4px 0 0 0;
+          font-size: 13px;
+          color: #64748b;
+          font-weight: 500;
         }
 
         .cart-indicator {
           position: relative;
           cursor: pointer;
-          padding: 8px;
-          border-radius: 6px;
+          padding: 10px;
+          border-radius: 10px;
           transition: background 0.2s;
         }
 
         .cart-indicator:hover {
-          background: #f1f3f5;
+          background: #f8f9fa;
         }
 
-        .cart-indicator span {
+        .cart-badge {
           position: absolute;
-          top: 2px;
-          right: 2px;
-          background: #ff4757;
+          top: 4px;
+          right: 4px;
+          background: #ef4444;
           color: white;
           border-radius: 10px;
           padding: 2px 6px;
-          font-size: 10px;
-          font-weight: 600;
-          min-width: 16px;
+          font-size: 11px;
+          font-weight: 700;
+          min-width: 18px;
           text-align: center;
-          line-height: 1.2;
         }
 
         .tll-content {
@@ -318,14 +320,13 @@ export const OrderView = {
         }
 
         .category-tabs {
-          padding: 8px 16px;
+          padding: 12px 20px;
           background: white;
-          border-bottom: 1px solid #f1f3f5;
+          border-bottom: 1px solid #f1f5f9;
           display: flex;
           gap: 8px;
           overflow-x: auto;
           scrollbar-width: none;
-          -ms-overflow-style: none;
         }
 
         .category-tabs::-webkit-scrollbar {
@@ -335,10 +336,11 @@ export const OrderView = {
         .category-tab {
           background: #f8f9fa;
           border: none;
-          border-radius: 16px;
-          padding: 6px 12px;
-          font-size: 12px;
-          color: #666;
+          border-radius: 20px;
+          padding: 8px 16px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #64748b;
           cursor: pointer;
           transition: all 0.2s;
           white-space: nowrap;
@@ -346,14 +348,16 @@ export const OrderView = {
         }
 
         .category-tab.active {
-          background: #007bff;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .menu-container {
           flex: 1;
-          padding: 16px;
+          padding: 20px;
           overflow-y: auto;
+          -webkit-overflow-scrolling: touch;
         }
 
         .menu-category {
@@ -372,20 +376,22 @@ export const OrderView = {
 
         .menu-item {
           background: white;
-          border: 1px solid #e9ecef;
-          border-radius: 12px;
-          padding: 14px;
+          border: 1px solid #f1f5f9;
+          border-radius: 16px;
+          padding: 16px;
           cursor: pointer;
           transition: all 0.2s;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 12px;
+          gap: 16px;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
 
         .menu-item:hover {
-          border-color: #007bff;
-          box-shadow: 0 4px 12px rgba(0,123,255,0.1);
+          border-color: #3b82f6;
+          box-shadow: 0 4px 16px rgba(59, 130, 246, 0.15);
+          transform: translateY(-2px);
         }
 
         .menu-info {
@@ -394,59 +400,64 @@ export const OrderView = {
         }
 
         .menu-info h4 {
-          margin: 0 0 4px 0;
-          font-size: 14px;
-          font-weight: 600;
-          color: #333;
-          line-height: 1.3;
+          margin: 0 0 6px 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #1e293b;
         }
 
-        .menu-info p {
-          margin: 0 0 6px 0;
-          font-size: 12px;
-          color: #666;
-          line-height: 1.3;
+        .menu-desc {
+          margin: 0 0 10px 0;
+          font-size: 13px;
+          color: #64748b;
+          line-height: 1.4;
           overflow: hidden;
           text-overflow: ellipsis;
-          white-space: nowrap;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .menu-footer {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .menu-price {
-          font-size: 14px;
-          font-weight: 700;
-          color: #007bff;
+          font-size: 16px;
+          font-weight: 800;
+          color: #3b82f6;
         }
 
         .cook-station-badge {
-          display: inline-block;
-          background: #f8f9fa;
-          color: #666;
-          font-size: 10px;
-          padding: 2px 6px;
-          border-radius: 8px;
-          margin-top: 4px;
-          border: 1px solid #e9ecef;
+          background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+          color: #475569;
+          font-size: 11px;
+          font-weight: 600;
+          padding: 4px 8px;
+          border-radius: 6px;
         }
 
         .add-btn {
-          background: #007bff;
+          background: linear-gradient(135deg, #3b82f6, #2563eb);
           color: white;
           border: none;
           border-radius: 50%;
-          width: 32px;
-          height: 32px;
+          width: 44px;
+          height: 44px;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
           transition: all 0.2s;
-          font-size: 16px;
           flex-shrink: 0;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .add-btn:hover {
-          background: #0056b3;
-          transform: scale(1.05);
+          transform: scale(1.1);
+          box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
         }
 
         .cart-panel {
@@ -455,11 +466,11 @@ export const OrderView = {
           left: 0;
           width: 100%;
           max-width: 390px;
-          height: 60%;
+          height: 65%;
           background: white;
-          border-radius: 16px 16px 0 0;
-          box-shadow: 0 -8px 32px rgba(0,0,0,0.15);
-          transition: bottom 0.3s ease;
+          border-radius: 24px 24px 0 0;
+          box-shadow: 0 -8px 32px rgba(0,0,0,0.2);
+          transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           z-index: 1010;
           display: flex;
           flex-direction: column;
@@ -470,24 +481,23 @@ export const OrderView = {
         }
 
         .cart-handle {
-          padding: 8px 0;
+          padding: 12px 0;
           display: flex;
           justify-content: center;
           cursor: pointer;
-          background: white;
-          border-radius: 16px 16px 0 0;
+          border-radius: 24px 24px 0 0;
         }
 
         .handle-bar {
           width: 40px;
           height: 4px;
-          background: #dee2e6;
+          background: #cbd5e1;
           border-radius: 2px;
         }
 
         .cart-content {
           flex: 1;
-          padding: 0 16px 16px 16px;
+          padding: 0 20px 20px 20px;
           display: flex;
           flex-direction: column;
           overflow: hidden;
@@ -497,28 +507,29 @@ export const OrderView = {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding-bottom: 12px;
-          border-bottom: 1px solid #f1f3f5;
-          margin-bottom: 12px;
+          padding-bottom: 16px;
+          border-bottom: 2px solid #f1f5f9;
+          margin-bottom: 16px;
         }
 
         .cart-header h3 {
           margin: 0;
-          font-size: 16px;
-          font-weight: 600;
-          color: #333;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
         }
 
         .cart-total {
-          font-size: 16px;
-          font-weight: 700;
-          color: #007bff;
+          font-size: 18px;
+          font-weight: 800;
+          color: #3b82f6;
         }
 
         .cart-items {
           flex: 1;
           overflow-y: auto;
           margin-bottom: 16px;
+          -webkit-overflow-scrolling: touch;
         }
 
         .empty-cart {
@@ -526,112 +537,138 @@ export const OrderView = {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 120px;
-          color: #999;
-          text-align: center;
+          height: 160px;
+          color: #94a3b8;
         }
 
         .empty-icon {
-          font-size: 32px;
-          margin-bottom: 8px;
+          font-size: 48px;
+          margin-bottom: 12px;
+        }
+
+        .empty-cart p {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 500;
         }
 
         .cart-item {
+          background: linear-gradient(135deg, #ffffff, #f8fafc);
+          border-radius: 16px;
+          padding: 16px;
+          margin-bottom: 12px;
+          border: 1px solid #f1f5f9;
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 12px 0;
-          border-bottom: 1px solid #f8f9fa;
-        }
-
-        .cart-item:last-child {
-          border-bottom: none;
+          flex-direction: column;
+          gap: 12px;
         }
 
         .item-info h4 {
-          margin: 0 0 4px 0;
-          font-size: 13px;
-          font-weight: 600;
-          color: #333;
-          line-height: 1.3;
+          margin: 0 0 6px 0;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1e293b;
         }
 
         .item-price {
-          font-size: 12px;
-          color: #666;
+          font-size: 14px;
+          color: #64748b;
+          font-weight: 500;
         }
 
         .quantity-controls {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 12px;
         }
 
         .qty-btn {
-          width: 24px;
-          height: 24px;
-          border: 1px solid #dee2e6;
+          width: 32px;
+          height: 32px;
+          border: 2px solid #e2e8f0;
           background: white;
-          border-radius: 4px;
+          border-radius: 8px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 12px;
+          font-size: 16px;
+          font-weight: 700;
+          color: #475569;
           transition: all 0.2s;
         }
 
         .qty-btn:hover {
           background: #f8f9fa;
+          border-color: #cbd5e1;
         }
 
         .quantity {
-          min-width: 20px;
+          min-width: 28px;
           text-align: center;
-          font-size: 12px;
-          font-weight: 600;
+          font-size: 16px;
+          font-weight: 700;
+          color: #1e293b;
         }
 
         .remove-btn {
-          width: 24px;
-          height: 24px;
-          background: #dc3545;
+          width: 32px;
+          height: 32px;
+          background: linear-gradient(135deg, #ef4444, #dc2626);
           color: white;
           border: none;
-          border-radius: 4px;
+          border-radius: 8px;
           cursor: pointer;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 14px;
           transition: all 0.2s;
+          margin-left: auto;
         }
 
         .remove-btn:hover {
-          background: #c82333;
+          transform: scale(1.05);
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .item-total {
+          font-size: 16px;
+          font-weight: 800;
+          color: #3b82f6;
+          text-align: right;
         }
 
         .order-btn {
           width: 100%;
-          background: #28a745;
+          background: linear-gradient(135deg, #10b981, #059669);
           color: white;
           border: none;
-          border-radius: 8px;
-          padding: 14px;
-          font-size: 14px;
-          font-weight: 600;
+          border-radius: 16px;
+          padding: 18px 24px;
+          font-size: 16px;
+          font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
-          margin-top: auto;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
         }
 
         .order-btn:hover:not(:disabled) {
-          background: #218838;
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
         }
 
         .order-btn:disabled {
-          background: #6c757d;
+          background: linear-gradient(135deg, #9ca3af, #6b7280);
           cursor: not-allowed;
+          box-shadow: none;
+        }
+
+        .btn-amount {
+          font-size: 18px;
+          font-weight: 800;
         }
 
         .cart-overlay {
@@ -640,11 +677,12 @@ export const OrderView = {
           left: 0;
           width: 100%;
           height: 100%;
-          background: rgba(0,0,0,0.3);
+          background: rgba(0,0,0,0.4);
           opacity: 0;
           visibility: hidden;
           transition: all 0.3s ease;
           z-index: 1005;
+          backdrop-filter: blur(4px);
         }
 
         .cart-overlay.open {
@@ -652,23 +690,18 @@ export const OrderView = {
           visibility: visible;
         }
 
-        @media (max-height: 600px) {
+        @media (max-height: 700px) {
           .cart-panel {
-            height: 70%;
+            height: 75%;
           }
         }
 
         @media (max-width: 360px) {
           .tll-header {
-            padding: 10px 12px;
+            padding: 12px 16px;
           }
-
           .menu-container {
-            padding: 12px;
-          }
-
-          .cart-content {
-            padding: 0 12px 12px 12px;
+            padding: 16px;
           }
         }
       </style>
