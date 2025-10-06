@@ -695,35 +695,70 @@ window.MapPanelUI = {
     const reviewCount = store?.reviewCount || Math.floor(Math.random() * 500 + 50);
     const isOpen = store?.isOpen !== undefined ? store.isOpen : Math.random() > 0.3;
     const distance = store?.distance || (Math.random() * 2 + 0.1).toFixed(1);
-    
+
     // 영업시간 더미 데이터
     const operatingHours = isOpen ? '11:00 - 22:00' : '영업 종료';
-    
+
     // 최소 주문 금액 더미 데이터
     const minOrder = [10000, 12000, 15000, 20000][Math.floor(Math.random() * 4)];
-    
+
     // 예상 대기 시간 더미 데이터
     const waitTime = Math.floor(Math.random() * 30 + 10);
-    
+
     // 매장 특징 태그 더미 데이터
     const tags = [];
     if (Math.random() > 0.7) tags.push({ text: '🔥 인기', class: 'hot' });
     if (Math.random() > 0.8) tags.push({ text: '✨ 신규', class: 'new' });
     if (Math.random() > 0.6) tags.push({ text: '🎁 할인중', class: '' });
     if (Math.random() > 0.5) tags.push({ text: '🚚 배달', class: '' });
-    
+
     // 프로모션 여부
     const hasPromotion = Math.random() > 0.7;
-    
-    const tagsHTML = tags.map(tag => 
+
+    const tagsHTML = tags.map(tag =>
       `<span class="storeTag ${tag.class}">${tag.text}</span>`
     ).join('');
 
-    const promotionHTML = hasPromotion ? 
+    const promotionHTML = hasPromotion ?
       `<div class="promotionBanner">🎉 10% 할인</div>` : '';
 
+    // renderStore 함수 호출을 위한 안전한 데이터 처리
+    let storeDataForRender;
+    try {
+      // 매장 데이터 정규화 - id 속성 확실히 설정
+      const normalizedStore = {
+        ...store,
+        id: storeId,
+        store_id: storeId, // 호환성을 위해 둘 다 설정
+        name: storeName,
+        category: storeCategory,
+        ratingAverage: rating,
+        reviewCount: reviewCount,
+        isOpen: isOpen,
+        distance: distance,
+        operatingHours: operatingHours,
+        minOrder: minOrder,
+        waitTime: waitTime,
+        tags: tags.map(t => t.text),
+        hasPromotion: hasPromotion
+      };
+      const jsonString = JSON.stringify(normalizedStore);
+      storeDataForRender = jsonString.replace(/"/g, '&quot;');
+    } catch (jsonError) {
+      console.error('❌ JSON 직렬화 실패:', jsonError);
+      // 최소한의 데이터만 전달
+      const minimalStore = {
+        id: storeId,
+        store_id: storeId,
+        name: storeName,
+        category: storeCategory,
+        isOpen: isOpen
+      };
+      storeDataForRender = JSON.stringify(minimalStore).replace(/"/g, '&quot;');
+    }
+
     return `
-      <div class="storeCard" data-store-id="${storeId}" onclick="renderStore(${storeId})">
+      <div class="storeCard" data-store-id="${storeId}" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${storeDataForRender})">
         <!-- 매장 이미지 영역 -->
         <div class="storeImageBox">
           <img src="/TableLink.png" alt="${storeName}" onerror="this.style.display='none'">
@@ -787,68 +822,10 @@ window.MapPanelUI = {
               <span class="actionIcon">📞</span>
               <span class="actionText">전화</span>
             </button>
-            <button class="actionButton primary" onclick="event.stopPropagation(); renderStore(${storeId})">
+            <button class="actionButton primary" onclick="event.stopPropagation(); renderStore(${storeDataForRender})">
               <span class="actionIcon">🛒</span>
               <span class="actionText">주문하기</span>
             </button>
-          </div>
-        </div>
-      </div>
-    `age).toFixed(1) : '0.0';
-    const reviewCount = store?.reviewCount || 0;
-    const storeAddress = store?.address || '주소 정보 없음';
-    const isOpen = store?.isOpen !== false;
-
-    // 매장 데이터 정규화 - id 속성 확실히 설정
-    const normalizedStore = {
-      ...store,
-      id: storeId,
-      store_id: storeId // 호환성을 위해 둘 다 설정
-    };
-
-
-
-    // renderStore 함수 호출을 위한 안전한 데이터 처리
-    let storeDataForRender;
-    try {
-      const jsonString = JSON.stringify(normalizedStore);
-      storeDataForRender = jsonString.replace(/"/g, '&quot;');
-    } catch (jsonError) {
-      console.error('❌ JSON 직렬화 실패:', jsonError);
-      // 최소한의 데이터만 전달
-      const minimalStore = {
-        id: storeId,
-        store_id: storeId,
-        name: storeName,
-        category: storeCategory,
-        isOpen: isOpen
-      };
-      storeDataForRender = JSON.stringify(minimalStore).replace(/"/g, '&quot;');
-    }
-
-    return `
-      <div class="storeCard" data-status="${isOpen ? 'true' : 'false'}" data-category="${storeCategory}" data-rating="${rating}" onclick="renderStore(${storeDataForRender})">
-        <div class="storeImageBox">
-          <img src="TableLink.png" alt="가게 이미지" />
-          <div class="storeStatus ${isOpen ? 'open' : 'closed'}">
-            ${isOpen ? '🟢 운영중' : '🔴 운영중지'}
-          </div>
-        </div>
-        <div class="storeInfoBox">
-          <div class="storeHeader">
-            <div class="storeName">${storeName}</div>
-            <div class="storeRating">
-              <span class="ratingStars">★</span>
-              <span class="ratingValue">${rating}</span>
-              <span class="reviewCount">(${reviewCount})</span>
-            </div>
-          </div>
-          <div class="storeCategory">${storeCategory}</div>
-          <div class="storeActions">
-            <div class="actionButton primary">
-              <span class="actionIcon">🍽️</span>
-              <span class="actionText">메뉴보기</span>
-            </div>
           </div>
         </div>
       </div>
