@@ -579,7 +579,260 @@ export const mapController = {
     } else {
       container.innerHTML = '<p>주변에 매장이 없습니다.</p>';
     }
-  }
+  },
+
+  /**
+   * 이벤트 리스너 설정
+   */
+  setupEventListeners() {
+    // 검색 관련 이벤트
+    this.setupSearchEvents();
+
+    // 위치 설정 관련 이벤트
+    this.setupLocationEvents();
+
+    // 뷰포트 변경 이벤트 (디바운스 처리)
+    this.setupViewportChangeEvents();
+
+    // 바텀시트 관련 이벤트
+    this.setupBottomSheetEvents();
+
+    console.log('✅ 지도 이벤트 리스너 설정 완료');
+  },
+
+  /**
+   * 바텀시트 이벤트 설정
+   */
+  setupBottomSheetEvents() {
+    const filterBtns = document.querySelectorAll('.filter-btn');
+    const bottomSheet = document.getElementById('bottomSheet');
+    const sheetDim = document.getElementById('sheetDim');
+    const sheetCloseBtn = document.querySelector('.sheet-close-btn');
+    const sheetTitle = document.getElementById('sheetTitle');
+    const sheetContent = document.getElementById('sheetContent');
+
+    // 필터 버튼 클릭 이벤트
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const filterType = btn.dataset.filter;
+
+        // 전체 필터는 바텀시트 없이 처리
+        if (filterType === 'all') {
+          filterBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          this.applyFilter('all', null);
+          return;
+        }
+
+        // 바텀시트 컨텐츠 업데이트
+        this.updateBottomSheetContent(filterType, sheetTitle, sheetContent);
+
+        // 바텀시트 열기
+        bottomSheet.classList.add('active');
+        sheetDim.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      });
+    });
+
+    // 딤 클릭으로 닫기
+    sheetDim.addEventListener('click', () => {
+      this.closeBottomSheet(bottomSheet, sheetDim);
+    });
+
+    // 닫기 버튼
+    if (sheetCloseBtn) {
+      sheetCloseBtn.addEventListener('click', () => {
+        this.closeBottomSheet(bottomSheet, sheetDim);
+      });
+    }
+
+    console.log('✅ 바텀시트 이벤트 설정 완료');
+  },
+
+  /**
+   * 바텀시트 닫기
+   */
+  closeBottomSheet(bottomSheet, sheetDim) {
+    bottomSheet.classList.remove('active');
+    sheetDim.classList.remove('active');
+    document.body.style.overflow = '';
+  },
+
+  /**
+   * 바텀시트 컨텐츠 업데이트
+   */
+  updateBottomSheetContent(filterType, titleEl, contentEl) {
+    const contents = {
+      category: {
+        title: '카테고리 선택',
+        html: `
+          <div class="category-grid">
+            <div class="category-item" data-value="한식">
+              <div class="category-icon">🍚</div>
+              <div class="category-name">한식</div>
+            </div>
+            <div class="category-item" data-value="중식">
+              <div class="category-icon">🥟</div>
+              <div class="category-name">중식</div>
+            </div>
+            <div class="category-item" data-value="일식">
+              <div class="category-icon">🍱</div>
+              <div class="category-name">일식</div>
+            </div>
+            <div class="category-item" data-value="양식">
+              <div class="category-icon">🍝</div>
+              <div class="category-name">양식</div>
+            </div>
+            <div class="category-item" data-value="카페">
+              <div class="category-icon">☕</div>
+              <div class="category-name">카페</div>
+            </div>
+            <div class="category-item" data-value="치킨">
+              <div class="category-icon">🍗</div>
+              <div class="category-name">치킨</div>
+            </div>
+            <div class="category-item" data-value="분식">
+              <div class="category-icon">🍜</div>
+              <div class="category-name">분식</div>
+            </div>
+            <div class="category-item" data-value="디저트">
+              <div class="category-icon">🍰</div>
+              <div class="category-name">디저트</div>
+            </div>
+            <div class="category-item" data-value="기타">
+              <div class="category-icon">🍽️</div>
+              <div class="category-name">기타</div>
+            </div>
+          </div>
+        `
+      },
+      price: {
+        title: '가격대 선택',
+        html: `
+          <div class="price-options">
+            <div class="price-option" data-value="low">
+              <div>
+                <div class="price-label">💰 저렴한</div>
+                <div class="price-range">10,000원 이하</div>
+              </div>
+            </div>
+            <div class="price-option" data-value="medium">
+              <div>
+                <div class="price-label">💰💰 보통</div>
+                <div class="price-range">10,000 ~ 20,000원</div>
+              </div>
+            </div>
+            <div class="price-option" data-value="high">
+              <div>
+                <div class="price-label">💰💰💰 비싼</div>
+                <div class="price-range">20,000원 이상</div>
+              </div>
+            </div>
+          </div>
+        `
+      },
+      distance: {
+        title: '거리 설정',
+        html: `
+          <div class="price-options">
+            <div class="price-option" data-value="500">
+              <div class="price-label">📍 500m 이내</div>
+            </div>
+            <div class="price-option" data-value="1000">
+              <div class="price-label">📍 1km 이내</div>
+            </div>
+            <div class="price-option" data-value="3000">
+              <div class="price-label">📍 3km 이내</div>
+            </div>
+            <div class="price-option" data-value="5000">
+              <div class="price-label">📍 5km 이내</div>
+            </div>
+          </div>
+        `
+      },
+      rating: {
+        title: '평점 필터',
+        html: `
+          <div class="price-options">
+            <div class="price-option" data-value="4.5">
+              <div class="price-label">⭐ 4.5점 이상</div>
+            </div>
+            <div class="price-option" data-value="4.0">
+              <div class="price-label">⭐ 4.0점 이상</div>
+            </div>
+            <div class="price-option" data-value="3.5">
+              <div class="price-label">⭐ 3.5점 이상</div>
+            </div>
+            <div class="price-option" data-value="3.0">
+              <div class="price-label">⭐ 3.0점 이상</div>
+            </div>
+          </div>
+        `
+      },
+      delivery: {
+        title: '배달 옵션',
+        html: `
+          <div class="price-options">
+            <div class="price-option" data-value="available">
+              <div class="price-label">🛵 배달 가능</div>
+            </div>
+            <div class="price-option" data-value="pickup">
+              <div class="price-label">🏃 포장 가능</div>
+            </div>
+            <div class="price-option" data-value="dine-in">
+              <div class="price-label">🍽️ 매장 식사</div>
+            </div>
+          </div>
+        `
+      }
+    };
+
+    const content = contents[filterType] || contents.category;
+    titleEl.textContent = content.title;
+    contentEl.innerHTML = content.html;
+
+    // 선택 이벤트 추가
+    setTimeout(() => {
+      const items = contentEl.querySelectorAll('.category-item, .price-option');
+      items.forEach(item => {
+        item.addEventListener('click', () => {
+          items.forEach(i => i.classList.remove('selected'));
+          item.classList.add('selected');
+
+          const value = item.dataset.value;
+          console.log(`🔍 필터 선택: ${filterType} = ${value}`);
+
+          // 필터 적용
+          this.applyFilter(filterType, value);
+
+          // 필터 버튼 활성화
+          document.querySelectorAll('.filter-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.filter === filterType) {
+              btn.classList.add('active');
+            }
+          });
+
+          // 바텀시트 닫기
+          setTimeout(() => {
+            this.closeBottomSheet(
+              document.getElementById('bottomSheet'),
+              document.getElementById('sheetDim')
+            );
+          }, 300);
+        });
+      });
+    }, 50);
+  },
+
+  /**
+   * 필터 적용
+   */
+  applyFilter(filterType, value) {
+    console.log(`🔍 필터 적용: ${filterType} = ${value}`);
+    // TODO: 실제 필터링 로직 구현
+    // mapService나 mapPanelUI를 통해 매장 목록 필터링
+  },
 };
 
 // 전역 객체로 등록 (MapMarkerManager 의존성 해결)

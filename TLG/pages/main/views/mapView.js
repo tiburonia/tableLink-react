@@ -31,10 +31,52 @@ export const mapView = {
         ${this.renderSearchBar()}
         ${this.renderTopControlBar()}
         ${this.renderLocationModal()}
-        ${window.MapPanelUI.renderPanelHTML()}
+        ${this.renderStorePanel()}
       </main>
       ${this.renderBottomBar()}
       ${this.getMapStyles()}
+    `;
+  },
+
+  /**
+   * 매장 패널 렌더링 (필터바 + 바텀시트 포함)
+   */
+  renderStorePanel() {
+    return `
+      <div id="storePanel" class="store-panel">
+        <!-- 필터바 -->
+        <div class="filter-bar">
+          <button class="filter-btn active" data-filter="all">전체</button>
+          <button class="filter-btn" data-filter="distance">거리순</button>
+          <button class="filter-btn" data-filter="rating">평점순</button>
+          <button class="filter-btn" data-filter="category">카테고리</button>
+          <button class="filter-btn" data-filter="price">가격대</button>
+          <button class="filter-btn" data-filter="delivery">배달가능</button>
+        </div>
+
+        <!-- 매장 리스트 컨테이너 -->
+        <div id="storeListContainer" class="store-list-container">
+          <div class="empty-state">
+            <div class="empty-icon">🔍</div>
+            <div class="empty-text">지도를 움직여 매장을 찾아보세요</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 바텀시트 딤 -->
+      <div id="sheetDim" class="sheet-dim"></div>
+
+      <!-- 바텀시트 -->
+      <div id="bottomSheet" class="bottom-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+          <h3 id="sheetTitle">카테고리 선택</h3>
+          <button class="sheet-close-btn">✕</button>
+        </div>
+        <div class="sheet-content" id="sheetContent">
+          <!-- 동적으로 채워질 내용 -->
+        </div>
+      </div>
     `;
   },
 
@@ -858,6 +900,252 @@ export const mapView = {
           overflow: hidden;
           background: #fdfdfd;
           z-index: 1;
+        }
+
+        /* 매장 패널 (지도 위 하단) */
+        .store-panel {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: white;
+          border-radius: 16px 16px 0 0;
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+          z-index: 1002;
+          max-height: 60%;
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* 필터바 */
+        .filter-bar {
+          display: flex;
+          gap: 8px;
+          padding: 16px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+          border-bottom: 1px solid #f1f2f6;
+        }
+
+        .filter-bar::-webkit-scrollbar {
+          display: none;
+        }
+
+        .filter-btn {
+          flex-shrink: 0;
+          padding: 8px 16px;
+          border: 1px solid #e0e3f3;
+          background: white;
+          color: #666;
+          border-radius: 20px;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .filter-btn:hover {
+          background: #f8f9fa;
+        }
+
+        .filter-btn.active {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border-color: transparent;
+        }
+
+        /* 매장 리스트 컨테이너 */
+        .store-list-container {
+          flex: 1;
+          overflow-y: auto;
+          padding: 16px;
+        }
+
+        .empty-state {
+          text-align: center;
+          padding: 60px 20px;
+        }
+
+        .empty-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+          opacity: 0.5;
+        }
+
+        .empty-text {
+          font-size: 15px;
+          color: #999;
+        }
+
+        /* 바텀시트 딤 */
+        .sheet-dim {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.4);
+          z-index: 2000;
+          opacity: 0;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+        }
+
+        .sheet-dim.active {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
+        /* 바텀시트 */
+        .bottom-sheet {
+          position: fixed;
+          left: 50%;
+          transform: translateX(-50%);
+          bottom: -100%;
+          width: 100%;
+          max-width: 430px;
+          max-height: 70vh;
+          background: white;
+          border-radius: 16px 16px 0 0;
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+          z-index: 2001;
+          transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .bottom-sheet.active {
+          bottom: 0;
+        }
+
+        .sheet-handle {
+          width: 40px;
+          height: 4px;
+          background: #d1d5db;
+          border-radius: 2px;
+          margin: 12px auto 8px;
+        }
+
+        .sheet-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 20px;
+          border-bottom: 1px solid #f1f2f6;
+        }
+
+        .sheet-header h3 {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1a1a1a;
+        }
+
+        .sheet-close-btn {
+          background: #f7fafc;
+          border: none;
+          border-radius: 50%;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          font-size: 18px;
+          color: #999;
+          transition: all 0.2s ease;
+        }
+
+        .sheet-close-btn:hover {
+          background: #edf2f7;
+          color: #666;
+          transform: scale(1.1);
+        }
+
+        .sheet-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 20px;
+        }
+
+        /* 바텀시트 컨텐츠 - 카테고리 그리드 */
+        .category-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 12px;
+        }
+
+        .category-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          padding: 20px 12px;
+          background: #f8f9fa;
+          border: 2px solid transparent;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .category-item:hover {
+          background: #e9ecef;
+        }
+
+        .category-item.selected {
+          background: #eef2ff;
+          border-color: #667eea;
+        }
+
+        .category-icon {
+          font-size: 32px;
+        }
+
+        .category-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        /* 바텀시트 컨텐츠 - 가격대 옵션 */
+        .price-options {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .price-option {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 16px;
+          background: #f8f9fa;
+          border: 2px solid transparent;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .price-option:hover {
+          background: #e9ecef;
+        }
+
+        .price-option.selected {
+          background: #eef2ff;
+          border-color: #667eea;
+        }
+
+        .price-label {
+          font-size: 15px;
+          font-weight: 600;
+          color: #333;
+        }
+
+        .price-range {
+          font-size: 13px;
+          color: #666;
         }
 
         #map {
