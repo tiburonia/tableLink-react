@@ -85,7 +85,7 @@ html, body {
   background: rgba(0, 0, 0, 0.8);
   border-radius: 3px;
   opacity: 0.8;
-  z-index: 999;
+  z-index: 2000;
 }
 
 

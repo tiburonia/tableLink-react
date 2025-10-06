@@ -7,6 +7,22 @@ window.MapPanelUI = {
       <div id="mapStorePanel" class="collapsed">
         <div id="panelHandle"></div>
         <div id="filterBar" class="filter-bar">
+          <button class="filter-btn">
+            <span class="filler-btn-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" aria-label="Filter Solid" xmlns="http://www.w3.org/2000/svg">
+              <g fill="currentColor">
+                <!-- bars -->
+                <rect x="3" y="5"  width="18" height="2" rx="1"/>
+                <rect x="3" y="11" width="18" height="2" rx="1"/>
+                <rect x="3" y="17" width="18" height="2" rx="1"/>
+                <!-- knobs -->
+                <circle cx="9"  cy="6"  r="3"/>
+                <circle cx="15" cy="12" r="3"/>
+                <circle cx="9"  cy="18" r="3"/>
+              </g>
+            </svg>
+            </span>
+          </button>
           <button class="filter-btn" data-filter-type="category">
             <span class="filter-btn-icon">🍽️</span>
             <span class="filter-btn-text">카테고리</span>
@@ -326,7 +342,7 @@ window.MapPanelUI = {
         storePanel.classList.remove('expanded');
         currentHeight = 120;
       } else {
-        storePanel.style.height = '630px';
+        storePanel.style.height = '680px';
         storePanel.classList.add('expanded');
         storePanel.classList.remove('collapsed');
         currentHeight = 630;
@@ -388,7 +404,7 @@ window.MapPanelUI = {
         currentHeight = 120;
         console.log('📱 모바일 패널 접힘');
       } else {
-        storePanel.style.height = '630px';
+        storePanel.style.height = '680px';
         storePanel.classList.add('expanded');
         storePanel.classList.remove('collapsed');
         currentHeight = 630;
