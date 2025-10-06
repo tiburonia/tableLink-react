@@ -224,11 +224,11 @@ export const OrderView = {
     return `
       <style>
         .tll-order-screen {
-          position: fixed;
-          top: 0;
+          position: absolute;
+          top: 50px;
           left: 0;
           width: 100%;
-          height: 100%;
+          height: calc(100% - 50px);
           max-width: 390px;
           background: #f8f9fa;
           display: flex;
@@ -242,12 +242,13 @@ export const OrderView = {
           top: 0;
           z-index: 100;
           background: white;
-          padding: 16px 20px;
+          padding: 12px 20px;
           border-bottom: 1px solid #f1f5f9;
           display: flex;
           align-items: center;
           justify-content: space-between;
           box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+          flex-shrink: 0;
         }
 
         .back-btn {
@@ -466,7 +467,7 @@ export const OrderView = {
           left: 0;
           width: 100%;
           max-width: 390px;
-          height: 65%;
+          height: calc(65% - 13px);
           background: white;
           border-radius: 24px 24px 0 0;
           box-shadow: 0 -8px 32px rgba(0,0,0,0.2);
@@ -477,7 +478,7 @@ export const OrderView = {
         }
 
         .cart-panel.open {
-          bottom: 0;
+          bottom: 13px;
         }
 
         .cart-handle {
