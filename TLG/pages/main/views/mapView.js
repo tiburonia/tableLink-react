@@ -60,11 +60,7 @@ export const mapView = {
   renderTopControlBar() {
     return `
       <div id="topControlBar">
-        <button id="locationSelectBtn" class="location-select-btn" title="위치 선택">
-          <span id="locationText">중구 세종대로 110</span>
-          <span class="dropdown-arrow">▼</span>
-        </button>
-        <div class="top-control-spacer"></div>
+        
         <button id="notificationBtn" class="top-control-btn" title="알림" onclick="renderNotification()">
           <span>🔔</span>
           <span id="notificationBadge" class="notification-badge hidden">3</span>
@@ -514,7 +510,7 @@ export const mapView = {
         .current-location-btn {
           position: absolute;
           left: 20px;
-          bottom: 140px;
+          bottom: 205px;
           width: 48px;
           height: 48px;
           background: white;
