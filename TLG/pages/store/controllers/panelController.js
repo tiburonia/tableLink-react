@@ -146,7 +146,7 @@ export const panelController = {
       const finalPosition = panelService.calculateFinalPosition(deltaY);
 
       if (finalPosition !== null) {
-        if (finalPosition === 85) {
+        if (finalPosition === 75) {
           panelView.expandPanel(this.elements.panel);
         } else {
           panelView.collapsePanel(this.elements.panel);
@@ -154,7 +154,7 @@ export const panelController = {
       } else {
         // 원래 상태 유지
         const currentTop = panelView.getPanelTop(this.elements.panel);
-        if (currentTop < 142) {
+        if (currentTop < 137.5) {
           panelView.expandPanel(this.elements.panel);
         } else {
           panelView.collapsePanel(this.elements.panel);
