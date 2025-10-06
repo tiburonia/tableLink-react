@@ -34,7 +34,6 @@ export const mapView = {
         ${window.MapPanelUI.renderPanelHTML()}
       </main>
       ${this.renderBottomBar()}
-      ${window.MapPanelUI.getPanelStyles()}
       ${this.getMapStyles()}
     `;
   },
