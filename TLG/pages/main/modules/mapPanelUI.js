@@ -4,7 +4,7 @@ window.MapPanelUI = {
   activeFilters: {},
   renderPanelHTML() {
     return `
-      <div id="mapStorePanel">
+      <div id="mapStorePanel" class="collapsed">
         <div id="panelHandle"></div>
         <div id="filterBar" class="filter-bar">
           <button class="filter-btn">
@@ -277,70 +277,62 @@ window.MapPanelUI = {
 
   // 패널 드래그 기능 설정
   setupPanelDrag() {
-    // setupPanelDrag가 이미 실행되었는지 확인 (중복 실행 방지)
-    if (window.mapPanelDragSetup) {
-      console.log('⚠️ setupPanelDrag 이미 실행됨 - 건너뜁니다');
-      return;
-    }
-    
     const storePanel = document.getElementById('mapStorePanel');
     const panelHandle = document.getElementById('panelHandle');
-    if (!storePanel || !panelHandle) {
-      console.error('❌ 패널 요소를 찾을 수 없습니다');
-      return;
-    }
-    
     let isDragging = false;
     let startY;
     let startHeight;
     
-    // 패널이 이미 클래스를 가지고 있는지 확인
-    const hasExistingClass = storePanel.classList.contains('initial-render') || 
-                             storePanel.classList.contains('collapsed') || 
-                             storePanel.classList.contains('expanded');
+    // 최초 렌더링 검증 (window 전역 객체 사용)
+    if (typeof window.mapPanelRendered === 'undefined') {
+      window.mapPanelRendered = false;
+    }
     
-    console.log('🔍 패널 상태 확인');
-    console.log('  - 기존 클래스 존재:', hasExistingClass);
-    console.log('  - 현재 클래스:', storePanel.className);
-    
+    const isFirstRender = !window.mapPanelRendered;
     let currentHeight;
     
-    // 기존 클래스가 없을 때만 초기화
-    if (!hasExistingClass) {
-      console.log('✨ 패널 초기화 - 400px 높이로 시작');
+    console.log('🔍 패널 렌더링 검증 시작');
+    console.log('  - window.mapPanelRendered 값:', window.mapPanelRendered);
+    console.log('  - isFirstRender:', isFirstRender);
+    
+    if (isFirstRender) {
+      console.log('✨ 최초 렌더링 감지 - 400px 높이로 시작');
       
-      // initial-render 클래스 추가
+      // 최초 렌더링: initial-render 클래스 추가
       storePanel.classList.add('initial-render');
       currentHeight = 400;
       
       console.log('  - initial-render 클래스 추가됨');
+      console.log('  - currentHeight 설정:', currentHeight);
       
-      // 3초 후 collapsed 상태로 전환
+      // 전역 객체에 렌더링 완료 표시
+      window.mapPanelRendered = true;
+      console.log('  - window.mapPanelRendered=true 설정됨');
+      
+      // 3초 후 initial-render 클래스 제거하고 collapsed 상태로 전환
       setTimeout(() => {
         console.log('⏰ 3초 타이머 완료 - collapsed 상태로 전환');
         storePanel.classList.remove('initial-render');
         storePanel.classList.add('collapsed');
-        storePanel.style.height = '125px';
-        currentHeight = 125;
+        storePanel.style.height = '120px';
+        currentHeight = 120;
         console.log('  - 최종 높이:', storePanel.style.height);
+        console.log('  - 현재 클래스:', storePanel.className);
       }, 3000);
     } else {
-      // 기존 클래스가 있으면 현재 상태 유지
-      console.log('🔄 기존 패널 상태 유지');
+      console.log('🔄 이후 렌더링 감지 - 120px 높이로 시작');
       
-      if (storePanel.classList.contains('initial-render')) {
-        currentHeight = 400;
-      } else if (storePanel.classList.contains('expanded')) {
-        currentHeight = 630;
-      } else {
-        currentHeight = 125;
-      }
+      // 이후 렌더링: collapsed 상태로 시작
+      currentHeight = 120;
+      storePanel.classList.add('collapsed');
+      storePanel.style.height = `${currentHeight}px`;
       
-      console.log('  - 현재 높이:', currentHeight);
+      console.log('  - collapsed 클래스 추가됨');
+      console.log('  - 현재 높이:', storePanel.style.height);
     }
     
     console.log('✅ 패널 초기화 완료');
-    console.log('  - currentHeight:', currentHeight);
+    console.log('  - 최종 currentHeight:', currentHeight);
     console.log('  - 패널 클래스:', storePanel.className);
 
     // 마우스 이벤트
@@ -363,7 +355,7 @@ window.MapPanelUI = {
       let newHeight = startHeight - deltaY;
 
       const maxHeight = 630;
-      const minHeight = 125;
+      const minHeight = 120;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
@@ -391,10 +383,10 @@ window.MapPanelUI = {
       const midPoint = 300;
 
       if (currentHeight < midPoint) {
-        storePanel.style.height = '125px';
+        storePanel.style.height = '120px';
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
-        currentHeight = 125;
+        currentHeight = 120;
       } else {
         storePanel.style.height = '680px';
         storePanel.classList.add('expanded');
@@ -424,7 +416,7 @@ window.MapPanelUI = {
       let newHeight = startHeight - deltaY;
 
       const maxHeight = 630;
-      const minHeight = 125;
+      const minHeight = 120;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
@@ -452,10 +444,10 @@ window.MapPanelUI = {
       const midPoint = 300;
 
       if (currentHeight < midPoint) {
-        storePanel.style.height = '125px';
+        storePanel.style.height = '120px';
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
-        currentHeight = 125;
+        currentHeight = 120;
         console.log('📱 모바일 패널 접힘');
       } else {
         storePanel.style.height = '680px';
@@ -505,8 +497,6 @@ window.MapPanelUI = {
       });
     }
 
-    // setupPanelDrag 실행 완료 플래그 설정
-    window.mapPanelDragSetup = true;
     console.log('✅ 지도 패널: 드래그 전용 모드로 설정 완료');
   },
 
