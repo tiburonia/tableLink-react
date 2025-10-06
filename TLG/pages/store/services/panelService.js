@@ -62,11 +62,13 @@ export const panelService = {
    */
   calculateNewTopWhileDragging(deltaY, currentTop, isExpanded, isCollapsed) {
     if (isExpanded && deltaY < 0) {
-      // 확장 상태에서 아래로 드래그 (위치값 증가)
-      return Math.max(85, Math.min(200, 85 - deltaY));
+      // 확장 상태에서 아래로 드래그 (deltaY < 0, top 증가)
+      const newTop = 85 + Math.abs(deltaY);
+      return Math.min(200, newTop);
     } else if (isCollapsed && deltaY > 0) {
-      // 축소 상태에서 위로 드래그 (위치값 감소)
-      return Math.max(85, Math.min(200, 200 - deltaY));
+      // 축소 상태에서 위로 드래그 (deltaY > 0, top 감소)
+      const newTop = 200 - deltaY;
+      return Math.max(85, newTop);
     }
     return null; // 스크롤 허용
   },

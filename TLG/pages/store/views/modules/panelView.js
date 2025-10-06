@@ -41,14 +41,17 @@ export const panelView = {
   /**
    * 패널 확장
    */
-  async expandPanel(panel) {
+  expandPanel(panel) {
     panelRepository.togglePanelClass(panel, 'collapsed', false);
     panelRepository.togglePanelClass(panel, 'expanded', true);
-
-    // panelService에서 동적으로 계산된 top 값 사용
-    const panelServiceModule = await import('../../services/panelService.js');
-    const expandedTop = panelServiceModule.panelService.calculateExpandedTop();
-    panelRepository.setPanelPosition(panel, expandedTop);
+    panelRepository.setPanelPosition(panel, 85);
+    
+    // 헤더 스타일 변경
+    const header = document.querySelector('.store-fixed-header');
+    if (header) {
+      header.style.background = '#e0e3f3';
+      header.style.borderBottom = '1px solid #d1d5db';
+    }
   },
 
   /**
@@ -58,6 +61,13 @@ export const panelView = {
     panelRepository.togglePanelClass(panel, 'expanded', false);
     panelRepository.togglePanelClass(panel, 'collapsed', true);
     panelRepository.setPanelPosition(panel, 200);
+    
+    // 헤더 스타일 초기화
+    const header = document.querySelector('.store-fixed-header');
+    if (header) {
+      header.style.background = '';
+      header.style.borderBottom = '';
+    }
   },
 
   /**
