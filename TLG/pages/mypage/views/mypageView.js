@@ -20,7 +20,7 @@ export const mypageView = {
         </span>
         <button class="settings-btn-icon">⚙️</button>
       </header>
-      <div id="mypageContainer" style="overflow-y: auto; height: 700px;">
+      <div id="mypageContainer" style="overflow-y: auto; height: 660px;">
       <!-- 예약/이용예정 카드 -->
       <section class="mypage-reserve-card">
         <div class="reserve-icon">😢</div>
