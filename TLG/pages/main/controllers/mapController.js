@@ -64,7 +64,7 @@ export const mapController = {
       const mapContainer = document.getElementById('map');
       const options = {
         center: new naver.maps.LatLng(37.5665, 126.9780),
-        zoom: 15, // 네이버맵은 zoom 사용 (level 대신)
+        zoom: , // 네이버맵은 zoom 사용 (level 대신)
         maxZoom: 18,
         minZoom: 6
       };
@@ -123,14 +123,35 @@ export const mapController = {
    * UI 이벤트 설정
    */
   setupUIEvents() {
-    // 검색 이벤트
-    this.setupSearchEvents();
+    // 검색 버튼
+    document.getElementById('searchBtn')?.addEventListener('click', () => {
+      if (typeof renderSearch === 'function') {
+        renderSearch();
+      }
+    });
 
+    // 알림 버튼
+    document.getElementById('notificationBtn')?.addEventListener('click', async () => {
+      if (typeof renderNotification === 'function') {
+        renderNotification();
+      } else if (window.renderNotification) {
+        window.renderNotification();
+      } else {
+        // 동적으로 모듈 로드
+        const { default: renderNotificationFn } = await import('/TLG/pages/main/renderNotification.js');
+        if (renderNotificationFn) {
+          renderNotificationFn();
+        }
+      }
+    });
 
-    // 네비게이션 이벤트
-    this.setupNavigationEvents();
+    // 현재 위치 버튼
+    document.getElementById('currentLocationBtn')?.addEventListener('click', () => {
+      this.moveToCurrentLocation();
+    });
 
-    console.log('✅ UI 이벤트 설정 완료');
+    // 위치 설정 이벤트
+    this.setupLocationEvents();
   },
 
   /**

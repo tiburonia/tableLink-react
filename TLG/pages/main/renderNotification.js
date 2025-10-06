@@ -4,7 +4,7 @@
 import { notificationController } from './controllers/notificationController.js';
 import { notificationView } from './views/notificationView.js';
 
-window.renderNotification = async function renderNotification() {
+async function renderNotification() {
   const main = document.getElementById('main');
 
   // UI 렌더링
@@ -15,7 +15,13 @@ window.renderNotification = async function renderNotification() {
 
   // 초기 알림 목록 로드
   notificationController.loadNotifications('all');
-};
+}
+
+// 전역 스코프에 함수 등록
+window.renderNotification = renderNotification;
+
+// 기본 export
+export default renderNotification;
 
 // 사용자 정보 가져오기 함수
 function getUserInfo() {

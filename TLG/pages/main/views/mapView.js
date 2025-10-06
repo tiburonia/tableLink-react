@@ -59,7 +59,7 @@ export const mapView = {
    */
   renderNotificationButton() {
     return `
-      <button id="notificationBtn" class="notification-btn" title="알림" onclick="renderNotification()">
+      <button id="notificationBtn" class="notification-btn" title="알림">
         <span>🔔</span>
         <span id="notificationBadge" class="notification-badge hidden">3</span>
       </button>
