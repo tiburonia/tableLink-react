@@ -404,18 +404,17 @@ export const mapView = {
         /* 알림 버튼 */
         .notification-btn {
           position: absolute;
-          top: 84px;
-          right: 40px;
-          width: 48px;
-          height: 48px;
-          background: white;
+          top: 115px;
+          right: 15px;
+          width: 35px;
+          height: 35px;
           border: none;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          font-size: 22px;
+          font-size: 18px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           transition: all 0.3s ease;
           z-index: 1003;

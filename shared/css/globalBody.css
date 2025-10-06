@@ -36,7 +36,7 @@ html, body {
   top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 130px;
+  width: 160px;
   height: 35px;
   background: #000;
   border-radius: 20px;
@@ -71,7 +71,7 @@ html, body {
 /* 신호 / 배터리 (우측) */
 #status-bar .status-icons {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   font-size: 14px;
 }
 
