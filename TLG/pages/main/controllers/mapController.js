@@ -126,11 +126,6 @@ export const mapController = {
     // 검색 이벤트
     this.setupSearchEvents();
 
-    // 위치 설정 이벤트
-    this.setupLocationEvents();
-
-    // 장바구니 이벤트
-    this.setupCartEvents();
 
     // 네비게이션 이벤트
     this.setupNavigationEvents();
