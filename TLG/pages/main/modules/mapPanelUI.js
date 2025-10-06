@@ -22,10 +22,10 @@ window.MapPanelUI = {
         </div>
         <div id="mapStoreListContainer"></div>
       </div>
-      
+
       <!-- 바텀 시트 딤 -->
       <div id="sheetDim" class="sheet-dim"></div>
-      
+
       <!-- 바텀 시트 -->
       <div id="bottomSheet" class="bottom-sheet">
         <div class="bottom-sheet-handle"></div>
@@ -47,7 +47,7 @@ window.MapPanelUI = {
     `;
   },
 
-  
+
 
   // 바텀 시트 렌더링
   renderBottomSheetContent(filterType) {
@@ -293,7 +293,7 @@ window.MapPanelUI = {
       let newHeight = startHeight - deltaY;
 
       const maxHeight = 630;
-      const minHeight = 60;
+      const minHeight = 120;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
@@ -354,7 +354,7 @@ window.MapPanelUI = {
       let newHeight = startHeight - deltaY;
 
       const maxHeight = 630;
-      const minHeight = 60;
+      const minHeight = 120;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
