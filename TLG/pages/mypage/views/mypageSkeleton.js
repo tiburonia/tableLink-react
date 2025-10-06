@@ -6,25 +6,10 @@
 
 export const mypageSkeleton = {
   /**
-   * CSS 로드 (1회만)
-   */
-  loadStyles() {
-    if (!document.getElementById('mypageSkeletonStyles')) {
-      const link = document.createElement('link');
-      link.id = 'mypageSkeletonStyles';
-      link.rel = 'stylesheet';
-      link.href = '/TLG/pages/mypage/views/styles/mypageSkeleton.css';
-      document.head.appendChild(link);
-    }
-  },
-
-  /**
    * 마이페이지 스켈레톤 HTML 생성
+   * (CSS는 index.html에서 사전 로드됨)
    */
   render() {
-    // CSS 로드
-    this.loadStyles();
-
     return `
       <div class="mypage-skeleton">
         <!-- 헤더 스켈레톤 -->
