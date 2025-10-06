@@ -283,13 +283,16 @@ window.MapPanelUI = {
     let startY;
     let startHeight;
     
-    // 최초 렌더링 검증 (sessionStorage 사용)
-    const mapPanelRenderedFlag = sessionStorage.getItem('mapPanelRendered');
-    const isFirstRender = !mapPanelRenderedFlag;
+    // 최초 렌더링 검증 (window 전역 객체 사용)
+    if (typeof window.mapPanelRendered === 'undefined') {
+      window.mapPanelRendered = false;
+    }
+    
+    const isFirstRender = !window.mapPanelRendered;
     let currentHeight;
     
     console.log('🔍 패널 렌더링 검증 시작');
-    console.log('  - sessionStorage 값:', mapPanelRenderedFlag);
+    console.log('  - window.mapPanelRendered 값:', window.mapPanelRendered);
     console.log('  - isFirstRender:', isFirstRender);
     
     if (isFirstRender) {
@@ -302,9 +305,9 @@ window.MapPanelUI = {
       console.log('  - initial-render 클래스 추가됨');
       console.log('  - currentHeight 설정:', currentHeight);
       
-      // 세션 스토리지에 렌더링 완료 표시
-      sessionStorage.setItem('mapPanelRendered', 'true');
-      console.log('  - sessionStorage에 mapPanelRendered=true 저장됨');
+      // 전역 객체에 렌더링 완료 표시
+      window.mapPanelRendered = true;
+      console.log('  - window.mapPanelRendered=true 설정됨');
       
       // 3초 후 initial-render 클래스 제거하고 collapsed 상태로 전환
       setTimeout(() => {
