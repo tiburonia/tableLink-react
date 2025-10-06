@@ -225,7 +225,7 @@ export const OrderView = {
       <style>
         .tll-order-screen {
           position: absolute;
-          top: 50px;
+          top: 0;
           left: 0;
           width: 100%;
           height: calc(100% - 50px);
