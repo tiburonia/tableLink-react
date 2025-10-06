@@ -1,4 +1,3 @@
-
 // 패널 뷰 - UI 업데이트 및 시각적 피드백
 let panelRepository;
 
@@ -42,10 +41,21 @@ export const panelView = {
   /**
    * 패널 확장
    */
-  expandPanel(panel) {
+  async expandPanel(panel) {
     panelRepository.togglePanelClass(panel, 'collapsed', false);
     panelRepository.togglePanelClass(panel, 'expanded', true);
-    panelRepository.setPanelPosition(panel, 85);
+
+    // panelService에서 동적으로 계산된 top 값 사용
+    const panelServiceModule = await import('../../services/panelService.js');
+    const expandedTop = panelServiceModule.panelService.calculateExpandedTop();
+    panelRepository.setPanelPosition(panel, expandedTop);
+
+    // 헤더 스타일 변경 (확장 시)
+    const storeHeader = document.querySelector('.store-fixed-header');
+    if (storeHeader) {
+      storeHeader.style.background = '#e0e3f3';
+      storeHeader.style.borderBottom = '1px solid #d1d5db';
+    }
   },
 
   /**
@@ -55,6 +65,13 @@ export const panelView = {
     panelRepository.togglePanelClass(panel, 'expanded', false);
     panelRepository.togglePanelClass(panel, 'collapsed', true);
     panelRepository.setPanelPosition(panel, 200);
+
+    // 헤더 스타일 삭제 (축소 시)
+    const storeHeader = document.querySelector('.store-fixed-header');
+    if (storeHeader) {
+      storeHeader.style.background = '';
+      storeHeader.style.borderBottom = '';
+    }
   },
 
   /**
