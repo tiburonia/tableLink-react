@@ -74,6 +74,16 @@ export const mapView = {
           <span id="cartBadge" class="cart-badge hidden">2</span>
         </button>
       </div>
+      <button id="currentLocationBtn" class="current-location-btn" title="현재 위치로 이동">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9" stroke="#007aff" fill="white" />
+          <line x1="12" y1="3" x2="12" y2="6" />
+          <line x1="12" y1="18" x2="12" y2="21" />
+          <line x1="3" y1="12" x2="6" y2="12" />
+          <line x1="18" y1="12" x2="21" y2="12" />
+          <circle cx="12" cy="12" r="2.2" fill="#007aff" />
+        </svg>
+      </button>
     `;
   },
 
@@ -498,6 +508,34 @@ export const mapView = {
         .notification-badge.hidden,
         .cart-badge.hidden {
           display: none;
+        }
+
+        /* 현재 위치 버튼 */
+        .current-location-btn {
+          position: absolute;
+          left: 20px;
+          bottom: 140px;
+          width: 48px;
+          height: 48px;
+          background: white;
+          border: none;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          transition: all 0.3s ease;
+          z-index: 1001;
+        }
+
+        .current-location-btn:hover {
+          transform: scale(1.05);
+          box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3);
+        }
+
+        .current-location-btn:active {
+          transform: scale(0.95);
         }
 
         /* 검색바 */
