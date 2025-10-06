@@ -1,102 +1,308 @@
 
-/* 지도 패널 - 매장 카드 스타일 */
+/* 지도 패널 - 매장 카드 스타일 (네이티브 앱 스타일) */
 .storeCard {
   background: white;
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 20px;
+  padding: 0;
   margin-bottom: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: none;
   cursor: pointer;
-  border: 1px solid #f1f5f9;
+  overflow: hidden;
+  position: relative;
 }
 
 .storeCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
+.storeCard:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* 매장 이미지 영역 */
+.storeImageBox {
+  position: relative;
+  height: 180px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.storeImageBox::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.3) 100%);
+  z-index: 1;
+}
+
+.storeImageBox img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  position: relative;
+  z-index: 0;
+}
+
+/* 매장 상태 배지 */
+.storeStatus {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.storeStatus.open {
+  background: rgba(16, 185, 129, 0.95);
+  color: white;
+}
+
+.storeStatus.closed {
+  background: rgba(239, 68, 68, 0.95);
+  color: white;
+}
+
+/* 거리 배지 */
+.storeDistance {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* 매장 정보 영역 */
+.storeInfoBox {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 매장 헤더 (이름 + 즐겨찾기) */
 .storeHeader {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 12px;
+  gap: 12px;
 }
 
-.storeMainInfo {
+.storeNameSection {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .storeName {
+  font-weight: 800;
   font-size: 20px;
-  font-weight: 700;
-  color: #1a1a1a;
-  margin: 0 0 8px 0;
+  color: #111827;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
 }
 
+.storeCategory {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7280;
+  width: fit-content;
+}
+
+.favoriteBtn {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.favoriteBtn:hover {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  transform: scale(1.05);
+}
+
+.favoriteBtn.active {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border-color: #dc2626;
+}
+
+/* 평점 및 리뷰 */
 .storeRating {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.ratingScore {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 12px;
+  border: 1px solid #fbbf24;
 }
 
 .ratingStar {
-  color: #fbbf24;
+  color: #f59e0b;
   font-size: 16px;
 }
 
 .ratingValue {
   font-weight: 700;
   font-size: 16px;
-  color: #1a1a1a;
+  color: #92400e;
 }
 
 .reviewCount {
-  font-size: 14px;
-  color: #666;
-  font-weight: 500;
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
 }
 
-.storeCategory {
-  font-size: 14px;
-  color: #666;
-  font-weight: 500;
-  padding: 6px 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  display: inline-block;
-  width: fit-content;
+/* 매장 정보 그리드 */
+.storeInfoGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
 }
 
-.storeActions {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.actionButton {
+.infoItem {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 16px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.infoIcon {
+  font-size: 14px;
+}
+
+.infoText {
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+/* 매장 태그들 */
+.storeTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.storeTag {
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e40af;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.storeTag.hot {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.storeTag.new {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border-color: #86efac;
+  color: #166534;
+}
+
+/* 액션 버튼 영역 */
+.storeActions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.actionButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
   border-radius: 12px;
   font-size: 14px;
   font-weight: 600;
   transition: all 0.2s ease;
   cursor: pointer;
   border: none;
-  background: none;
 }
 
 .actionButton.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
 }
 
 .actionButton.primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.actionButton.secondary {
+  background: white;
+  border: 1.5px solid #e5e7eb;
+  color: #374151;
+}
+
+.actionButton.secondary:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
 }
 
 .actionIcon {
@@ -107,15 +313,44 @@
   font-size: 13px;
 }
 
-.storeAddress {
-  padding: 0 20px 20px 20px;
-  color: #666;
-  font-size: 14px;
-  line-height: 1.5;
+/* 프로모션 배너 */
+.promotionBanner {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
 }
 
-.storeDistance {
-  color: #3b82f6;
-  font-weight: 600;
-  margin-left: 8px;
+/* 반응형 */
+@media (max-width: 380px) {
+  .storeImageBox {
+    height: 160px;
+  }
+
+  .storeInfoBox {
+    padding: 16px;
+  }
+
+  .storeName {
+    font-size: 18px;
+  }
+
+  .storeInfoGrid {
+    gap: 8px;
+  }
+
+  .actionButton {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
 }

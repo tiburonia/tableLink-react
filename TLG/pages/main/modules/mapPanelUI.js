@@ -661,13 +661,12 @@ window.MapPanelUI = {
     });
   },
 
-  // 매장 카드 생성 (개별 매장 전용)
+  // 매장 카드 생성 (더미 데이터 기반)
   createStoreCard(store) {
     if (!store) {
       console.error('❌ 매장 데이터가 없음');
       return '';
     }
-
 
     // ID 우선 검증 - store_id 또는 id 사용
     let storeId = store.id || store.store_id;
@@ -689,9 +688,113 @@ window.MapPanelUI = {
       return '';
     }
 
+    // 더미 데이터 생성
     const storeName = store?.name || '매장명 없음';
-    const storeCategory = store?.category || '카테고리 없음';
-    const rating = store?.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : '0.0';
+    const storeCategory = store?.category || '한식';
+    const rating = store?.ratingAverage ? parseFloat(store.ratingAverage).toFixed(1) : (Math.random() * 2 + 3).toFixed(1);
+    const reviewCount = store?.reviewCount || Math.floor(Math.random() * 500 + 50);
+    const isOpen = store?.isOpen !== undefined ? store.isOpen : Math.random() > 0.3;
+    const distance = store?.distance || (Math.random() * 2 + 0.1).toFixed(1);
+    
+    // 영업시간 더미 데이터
+    const operatingHours = isOpen ? '11:00 - 22:00' : '영업 종료';
+    
+    // 최소 주문 금액 더미 데이터
+    const minOrder = [10000, 12000, 15000, 20000][Math.floor(Math.random() * 4)];
+    
+    // 예상 대기 시간 더미 데이터
+    const waitTime = Math.floor(Math.random() * 30 + 10);
+    
+    // 매장 특징 태그 더미 데이터
+    const tags = [];
+    if (Math.random() > 0.7) tags.push({ text: '🔥 인기', class: 'hot' });
+    if (Math.random() > 0.8) tags.push({ text: '✨ 신규', class: 'new' });
+    if (Math.random() > 0.6) tags.push({ text: '🎁 할인중', class: '' });
+    if (Math.random() > 0.5) tags.push({ text: '🚚 배달', class: '' });
+    
+    // 프로모션 여부
+    const hasPromotion = Math.random() > 0.7;
+    
+    const tagsHTML = tags.map(tag => 
+      `<span class="storeTag ${tag.class}">${tag.text}</span>`
+    ).join('');
+
+    const promotionHTML = hasPromotion ? 
+      `<div class="promotionBanner">🎉 10% 할인</div>` : '';
+
+    return `
+      <div class="storeCard" data-store-id="${storeId}" onclick="renderStore(${storeId})">
+        <!-- 매장 이미지 영역 -->
+        <div class="storeImageBox">
+          <img src="/TableLink.png" alt="${storeName}" onerror="this.style.display='none'">
+          ${promotionHTML}
+          <div class="storeStatus ${isOpen ? 'open' : 'closed'}">
+            ${isOpen ? '🟢 영업중' : '🔴 영업종료'}
+          </div>
+          <div class="storeDistance">
+            📍 ${distance}km
+          </div>
+        </div>
+
+        <!-- 매장 정보 영역 -->
+        <div class="storeInfoBox">
+          <!-- 매장 이름 & 즐겨찾기 -->
+          <div class="storeHeader">
+            <div class="storeNameSection">
+              <div class="storeName">${storeName}</div>
+              <div class="storeCategory">🍽️ ${storeCategory}</div>
+            </div>
+            <button class="favoriteBtn" onclick="event.stopPropagation(); toggleFavorite(${storeId})">
+              ${Math.random() > 0.7 ? '❤️' : '🤍'}
+            </button>
+          </div>
+
+          <!-- 평점 & 리뷰 -->
+          <div class="storeRating">
+            <div class="ratingScore">
+              <span class="ratingStar">⭐</span>
+              <span class="ratingValue">${rating}</span>
+            </div>
+            <span class="reviewCount">리뷰 ${reviewCount}개</span>
+          </div>
+
+          <!-- 매장 상세 정보 그리드 -->
+          <div class="storeInfoGrid">
+            <div class="infoItem">
+              <span class="infoIcon">🕐</span>
+              <span class="infoText">${operatingHours}</span>
+            </div>
+            <div class="infoItem">
+              <span class="infoIcon">💰</span>
+              <span class="infoText">최소 ${(minOrder / 1000).toFixed(0)}천원</span>
+            </div>
+            <div class="infoItem">
+              <span class="infoIcon">⏱️</span>
+              <span class="infoText">대기 ${waitTime}분</span>
+            </div>
+            <div class="infoItem">
+              <span class="infoIcon">🅿️</span>
+              <span class="infoText">${Math.random() > 0.5 ? '주차 가능' : '주차 불가'}</span>
+            </div>
+          </div>
+
+          <!-- 매장 태그 -->
+          ${tags.length > 0 ? `<div class="storeTags">${tagsHTML}</div>` : ''}
+
+          <!-- 액션 버튼 -->
+          <div class="storeActions">
+            <button class="actionButton secondary" onclick="event.stopPropagation(); callStore(${storeId})">
+              <span class="actionIcon">📞</span>
+              <span class="actionText">전화</span>
+            </button>
+            <button class="actionButton primary" onclick="event.stopPropagation(); renderStore(${storeId})">
+              <span class="actionIcon">🛒</span>
+              <span class="actionText">주문하기</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `age).toFixed(1) : '0.0';
     const reviewCount = store?.reviewCount || 0;
     const storeAddress = store?.address || '주소 정보 없음';
     const isOpen = store?.isOpen !== false;
