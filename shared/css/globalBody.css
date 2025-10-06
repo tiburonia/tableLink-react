@@ -35,6 +35,21 @@ html, body {
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.5) !important;
 }
 
+/* 노치 추가 (가상요소 사용) */
+#main::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 35px;
+  background: #000;
+  border-radius: 20px;
+  z-index: 100;
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.1) inset;
+}
+
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
