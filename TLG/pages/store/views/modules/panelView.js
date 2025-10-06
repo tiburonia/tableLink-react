@@ -49,7 +49,7 @@ export const panelView = {
     // 헤더 스타일 변경
     const header = document.querySelector('.store-fixed-header');
     if (header) {
-      header.style.background = '#e0e3f3';
+      header.style.background = '#fafafa';
       header.style.borderBottom = '1px solid #d1d5db';
     }
   },

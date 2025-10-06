@@ -9,18 +9,16 @@
   background: #fafafa;
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.08);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 10;
+  z-index: 9;
 }
 
 #storePanel.collapsed {
   height: calc(100vh - 270px);
-  border-radius: 24px 24px 0 0;
 }
 
 #storePanel.expanded {
   top: 85px;
   height: calc(100vh - 85px);
-  border-radius: 20px 20px 0 0;
 }
 
 #panelHandle {
