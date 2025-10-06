@@ -377,12 +377,11 @@ body {
 
 /* 프로필 카드 */
 .profile-card {
-  background: white;
   border-radius: 20px;
   padding: 24px;
   margin-bottom: 24px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   position: relative;
   overflow: hidden;
 }
