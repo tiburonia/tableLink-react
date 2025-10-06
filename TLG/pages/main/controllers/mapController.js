@@ -64,7 +64,7 @@ export const mapController = {
       const mapContainer = document.getElementById('map');
       const options = {
         center: new naver.maps.LatLng(37.5665, 126.9780),
-        zoom: , // 네이버맵은 zoom 사용 (level 대신)
+        zoom: 16, // 네이버맵은 zoom 사용 (level 대신)
         maxZoom: 18,
         minZoom: 6
       };

@@ -45,9 +45,8 @@ export const mapView = {
     return `
       <div id="searchBar">
         <div class="search-container">
-          <input id="searchInput" type="text" placeholder="매장명, 카테고리 또는 위치 검색...">
           <button id="searchBtn">🔍</button>
-          <button id="clearBtn">✕</button>
+          <input id="searchInput" type="text" placeholder="매장명, 카테고리 또는 위치 검색...">
         </div>
         <div id="searchResults" class="search-results hidden"></div>
       </div>
@@ -534,21 +533,8 @@ export const mapView = {
           color: #6b7280;
         }
 
-        #searchBtn:hover {
-          background: linear-gradient(135deg, #297efc 0%, #4f46e5 100%);
-          color: white;
-          transform: scale(1.05);
-          box-shadow: 0 4px 12px rgba(41, 126, 252, 0.3);
-          border-color: transparent;
-        }
+        
 
-        #clearBtn:hover {
-          background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-          color: #dc2626;
-          transform: scale(1.05);
-          box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-          border-color: rgba(220, 38, 38, 0.2);
-        }
 
         /* 검색 결과 */
         .search-results {
