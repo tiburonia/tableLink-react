@@ -45,7 +45,7 @@ export const panelView = {
   expandPanel(panel) {
     panelRepository.togglePanelClass(panel, 'collapsed', false);
     panelRepository.togglePanelClass(panel, 'expanded', true);
-    panelRepository.setPanelPosition(panel, 0);
+    panelRepository.setPanelPosition(panel, 85);
   },
 
   /**
