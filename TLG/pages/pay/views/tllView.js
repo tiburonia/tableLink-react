@@ -1,5 +1,6 @@
+
 /**
- * TLL View - UI 렌더링
+ * TLL View - UI 렌더링 (네이티브 앱 스타일)
  */
 
 export const tllView = {
@@ -11,76 +12,99 @@ export const tllView = {
     if (!main) return;
 
     main.innerHTML = `
-      <div class="tll-layout">
-        <div class="tll-header">
-          <button id="tllBackBtn" data-action="back-to-map" class="back-button">
-            <span class="back-icon">←</span>
-            <span class="back-text">지도로 돌아가기</span>
+      <div class="tll-native-layout">
+        <!-- 헤더 -->
+        <header class="tll-native-header">
+          <button id="tllBackBtn" data-action="back-to-map" class="native-back-btn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
           </button>
-          <div class="header-title">
-            <h1 class="tll-title">
-              <span class="title-icon">📱</span>
-              QR 주문
-            </h1>
-            <p class="tll-subtitle">매장을 선택하고 테이블에서 주문하세요</p>
+          <div class="native-header-title">
+            <h1>QR 주문</h1>
           </div>
-        </div>
+          <div class="header-spacer"></div>
+        </header>
 
-        <div class="tll-container">
-          <div class="search-section">
-            <div class="section-header">
-              <h3 class="section-title">
-                <span class="section-icon">🔍</span>
-                매장 검색
-              </h3>
+        <!-- 메인 컨텐츠 -->
+        <div class="tll-native-content">
+          <!-- 상단 인포 카드 -->
+          <div class="info-card">
+            <div class="info-icon">📱</div>
+            <div class="info-text">
+              <h2>테이블에서 간편하게</h2>
+              <p>매장과 테이블을 선택하고 바로 주문하세요</p>
             </div>
+          </div>
 
-            <div class="search-input-wrapper">
+          <!-- 매장 검색 섹션 -->
+          <div class="native-section">
+            <div class="section-label">
+              <span class="label-icon">🏪</span>
+              <span class="label-text">매장 선택</span>
+            </div>
+            
+            <div class="native-search-wrapper">
+              <div class="search-icon-wrapper">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <circle cx="11" cy="11" r="8" stroke="#9CA3AF" stroke-width="2"/>
+                  <path d="M21 21L16.65 16.65" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
               <input 
                 id="storeSearchInput" 
                 type="text" 
-                placeholder="매장 이름을 입력해보세요..." 
-                class="search-input"
+                placeholder="매장 이름 검색..." 
+                class="native-search-input"
                 data-testid="input-store-search"
               />
-              <div class="search-icon">🔍</div>
-              <div id="storeSearchResults" class="search-results"></div>
+              <div id="storeSearchResults" class="native-search-results"></div>
             </div>
 
-            <div id="selectedStore" class="selected-store" style="display:none;">
-              <div class="selected-store-header">
-                <span class="selected-icon">✅</span>
-                <span class="selected-text">선택된 매장</span>
+            <!-- 선택된 매장 표시 -->
+            <div id="selectedStore" class="selected-store-card" style="display:none;">
+              <div class="selected-badge">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6L9 17L4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
               </div>
-              <div class="selected-store-name">
-                <span id="selectedStoreName"></span>
+              <div class="selected-info">
+                <div class="selected-label">선택된 매장</div>
+                <div id="selectedStoreName" class="selected-name"></div>
               </div>
             </div>
           </div>
 
-          <div class="table-section">
-            <div class="section-header">
-              <h3 class="section-title">
-                <span class="section-icon">🪑</span>
-                테이블 선택
-              </h3>
+          <!-- 테이블 선택 섹션 -->
+          <div class="native-section">
+            <div class="section-label">
+              <span class="label-icon">🪑</span>
+              <span class="label-text">테이블 선택</span>
             </div>
-
-            <div class="table-select-wrapper">
-              <select id="tableSelect" class="table-select" disabled data-testid="select-table">
+            
+            <div class="native-select-wrapper">
+              <select id="tableSelect" class="native-select" disabled data-testid="select-table">
                 <option value="">매장을 먼저 선택하세요</option>
               </select>
-              <div class="select-arrow">▼</div>
+              <div class="select-arrow-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div class="action-section">
-            <button id="startOrderBtn" class="start-order-btn" disabled data-testid="button-start-order">
-              <span class="btn-icon">🚀</span>
-              <span class="btn-text">주문 시작하기</span>
-              <div class="btn-shine"></div>
-            </button>
-          </div>
+        <!-- 하단 고정 버튼 -->
+        <div class="tll-native-footer">
+          <button id="startOrderBtn" class="native-primary-btn" disabled data-testid="button-start-order">
+            <span class="btn-content">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>주문 시작하기</span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -95,39 +119,59 @@ export const tllView = {
     const resultsContainer = document.getElementById('storeSearchResults');
     if (!resultsContainer) return;
 
-    // 기존 내용 제거
     resultsContainer.innerHTML = '';
 
     if (stores.length === 0) {
       const emptyDiv = document.createElement('div');
-      emptyDiv.style.padding = '10px';
-      emptyDiv.style.color = '#666';
-      emptyDiv.style.textAlign = 'center';
-      emptyDiv.textContent = '검색 결과가 없습니다';
+      emptyDiv.className = 'search-empty';
+      emptyDiv.innerHTML = `
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="#E5E7EB" stroke-width="2"/>
+          <path d="M12 8V12M12 16H12.01" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <p>검색 결과가 없습니다</p>
+      `;
       resultsContainer.appendChild(emptyDiv);
       resultsContainer.style.display = 'block';
       return;
     }
 
-    // createElement로 안전하게 생성
     stores.forEach(store => {
       const itemDiv = document.createElement('div');
-      itemDiv.className = 'store-search-item';
+      itemDiv.className = 'native-search-item';
       itemDiv.setAttribute('data-action', 'select-store');
       itemDiv.setAttribute('data-store-id', String(store.id));
       itemDiv.setAttribute('data-store-name', store.name);
 
-      const nameDiv = document.createElement('div');
-      nameDiv.style.fontWeight = 'bold';
-      nameDiv.textContent = store.name;
+      const iconDiv = document.createElement('div');
+      iconDiv.className = 'search-item-icon';
+      iconDiv.textContent = '🏪';
 
       const infoDiv = document.createElement('div');
-      infoDiv.style.fontSize = '12px';
-      infoDiv.style.color = '#666';
-      infoDiv.textContent = `${store.category || '기타'} • ${store.address || '주소 정보 없음'}`;
+      infoDiv.className = 'search-item-info';
 
-      itemDiv.appendChild(nameDiv);
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'search-item-name';
+      nameDiv.textContent = store.name;
+
+      const detailDiv = document.createElement('div');
+      detailDiv.className = 'search-item-detail';
+      detailDiv.textContent = `${store.category || '기타'} • ${store.address || '주소 정보 없음'}`;
+
+      infoDiv.appendChild(nameDiv);
+      infoDiv.appendChild(detailDiv);
+
+      const arrowDiv = document.createElement('div');
+      arrowDiv.className = 'search-item-arrow';
+      arrowDiv.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M9 18L15 12L9 6" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      `;
+
+      itemDiv.appendChild(iconDiv);
       itemDiv.appendChild(infoDiv);
+      itemDiv.appendChild(arrowDiv);
       resultsContainer.appendChild(itemDiv);
     });
 
@@ -145,7 +189,7 @@ export const tllView = {
 
     if (storeSearchInput) storeSearchInput.value = storeName;
     if (storeSearchResults) storeSearchResults.style.display = 'none';
-    if (selectedStoreDiv) selectedStoreDiv.style.display = 'block';
+    if (selectedStoreDiv) selectedStoreDiv.style.display = 'flex';
     if (selectedStoreName) selectedStoreName.textContent = storeName;
   },
 
@@ -168,16 +212,7 @@ export const tllView = {
     if (!startOrderBtn) return;
 
     startOrderBtn.disabled = !enabled;
-    
-    if (enabled) {
-      startOrderBtn.style.background = '#297efc';
-      startOrderBtn.style.color = '#fff';
-      startOrderBtn.style.cursor = 'pointer';
-    } else {
-      startOrderBtn.style.background = '#ccc';
-      startOrderBtn.style.color = '#666';
-      startOrderBtn.style.cursor = 'not-allowed';
-    }
+    startOrderBtn.classList.toggle('enabled', enabled);
   },
 
   /**
@@ -188,8 +223,10 @@ export const tllView = {
     if (startOrderBtn) {
       startOrderBtn.disabled = true;
       startOrderBtn.innerHTML = `
-        <div class="loading-spinner"></div>
-        <span class="btn-text">주문 화면 로딩 중...</span>
+        <span class="btn-content">
+          <div class="loading-spinner"></div>
+          <span>로딩 중...</span>
+        </span>
       `;
     }
   },
@@ -202,198 +239,505 @@ export const tllView = {
     if (startOrderBtn) {
       startOrderBtn.disabled = false;
       startOrderBtn.innerHTML = `
-        <span class="btn-icon">🚀</span>
-        <span class="btn-text">주문 시작하기</span>
-        <div class="btn-shine"></div>
+        <span class="btn-content">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>주문 시작하기</span>
+        </span>
       `;
     }
   },
 
   /**
-   * TLL 스타일
+   * 네이티브 앱 스타일
    */
   getTLLStyles() {
     return `
       <style>
-        .tll-layout {
+        /* 레이아웃 */
+        .tll-native-layout {
           min-height: 100vh;
-          background: #f3f4f6;
-          padding: 16px;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          background: linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%);
           display: flex;
           flex-direction: column;
-          align-items: center;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
         }
 
-        .tll-header {
-          width: 100%;
-          max-width: 480px;
-          margin-bottom: 20px;
-        }
-
-        .back-button {
+        /* 헤더 */
+        .tll-native-header {
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: saturate(180%) blur(20px);
+          -webkit-backdrop-filter: saturate(180%) blur(20px);
+          padding: 12px 20px;
           display: flex;
           align-items: center;
-          gap: 6px;
-          background: none;
+          justify-content: space-between;
+          border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        }
+
+        .native-back-btn {
+          width: 40px;
+          height: 40px;
           border: none;
-          color: #374151;
-          font-size: 15px;
-          font-weight: 500;
+          background: transparent;
+          color: #1F2937;
           cursor: pointer;
-          transition: color 0.2s ease;
-          margin-bottom: 10px;
-        }
-        .back-button:hover {
-          color: #1e40af;
-        }
-
-        .header-title {
-          text-align: center;
-          color: #1f2937;
-        }
-
-        .tll-title {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          font-size: 26px;
-          font-weight: 800;
-          margin: 0 0 4px 0;
+          border-radius: 12px;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .title-icon {
-          font-size: 26px;
+        .native-back-btn:active {
+          background: rgba(0, 0, 0, 0.05);
+          transform: scale(0.95);
         }
 
-        .tll-subtitle {
-          font-size: 14px;
-          color: #6b7280;
+        .native-header-title h1 {
           margin: 0;
-        }
-
-        .tll-container {
-          width: 100%;
-          max-width: 480px;
-          background: white;
-          border-radius: 20px;
-          padding: 24px;
-          box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
-        }
-
-        .section-header {
-          margin-bottom: 8px;
-        }
-
-        .section-title {
-          font-size: 16px;
-          font-weight: 600;
-          color: #111827;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .search-input {
-          width: 100%;
-          padding: 14px 16px;
-          font-size: 15px;
-          border: 1.5px solid #d1d5db;
-          border-radius: 12px;
-          background: #f9fafb;
-          transition: all 0.2s ease;
-        }
-
-        .search-input:focus {
-          outline: none;
-          border-color: #297efc;
-          background: white;
-          box-shadow: 0 0 0 3px rgba(41, 126, 252, 0.15);
-        }
-
-        .store-search-item {
-          padding: 12px 14px;
-          border-bottom: 1px solid #f3f4f6;
-          cursor: pointer;
-          transition: background 0.2s ease;
-        }
-
-        .store-search-item:hover {
-          background: #f9fafb;
-        }
-
-        .selected-store {
-          background: #297efc;
-          border-radius: 12px;
-          padding: 12px 14px;
-          color: white;
-          margin-top: 10px;
-        }
-
-        .selected-store-header {
-          font-size: 13px;
-          opacity: 0.85;
-          margin-bottom: 4px;
-        }
-
-        .selected-store-name {
           font-size: 17px;
           font-weight: 600;
+          color: #1F2937;
+          letter-spacing: -0.3px;
         }
 
-        .table-select {
+        .header-spacer {
+          width: 40px;
+        }
+
+        /* 메인 컨텐츠 */
+        .tll-native-content {
+          flex: 1;
+          padding: 20px 20px 100px 20px;
+          max-width: 600px;
           width: 100%;
-          padding: 14px 16px;
-          font-size: 15px;
-          border: 1.5px solid #d1d5db;
-          border-radius: 12px;
-          background: #fff;
-          transition: all 0.2s ease;
+          margin: 0 auto;
         }
 
-        .table-select:focus {
-          border-color: #297efc;
-          box-shadow: 0 0 0 3px rgba(41, 126, 252, 0.1);
-          outline: none;
+        /* 인포 카드 */
+        .info-card {
+          background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+          border-radius: 20px;
+          padding: 24px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-bottom: 28px;
+          box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
 
-        .start-order-btn {
-          width: 100%;
-          margin-top: 20px;
-          background: #297efc;
+        .info-icon {
+          font-size: 48px;
+          line-height: 1;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+
+        .info-text h2 {
+          margin: 0 0 4px 0;
+          font-size: 20px;
+          font-weight: 700;
           color: white;
-          font-size: 16px;
+          letter-spacing: -0.5px;
+        }
+
+        .info-text p {
+          margin: 0;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.9);
+          line-height: 1.4;
+        }
+
+        /* 섹션 */
+        .native-section {
+          margin-bottom: 28px;
+        }
+
+        .section-label {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .label-icon {
+          font-size: 20px;
+        }
+
+        .label-text {
+          font-size: 15px;
           font-weight: 600;
-          border: none;
-          border-radius: 12px;
-          padding: 14px 0;
+          color: #374151;
+          letter-spacing: -0.3px;
+        }
+
+        /* 검색 인풋 */
+        .native-search-wrapper {
+          position: relative;
+        }
+
+        .search-icon-wrapper {
+          position: absolute;
+          left: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          display: flex;
+          align-items: center;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .native-search-input {
+          width: 100%;
+          padding: 16px 16px 16px 48px;
+          font-size: 16px;
+          font-weight: 500;
+          color: #1F2937;
+          background: white;
+          border: 2px solid #E5E7EB;
+          border-radius: 16px;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .native-search-input:focus {
+          outline: none;
+          border-color: #667EEA;
+          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .native-search-input::placeholder {
+          color: #9CA3AF;
+        }
+
+        /* 검색 결과 */
+        .native-search-results {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+          max-height: 320px;
+          overflow-y: auto;
+          z-index: 50;
+          display: none;
+        }
+
+        .search-empty {
+          padding: 40px 20px;
+          text-align: center;
+          color: #9CA3AF;
+        }
+
+        .search-empty svg {
+          margin-bottom: 12px;
+        }
+
+        .search-empty p {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 500;
+        }
+
+        .native-search-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 16px;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background 0.15s ease;
+          border-bottom: 1px solid #F3F4F6;
         }
 
-        .start-order-btn:hover:enabled {
-          background: #1e40af;
-          transform: translateY(-2px);
-          box-shadow: 0 4px 10px rgba(30, 64, 175, 0.25);
+        .native-search-item:last-child {
+          border-bottom: none;
         }
 
-        .start-order-btn:disabled {
-          background: #d1d5db;
-          color: #6b7280;
+        .native-search-item:active {
+          background: #F9FAFB;
+        }
+
+        .search-item-icon {
+          font-size: 28px;
+          flex-shrink: 0;
+        }
+
+        .search-item-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .search-item-name {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1F2937;
+          margin-bottom: 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .search-item-detail {
+          font-size: 13px;
+          color: #6B7280;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .search-item-arrow {
+          flex-shrink: 0;
+        }
+
+        /* 선택된 매장 카드 */
+        .selected-store-card {
+          display: none;
+          align-items: center;
+          gap: 12px;
+          background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+          padding: 16px;
+          border-radius: 16px;
+          margin-top: 12px;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .selected-badge {
+          width: 32px;
+          height: 32px;
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .selected-info {
+          flex: 1;
+        }
+
+        .selected-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: rgba(255, 255, 255, 0.8);
+          margin-bottom: 2px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .selected-name {
+          font-size: 16px;
+          font-weight: 700;
+          color: white;
+        }
+
+        /* 셀렉트 박스 */
+        .native-select-wrapper {
+          position: relative;
+        }
+
+        .native-select {
+          width: 100%;
+          padding: 16px 48px 16px 16px;
+          font-size: 16px;
+          font-weight: 500;
+          color: #1F2937;
+          background: white;
+          border: 2px solid #E5E7EB;
+          border-radius: 16px;
+          appearance: none;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        .native-select:focus {
+          outline: none;
+          border-color: #667EEA;
+          box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .native-select:disabled {
+          background: #F9FAFB;
+          color: #9CA3AF;
           cursor: not-allowed;
         }
 
+        .select-arrow-icon {
+          position: absolute;
+          right: 16px;
+          top: 50%;
+          transform: translateY(-50%);
+          pointer-events: none;
+          color: #6B7280;
+        }
+
+        /* 하단 고정 푸터 */
+        .tll-native-footer {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: saturate(180%) blur(20px);
+          -webkit-backdrop-filter: saturate(180%) blur(20px);
+          padding: 16px 20px;
+          padding-bottom: max(16px, env(safe-area-inset-bottom));
+          border-top: 1px solid rgba(0, 0, 0, 0.05);
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 주요 버튼 */
+        .native-primary-btn {
+          width: 100%;
+          max-width: 600px;
+          margin: 0 auto;
+          display: block;
+          padding: 18px 24px;
+          background: #D1D5DB;
+          color: #9CA3AF;
+          font-size: 17px;
+          font-weight: 700;
+          border: none;
+          border-radius: 16px;
+          cursor: not-allowed;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+          letter-spacing: -0.3px;
+        }
+
+        .native-primary-btn.enabled {
+          background: linear-gradient(135deg, #667EEA 0%, #764BA2 100%);
+          color: white;
+          cursor: pointer;
+          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        }
+
+        .native-primary-btn.enabled:active {
+          transform: scale(0.98);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-content {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+        }
+
+        /* 로딩 스피너 */
+        .loading-spinner {
+          width: 20px;
+          height: 20px;
+          border: 3px solid rgba(255, 255, 255, 0.3);
+          border-top-color: white;
+          border-radius: 50%;
+          animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* 스크롤바 */
+        .native-search-results::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .native-search-results::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .native-search-results::-webkit-scrollbar-thumb {
+          background: #D1D5DB;
+          border-radius: 3px;
+        }
+
+        .native-search-results::-webkit-scrollbar-thumb:hover {
+          background: #9CA3AF;
+        }
+
+        /* 반응형 */
         @media (max-width: 480px) {
-          .tll-container {
-            padding: 20px 16px;
+          .tll-native-content {
+            padding: 16px 16px 100px 16px;
           }
-          .tll-title {
-            font-size: 22px;
+
+          .info-card {
+            padding: 20px;
           }
-          .start-order-btn {
-            font-size: 15px;
-            padding: 12px;
+
+          .info-text h2 {
+            font-size: 18px;
+          }
+
+          .info-text p {
+            font-size: 13px;
+          }
+
+          .native-primary-btn {
+            font-size: 16px;
+            padding: 16px 24px;
+          }
+        }
+
+        /* 다크모드 대응 (선택사항) */
+        @media (prefers-color-scheme: dark) {
+          .tll-native-layout {
+            background: linear-gradient(180deg, #1F2937 0%, #111827 100%);
+          }
+
+          .tll-native-header {
+            background: rgba(31, 41, 55, 0.95);
+            border-bottom-color: rgba(255, 255, 255, 0.1);
+          }
+
+          .native-header-title h1,
+          .native-back-btn {
+            color: #F9FAFB;
+          }
+
+          .label-text {
+            color: #E5E7EB;
+          }
+
+          .native-search-input,
+          .native-select {
+            background: #374151;
+            border-color: #4B5563;
+            color: #F9FAFB;
+          }
+
+          .native-search-input::placeholder {
+            color: #6B7280;
+          }
+
+          .native-search-results {
+            background: #374151;
+          }
+
+          .native-search-item {
+            border-bottom-color: #4B5563;
+          }
+
+          .search-item-name {
+            color: #F9FAFB;
+          }
+
+          .search-item-detail {
+            color: #9CA3AF;
+          }
+
+          .tll-native-footer {
+            background: rgba(31, 41, 55, 0.95);
+            border-top-color: rgba(255, 255, 255, 0.1);
           }
         }
       </style>
