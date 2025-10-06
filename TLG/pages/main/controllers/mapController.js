@@ -204,30 +204,30 @@ export const mapController = {
    * 위치 설정 이벤트 설정
    */
   setupLocationEvents() {
-    const locationSelectBtn = document.getElementById('locationSelectBtn');
     const closeModal = document.getElementById('closeModal');
     const getCurrentLocationBtn = document.getElementById('getCurrentLocationBtn');
     const confirmLocationBtn = document.getElementById('confirmLocationBtn');
 
-    // 위치 선택 버튼
-    locationSelectBtn.addEventListener('click', () => {
-      this.openLocationModal();
-    });
-
     // 모달 닫기
-    closeModal.addEventListener('click', () => {
-      this.closeLocationModal();
-    });
+    if (closeModal) {
+      closeModal.addEventListener('click', () => {
+        this.closeLocationModal();
+      });
+    }
 
     // GPS 위치 가져오기
-    getCurrentLocationBtn.addEventListener('click', () => {
-      this.getCurrentGPSLocation();
-    });
+    if (getCurrentLocationBtn) {
+      getCurrentLocationBtn.addEventListener('click', () => {
+        this.getCurrentGPSLocation();
+      });
+    }
 
     // 위치 확인
-    confirmLocationBtn.addEventListener('click', () => {
-      this.confirmLocationSetting();
-    });
+    if (confirmLocationBtn) {
+      confirmLocationBtn.addEventListener('click', () => {
+        this.confirmLocationSetting();
+      });
+    }
 
     // 지역 선택 이벤트
     this.setupRegionSelectionEvents();
@@ -242,31 +242,37 @@ export const mapController = {
     const districtSelect = document.getElementById('districtSelect');
     const confirmLocationBtn = document.getElementById('confirmLocationBtn');
 
-    provinceSelect.addEventListener('change', async (e) => {
-      const province = e.target.value;
-      if (province) {
-        await this.loadCities(province);
-      } else {
-        mapView.resetCityAndDistrictSelects();
-        confirmLocationBtn.disabled = true;
-      }
-    });
+    if (provinceSelect) {
+      provinceSelect.addEventListener('change', async (e) => {
+        const province = e.target.value;
+        if (province) {
+          await this.loadCities(province);
+        } else {
+          mapView.resetCityAndDistrictSelects();
+          if (confirmLocationBtn) confirmLocationBtn.disabled = true;
+        }
+      });
+    }
 
-    citySelect.addEventListener('change', async (e) => {
-      const city = e.target.value;
-      const province = provinceSelect.value;
-      if (province && city) {
-        await this.loadDistricts(province, city);
-      } else {
-        mapView.resetDistrictSelect();
-        confirmLocationBtn.disabled = true;
-      }
-    });
+    if (citySelect && provinceSelect) {
+      citySelect.addEventListener('change', async (e) => {
+        const city = e.target.value;
+        const province = provinceSelect.value;
+        if (province && city) {
+          await this.loadDistricts(province, city);
+        } else {
+          mapView.resetDistrictSelect();
+          if (confirmLocationBtn) confirmLocationBtn.disabled = true;
+        }
+      });
+    }
 
-    districtSelect.addEventListener('change', (e) => {
-      const district = e.target.value;
-      confirmLocationBtn.disabled = !district;
-    });
+    if (districtSelect && confirmLocationBtn) {
+      districtSelect.addEventListener('change', (e) => {
+        const district = e.target.value;
+        confirmLocationBtn.disabled = !district;
+      });
+    }
   },
 
   /**
