@@ -33,13 +33,15 @@ export const storeView = {
 
     // 직접 import한 모듈들을 사용하여 렌더링
     main.innerHTML = `
-    <button id="backBtn" class="header-btn" data-action="back-to-map" aria-label="뒤로가기">
-      <span class="header-btn-ico">⬅️</span>
-    </button>
+    <div class="store-fixed-header">
+      <button id="backBtn" class="header-btn" data-action="back-to-map" aria-label="뒤로가기">
+        <span class="header-btn-ico">⬅️</span>
+      </button>
 
-    <button id="TLL" class="header-btn" data-action="start-tll" aria-label="QR결제">
-      <span class="header-btn-ico">📱</span>
-    </button>
+      <button id="TLL" class="header-btn" data-action="start-tll" aria-label="QR결제">
+        <span class="header-btn-ico">📱</span>
+      </button>
+    </div>
 
     <header id="storeHeader">
       <div class="imgWrapper">
