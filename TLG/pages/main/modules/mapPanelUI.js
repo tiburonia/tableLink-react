@@ -284,30 +284,53 @@ window.MapPanelUI = {
     let startHeight;
     
     // 최초 렌더링 검증 (sessionStorage 사용)
-    const isFirstRender = !sessionStorage.getItem('mapPanelRendered');
+    const mapPanelRenderedFlag = sessionStorage.getItem('mapPanelRendered');
+    const isFirstRender = !mapPanelRenderedFlag;
     let currentHeight;
     
+    console.log('🔍 패널 렌더링 검증 시작');
+    console.log('  - sessionStorage 값:', mapPanelRenderedFlag);
+    console.log('  - isFirstRender:', isFirstRender);
+    
     if (isFirstRender) {
+      console.log('✨ 최초 렌더링 감지 - 400px 높이로 시작');
+      
       // 최초 렌더링: initial-render 클래스 추가
       storePanel.classList.add('initial-render');
       currentHeight = 400;
       
+      console.log('  - initial-render 클래스 추가됨');
+      console.log('  - currentHeight 설정:', currentHeight);
+      
       // 세션 스토리지에 렌더링 완료 표시
       sessionStorage.setItem('mapPanelRendered', 'true');
+      console.log('  - sessionStorage에 mapPanelRendered=true 저장됨');
       
       // 3초 후 initial-render 클래스 제거하고 collapsed 상태로 전환
       setTimeout(() => {
+        console.log('⏰ 3초 타이머 완료 - collapsed 상태로 전환');
         storePanel.classList.remove('initial-render');
         storePanel.classList.add('collapsed');
         storePanel.style.height = '120px';
         currentHeight = 120;
+        console.log('  - 최종 높이:', storePanel.style.height);
+        console.log('  - 현재 클래스:', storePanel.className);
       }, 3000);
     } else {
+      console.log('🔄 이후 렌더링 감지 - 120px 높이로 시작');
+      
       // 이후 렌더링: collapsed 상태로 시작
       currentHeight = 120;
       storePanel.classList.add('collapsed');
       storePanel.style.height = `${currentHeight}px`;
+      
+      console.log('  - collapsed 클래스 추가됨');
+      console.log('  - 현재 높이:', storePanel.style.height);
     }
+    
+    console.log('✅ 패널 초기화 완료');
+    console.log('  - 최종 currentHeight:', currentHeight);
+    console.log('  - 패널 클래스:', storePanel.className);
 
     // 마우스 이벤트
     panelHandle.addEventListener('mousedown', (e) => {
