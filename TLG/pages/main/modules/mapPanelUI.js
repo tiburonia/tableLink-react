@@ -1,44 +1,37 @@
 // 지도 패널 UI 렌더링 관리자 (개별 매장 전용)
 window.MapPanelUI = {
+  // 필터 상태 관리
+  activeFilters: {},
   renderPanelHTML() {
     return `
       <div id="mapStorePanel" class="collapsed">
         <div id="panelHandle"></div>
-        <button id="mapFilterToggleBtn" class="filter-toggle-btn expanded">
-          <span class="toggle-icon">▼</span>
-        </button>
-        <div id="mapFilterContainer">
-          <div class="filter-row">
-            <div class="filter-label">카테고리</div>
-            <div class="filter-tabs category-filter">
-              <button class="map-filter-tab active" data-filter="all" data-type="category">전체</button>
-              <button class="map-filter-tab" data-filter="한식" data-type="category">한식</button>
-              <button class="map-filter-tab" data-filter="중식" data-type="category">중식</button>
-              <button class="map-filter-tab" data-filter="일식" data-type="category">일식</button>
-              <button class="map-filter-tab" data-filter="양식" data-type="category">양식</button>
-              <button class="map-filter-tab" data-filter="카페" data-type="category">카페</button>
-              <button class="map-filter-tab" data-filter="치킨" data-type="category">치킨</button>
-            </div>
-          </div>
-          <div class="filter-row">
-            <div class="filter-label">운영 상태</div>
-            <div class="filter-tabs status-filter">
-              <button class="map-filter-tab active" data-filter="all" data-type="status">전체</button>
-              <button class="map-filter-tab" data-filter="open" data-type="status">운영중</button>
-              <button class="map-filter-tab" data-filter="closed" data-type="status">운영중지</button>
-            </div>
-          </div>
-          <div class="filter-row">
-            <div class="filter-label">별점</div>
-            <div class="filter-tabs rating-filter">
-              <button class="map-filter-tab active" data-filter="all" data-type="rating">전체</button>
-              <button class="map-filter-tab" data-filter="4+" data-type="rating">4점 이상</button>
-              <button class="map-filter-tab" data-filter="3+" data-type="rating">3점 이상</button>
-              <button class="map-filter-tab" data-filter="2+" data-type="rating">2점 이상</button>
-            </div>
-          </div>
+        <div id="filterBar" class="filter-bar">
+          <button class="filter-btn" data-filter-type="category">
+            <span class="filter-btn-icon">🍽️</span>
+            <span class="filter-btn-text">카테고리</span>
+          </button>
+          <button class="filter-btn" data-filter-type="status">
+            <span class="filter-btn-icon">🟢</span>
+            <span class="filter-btn-text">운영 상태</span>
+          </button>
+          <button class="filter-btn" data-filter-type="rating">
+            <span class="filter-btn-icon">⭐</span>
+            <span class="filter-btn-text">별점</span>
+          </button>
         </div>
         <div id="mapStoreListContainer"></div>
+      </div>
+      
+      <!-- 바텀 시트 딤 -->
+      <div id="sheetDim" class="sheet-dim"></div>
+      
+      <!-- 바텀 시트 -->
+      <div id="bottomSheet" class="bottom-sheet">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-content" id="bottomSheetContent">
+          <!-- 필터 내용이 동적으로 렌더링됨 -->
+        </div>
       </div>
     `;
   },
@@ -56,80 +49,170 @@ window.MapPanelUI = {
 
   
 
+  // 바텀 시트 렌더링
+  renderBottomSheetContent(filterType) {
+    const contentMap = {
+      category: {
+        title: '카테고리',
+        icon: '🍽️',
+        options: [
+          { value: 'all', label: '전체' },
+          { value: '한식', label: '한식' },
+          { value: '중식', label: '중식' },
+          { value: '일식', label: '일식' },
+          { value: '양식', label: '양식' },
+          { value: '카페', label: '카페' },
+          { value: '치킨', label: '치킨' }
+        ]
+      },
+      status: {
+        title: '운영 상태',
+        icon: '🟢',
+        options: [
+          { value: 'all', label: '전체' },
+          { value: 'open', label: '운영중' },
+          { value: 'closed', label: '운영중지' }
+        ]
+      },
+      rating: {
+        title: '별점',
+        icon: '⭐',
+        options: [
+          { value: 'all', label: '전체' },
+          { value: '4+', label: '4점 이상' },
+          { value: '3+', label: '3점 이상' },
+          { value: '2+', label: '2점 이상' }
+        ]
+      }
+    };
+
+    const config = contentMap[filterType];
+    if (!config) return '';
+
+    const activeFilter = this.getActiveFilter(filterType);
+
+    return `
+      <div class="bottom-sheet-header">
+        <span class="bottom-sheet-icon">${config.icon}</span>
+        <h3 class="bottom-sheet-title">${config.title}</h3>
+      </div>
+      <div class="bottom-sheet-options">
+        ${config.options.map(option => `
+          <button 
+            class="sheet-option-btn ${activeFilter === option.value ? 'active' : ''}" 
+            data-filter="${option.value}" 
+            data-type="${filterType}"
+          >
+            ${option.label}
+          </button>
+        `).join('')}
+      </div>
+    `;
+  },
+
+  // 현재 활성화된 필터 값 가져오기
+  getActiveFilter(filterType) {
+    return this.activeFilters[filterType] || 'all';
+  },
+
+  // 바텀 시트 열기
+  openBottomSheet(filterType) {
+    const bottomSheet = document.getElementById('bottomSheet');
+    const sheetDim = document.getElementById('sheetDim');
+    const bottomSheetContent = document.getElementById('bottomSheetContent');
+
+    // 컨텐츠 렌더링
+    bottomSheetContent.innerHTML = this.renderBottomSheetContent(filterType);
+
+    // 활성화
+    setTimeout(() => {
+      bottomSheet.classList.add('active');
+      sheetDim.classList.add('active');
+    }, 10);
+
+    // 옵션 버튼 이벤트 설정
+    this.setupSheetOptionEvents();
+
+    console.log('📂 바텀 시트 열림:', filterType);
+  },
+
+  // 바텀 시트 닫기
+  closeBottomSheet() {
+    const bottomSheet = document.getElementById('bottomSheet');
+    const sheetDim = document.getElementById('sheetDim');
+
+    bottomSheet.classList.remove('active');
+    sheetDim.classList.remove('active');
+
+    console.log('📁 바텀 시트 닫힘');
+  },
+
+  // 시트 옵션 버튼 이벤트 설정
+  setupSheetOptionEvents() {
+    const optionBtns = document.querySelectorAll('.sheet-option-btn');
+
+    optionBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const filterValue = e.target.getAttribute('data-filter');
+        const filterType = e.target.getAttribute('data-type');
+
+        // 같은 타입의 다른 버튼 비활성화
+        document.querySelectorAll(`.sheet-option-btn[data-type="${filterType}"]`).forEach(b => {
+          b.classList.remove('active');
+        });
+
+        // 클릭된 버튼 활성화
+        e.target.classList.add('active');
+
+        // 필터 상태 저장
+        if (filterValue === 'all') {
+          delete this.activeFilters[filterType];
+        } else {
+          this.activeFilters[filterType] = filterValue;
+        }
+
+        // 필터링 적용
+        this.applyFilters();
+
+        // 바텀 시트 닫기
+        setTimeout(() => {
+          this.closeBottomSheet();
+        }, 200);
+
+        console.log('🔍 필터 변경됨:', filterType, '=', filterValue);
+      });
+    });
+  },
+
   // 필터링 이벤트 설정
   setupFilterEvents() {
-    const allFilterTabs = document.querySelectorAll('.map-filter-tab');
+    // 필터 버튼 클릭 이벤트
+    const filterBtns = document.querySelectorAll('.filter-btn');
 
-    allFilterTabs.forEach(tab => {
-      tab.addEventListener('click', (e) => {
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        const clickedTab = e.target;
-        const filterType = clickedTab.getAttribute('data-type');
-
-        // 같은 타입의 다른 탭 비활성화
-        document.querySelectorAll(`.map-filter-tab[data-type="${filterType}"]`).forEach(t => t.classList.remove('active'));
-
-        // 클릭된 탭 활성화
-        clickedTab.classList.add('active');
-
-        // 필터링 실행
-        this.applyFilters();
-
-        console.log('🔍 필터 변경됨:', filterType, '=', clickedTab.getAttribute('data-filter'));
+        const filterType = btn.getAttribute('data-filter-type');
+        this.openBottomSheet(filterType);
       });
     });
 
-    // 필터 토글 버튼 이벤트 설정
-    this.setupFilterToggle();
-  },
-
-  // 필터 영역 토글 기능 설정
-  setupFilterToggle() {
-    const filterToggleBtn = document.getElementById('mapFilterToggleBtn');
-    const filterContainer = document.getElementById('mapFilterContainer');
-    const storeListContainer = document.getElementById('mapStoreListContainer');
-
-    if (!filterToggleBtn || !filterContainer || !storeListContainer) {
-      console.warn('⚠️ 필터 토글 요소를 찾을 수 없습니다');
-      return;
+    // 딤 클릭 시 바텀 시트 닫기
+    const sheetDim = document.getElementById('sheetDim');
+    if (sheetDim) {
+      sheetDim.addEventListener('click', () => {
+        this.closeBottomSheet();
+      });
     }
 
-    filterToggleBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const isExpanded = filterToggleBtn.classList.contains('expanded');
-
-      if (isExpanded) {
-        // 접기
-        filterContainer.classList.add('collapsed');
-        filterToggleBtn.classList.remove('expanded');
-        storeListContainer.classList.add('filter-collapsed');
-        console.log('📁 필터 영역 접힘');
-      } else {
-        // 펼치기
-        filterContainer.classList.remove('collapsed');
-        filterToggleBtn.classList.add('expanded');
-        storeListContainer.classList.remove('filter-collapsed');
-        console.log('📂 필터 영역 펼침');
-      }
-    });
-
-    console.log('✅ 필터 토글 기능 설정 완료');
+    console.log('✅ 필터 이벤트 설정 완료');
   },
 
   // 현재 설정된 모든 필터 값에 따라 매장 필터링
   applyFilters() {
-    const activeFilters = {};
-    document.querySelectorAll('.map-filter-tab.active').forEach(tab => {
-      const type = tab.getAttribute('data-type');
-      const filterValue = tab.getAttribute('data-filter');
-      if (filterValue !== 'all') {
-        activeFilters[type] = filterValue;
-      }
-    });
+    const activeFilters = this.activeFilters;
 
     const storeCards = document.querySelectorAll('#mapStoreListContainer .storeCard');
 
@@ -655,15 +738,8 @@ window.MapPanelUI = {
 
   // 필터 상태 초기화
   resetFilters() {
-    // 모든 필터 탭을 '전체'로 초기화
-    document.querySelectorAll('.map-filter-tab').forEach(tab => {
-      tab.classList.remove('active');
-    });
-
-    // 각 필터 타입의 '전체' 탭을 활성화
-    document.querySelectorAll('.map-filter-tab[data-filter="all"]').forEach(tab => {
-      tab.classList.add('active');
-    });
+    // 필터 상태 초기화
+    this.activeFilters = {};
 
     console.log('🔄 필터 상태 초기화 완료');
   },
