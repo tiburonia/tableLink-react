@@ -4,7 +4,7 @@
  * 마이페이지 로딩 중 스켈레톤 UI
  */
 
-export const mypageSkeleton = {
+const mypageSkeleton = {
   /**
    * 마이페이지 스켈레톤 HTML 생성
    * (CSS는 index.html에서 사전 로드됨)
@@ -76,3 +76,6 @@ export const mypageSkeleton = {
     `).join('');
   }
 };
+
+// 전역 등록
+window.mypageSkeleton = mypageSkeleton;

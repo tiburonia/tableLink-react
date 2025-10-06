@@ -18,11 +18,12 @@ export const mypageController = {
         throw new Error('main 요소를 찾을 수 없습니다');
       }
 
-      // 1. 스켈레톤 즉시 표시 (사전 로드된 모듈 사용)
+      // 1. 스켈레톤 즉시 표시 (전역 객체 사용 - index.html에서 사전 로드됨)
       console.log('💀 스켈레톤 렌더링 시작');
-      const { mypageSkeleton } = await import('../views/mypageSkeleton.js');
-      main.innerHTML = mypageSkeleton.render();
-      console.log('💀 스켈레톤 렌더링 완료');
+      if (window.mypageSkeleton) {
+        main.innerHTML = window.mypageSkeleton.render();
+        console.log('💀 스켈레톤 렌더링 완료');
+      }
 
       // 2. 나머지 모듈 로드 (스켈레톤 표시 후)
       const { mypageView } = await import('../views/mypageView.js');
