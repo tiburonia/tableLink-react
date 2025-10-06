@@ -29,7 +29,7 @@ export const mapView = {
       <main id="content">
         <div id="map" style="width: 100%; height: 100%; min-height: 100vh;"></div>
         ${this.renderSearchBar()}
-        ${this.renderTopControlBar()}
+        ${this.renderNotificationButton()}
         ${this.renderLocationModal()}
         ${window.MapPanelUI.renderPanelHTML()}
       </main>
@@ -55,21 +55,14 @@ export const mapView = {
   },
 
   /**
-   * 상단 컨트롤 바 렌더링
+   * 알림 버튼 렌더링
    */
-  renderTopControlBar() {
+  renderNotificationButton() {
     return `
-      <div id="topControlBar">
-        
-        <button id="notificationBtn" class="top-control-btn" title="알림" onclick="renderNotification()">
-          <span>🔔</span>
-          <span id="notificationBadge" class="notification-badge hidden">3</span>
-        </button>
-        <button id="cartBtn" class="top-control-btn" title="장바구니">
-          <span>🛒</span>
-          <span id="cartBadge" class="cart-badge hidden">2</span>
-        </button>
-      </div>
+      <button id="notificationBtn" class="notification-btn" title="알림" onclick="renderNotification()">
+        <span>🔔</span>
+        <span id="notificationBadge" class="notification-badge hidden">3</span>
+      </button>
       <button id="currentLocationBtn" class="current-location-btn" title="현재 위치로 이동">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#007aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="9" stroke="#007aff" fill="white" />
@@ -408,101 +401,50 @@ export const mapView = {
           overflow: hidden;
         }
 
-        /* 상단 컨트롤 바 */
-        #topControlBar {
+        /* 알림 버튼 */
+        .notification-btn {
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          z-index: 1003;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          pointer-events: auto;
-          backdrop-filter: blur(2px);
-          padding: 8px 12px 0 12px;
-        }
-
-        .location-select-btn {
-          position: relative;
-          height: 36px;
-          padding: 0 12px;
-          background: rgba(255, 255, 255, 0.05);
-          border: none;
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          max-width: 180px;
-          backdrop-filter: blur(2px);
-        }
-
-        .location-select-btn #locationText {
-          font-size: 15px;
-          font-weight: 800;
-          color: #1f2937;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          max-width: 140px;
-        }
-
-        .location-select-btn .dropdown-arrow {
-          font-size: 10px;
-          color: #1f2937;
-          transition: transform 0.2s ease;
-        }
-
-        .location-select-btn:hover {
-          background: rgba(255, 255, 255, 0.55);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .top-control-btn {
-          position: relative;
-          width: 42px;
-          height: 42px;
-          background: transparent;
+          top: 84px;
+          right: 40px;
+          width: 48px;
+          height: 48px;
+          background: white;
           border: none;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          font-size: 19px;
+          font-size: 22px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           transition: all 0.3s ease;
+          z-index: 1003;
         }
 
-        .top-control-btn:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: translateY(-1px);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        .notification-btn:hover {
+          transform: scale(1.05);
+          box-shadow: 0 6px 16px rgba(220, 38, 38, 0.3);
         }
 
-        .top-control-spacer {
-          flex: 1;
+        .notification-btn:active {
+          transform: scale(0.95);
         }
 
-        .notification-badge,
-        .cart-badge {
+        .notification-badge {
           position: absolute;
-          top: -1px;
-          right: -1px;
+          top: -2px;
+          right: -2px;
           background: #dc2626;
           color: white;
-          font-size: 9px;
-          font-weight: 600;
-          padding: 1px 5px;
-          border-radius: 8px;
-          min-width: 14px;
+          font-size: 10px;
+          font-weight: 700;
+          padding: 2px 6px;
+          border-radius: 10px;
+          min-width: 18px;
           text-align: center;
         }
 
-        .notification-badge.hidden,
-        .cart-badge.hidden {
+        .notification-badge.hidden {
           display: none;
         }
 
