@@ -314,16 +314,16 @@ window.MapPanelUI = {
         console.log('⏰ 3초 타이머 완료 - collapsed 상태로 전환');
         storePanel.classList.remove('initial-render');
         storePanel.classList.add('collapsed');
-        storePanel.style.height = '120px';
-        currentHeight = 120;
+        storePanel.style.height = '125px';
+        currentHeight = 125;
         console.log('  - 최종 높이:', storePanel.style.height);
         console.log('  - 현재 클래스:', storePanel.className);
       }, 3000);
     } else {
-      console.log('🔄 이후 렌더링 감지 - 120px 높이로 시작');
+      console.log('🔄 이후 렌더링 감지 - 125px 높이로 시작');
       
       // 이후 렌더링: collapsed 상태로 시작
-      currentHeight = 120;
+      currentHeight = 125;
       storePanel.classList.add('collapsed');
       storePanel.style.height = `${currentHeight}px`;
       
@@ -355,7 +355,7 @@ window.MapPanelUI = {
       let newHeight = startHeight - deltaY;
 
       const maxHeight = 630;
-      const minHeight = 120;
+      const minHeight = 125;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
@@ -383,10 +383,10 @@ window.MapPanelUI = {
       const midPoint = 300;
 
       if (currentHeight < midPoint) {
-        storePanel.style.height = '120px';
+        storePanel.style.height = '125px';
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
-        currentHeight = 120;
+        currentHeight = 125;
       } else {
         storePanel.style.height = '680px';
         storePanel.classList.add('expanded');
@@ -416,7 +416,7 @@ window.MapPanelUI = {
       let newHeight = startHeight - deltaY;
 
       const maxHeight = 630;
-      const minHeight = 120;
+      const minHeight = 125;
 
       newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
 
@@ -444,10 +444,10 @@ window.MapPanelUI = {
       const midPoint = 300;
 
       if (currentHeight < midPoint) {
-        storePanel.style.height = '120px';
+        storePanel.style.height = '125px';
         storePanel.classList.add('collapsed');
         storePanel.classList.remove('expanded');
-        currentHeight = 120;
+        currentHeight = 125;
         console.log('📱 모바일 패널 접힘');
       } else {
         storePanel.style.height = '680px';
