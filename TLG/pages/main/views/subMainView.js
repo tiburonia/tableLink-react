@@ -14,26 +14,26 @@ export const subMainView = {
         <!-- 헤더 -->
         ${this.renderHeader()}
 
-        <!-- 인사말 섹션 -->
-        ${this.renderGreetingSection()}
+        <!-- 메인 컨텐츠 영역 -->
+        <div class="main-scroll-container">
+          <!-- 히어로 섹션 -->
+          ${this.renderHeroSection()}
 
-        <!-- 이벤트 배너 -->
-        ${this.renderEventBanner()}
+          <!-- 퀵 액션 -->
+          ${this.renderQuickActions()}
 
-        <!-- 퀵 액션 -->
-        ${this.renderQuickActions()}
+          <!-- 추천 매장 -->
+          ${this.renderRecommendedStores()}
 
-        <!-- 단골 & 최근 -->
-        ${this.renderFavoriteSection()}
+          <!-- 단골 & 최근 -->
+          ${this.renderFavoriteSection()}
 
-        <!-- 내 주변 추천 -->
-        ${this.renderNearbySection()}
+          <!-- 내 주변 -->
+          ${this.renderNearbySection()}
 
-        <!-- 혜택 섹션 -->
-        ${this.renderPromoSection()}
-
-        <!-- 통계 섹션 -->
-        ${this.renderStatsSection()}
+          <!-- 혜택 -->
+          ${this.renderPromoSection()}
+        </div>
       </main>
 
       ${this.renderBottomNav()}
@@ -47,25 +47,21 @@ export const subMainView = {
     return `
       <header id="subHeader">
         <div class="header-container">
-          <div class="header-left">
-            <div class="logo-wrapper">
-              <img src="/TableLink.png" alt="TableLink" class="logo" />
-              <div class="logo-info">
-                <span class="logo-text">TableLink</span>
-                <span class="logo-subtitle">오늘의 맛집 추천</span>
-              </div>
+          <div class="header-location">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <div class="location-info">
+              <span class="location-label">현재위치</span>
+              <span class="location-name">서울 강남구</span>
             </div>
           </div>
-          <div class="header-right">
-            <button id="weatherBtn" class="header-btn" title="날씨">
-              <span class="icon">🌤️</span>
-            </button>
-            <button id="qrBtn" class="header-btn" onclick="TLL().catch(console.error)" title="QR주문">
-              <span class="icon">📱</span>
-            </button>
-            <button id="notificationBtn" class="header-btn" onclick="renderNotification()" title="알림">
-              <span class="icon">🔔</span>
-              <span class="badge">3</span>
+          <div class="header-actions">
+            <button id="notificationBtn" class="header-icon-btn" onclick="renderNotification()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
+              </svg>
+              <span class="notification-badge">3</span>
             </button>
           </div>
         </div>
@@ -74,54 +70,21 @@ export const subMainView = {
   },
 
   /**
-   * 인사말 섹션 렌더링
+   * 히어로 섹션 렌더링
    */
-  renderGreetingSection() {
+  renderHeroSection() {
     return `
-      <section id="greetingSection">
-        <div class="greeting-card">
-          <div class="greeting-header">
-            <div class="greeting-content">
-              <h2 id="greetingText">안녕하세요! 오늘도 맛있는 하루 되세요 😊</h2>
-              <p id="greetingSubtext">
-                <span class="time-icon">🕐</span>
-                <span id="currentTime"></span>
-              </p>
-            </div>
-            <div class="greeting-weather">
-              <div id="weatherWidget" class="weather-widget">
-                <span class="weather-icon">🌤️</span>
-                <div class="weather-info">
-                  <span class="weather-temp">--°C</span>
-                  <span class="weather-desc">맑음</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="greeting-stats">
-            <div class="stat-item">
-              <span class="stat-icon">🎯</span>
-              <div class="stat-info">
-                <span class="stat-value">28</span>
-                <span class="stat-label">방문</span>
-              </div>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-              <span class="stat-icon">⭐</span>
-              <div class="stat-info">
-                <span class="stat-value">12</span>
-                <span class="stat-label">리뷰</span>
-              </div>
-            </div>
-            <div class="stat-divider"></div>
-            <div class="stat-item">
-              <span class="stat-icon">💰</span>
-              <div class="stat-info">
-                <span class="stat-value">4,200</span>
-                <span class="stat-label">포인트</span>
-              </div>
-            </div>
+      <section id="heroSection">
+        <div class="hero-content">
+          <h1 class="hero-title">어디로 갈까요?</h1>
+          <p class="hero-subtitle">가까운 맛집을 찾아보세요</p>
+          
+          <div class="search-bar" onclick="renderSearch('')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.35-4.35"/>
+            </svg>
+            <span class="search-placeholder">매장명, 음식, 지역 검색</span>
           </div>
         </div>
       </section>
@@ -129,30 +92,58 @@ export const subMainView = {
   },
 
   /**
-   * 이벤트 배너 렌더링
+   * 추천 매장 섹션 렌더링
    */
-  renderEventBanner() {
+  renderRecommendedStores() {
     return `
-      <section id="eventBannerSection">
-        <div class="banner-slider">
-          <div class="banner-item active">
-            <div class="banner-content">
-              <div class="banner-tag">🔥 HOT</div>
-              <h3 class="banner-title">신규 회원 특별 혜택</h3>
-              <p class="banner-desc">첫 주문 시 20% 할인 쿠폰</p>
-            </div>
-            <div class="banner-visual">
-              <div class="discount-badge">20%</div>
-            </div>
-          </div>
-          <div class="banner-indicators">
-            <span class="indicator active"></span>
-            <span class="indicator"></span>
-            <span class="indicator"></span>
-          </div>
+      <section id="recommendedSection">
+        <div class="section-header">
+          <h2 class="section-title">지금 인기있는 맛집</h2>
+          <button class="see-all-btn" onclick="renderMap()">전체보기</button>
+        </div>
+        <div class="recommended-scroll">
+          ${this.renderRecommendedCards()}
         </div>
       </section>
     `;
+  },
+
+  /**
+   * 추천 매장 카드 렌더링
+   */
+  renderRecommendedCards() {
+    const stores = [
+      { name: '맛있는 파스타', category: '이탈리안', rating: '4.8', image: '/api/placeholder/200/140', discount: '-20%' },
+      { name: '프리미엄 스시', category: '일식', rating: '4.9', image: '/api/placeholder/200/140', badge: 'NEW' },
+      { name: '감성 카페', category: '카페', rating: '4.7', image: '/api/placeholder/200/140' },
+    ];
+
+    return stores.map(store => `
+      <div class="recommended-card">
+        <div class="card-image">
+          <img src="${store.image}" alt="${store.name}" />
+          ${store.discount ? `<span class="card-discount">${store.discount}</span>` : ''}
+          ${store.badge ? `<span class="card-badge">${store.badge}</span>` : ''}
+          <button class="card-bookmark">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">${store.name}</h3>
+          <div class="card-meta">
+            <span class="card-category">${store.category}</span>
+            <div class="card-rating">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB800">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+              <span>${store.rating}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    `).join('');
   },
 
   /**
@@ -161,47 +152,41 @@ export const subMainView = {
   renderQuickActions() {
     return `
       <section id="quickActionsSection">
-        <div class="section-header">
-          <h2 class="section-title">빠른 메뉴</h2>
-          <button class="see-all-btn">전체보기 ›</button>
-        </div>
-        <div class="quick-actions-scroll">
-          <div class="quick-action-item" onclick="TLL().catch(console.error)">
-            <div class="action-icon-wrapper gradient-purple">
-              <span class="action-icon">📱</span>
+        <div class="quick-actions-grid">
+          <button class="quick-action-card" onclick="renderMap().catch(console.error)">
+            <div class="action-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
             </div>
-            <span class="action-label">QR주문</span>
-          </div>
-          <div class="quick-action-item" onclick="renderMap().catch(console.error)">
-            <div class="action-icon-wrapper gradient-blue">
-              <span class="action-icon">🗺️</span>
+            <span class="action-label">내 주변</span>
+          </button>
+          <button class="quick-action-card" onclick="TLL().catch(console.error)">
+            <div class="action-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M7 7h3v3H7zm0 7h3v3H7zm7-7h3v3h-3z" fill="white"/>
+              </svg>
             </div>
-            <span class="action-label">주변매장</span>
-          </div>
-          <div class="quick-action-item" onclick="renderSearch('')">
-            <div class="action-icon-wrapper gradient-green">
-              <span class="action-icon">🔍</span>
-            </div>
-            <span class="action-label">검색</span>
-          </div>
-          <div class="quick-action-item" onclick="renderMyPage()">
-            <div class="action-icon-wrapper gradient-orange">
-              <span class="action-icon">👤</span>
+            <span class="action-label">QR 주문</span>
+          </button>
+          <button class="quick-action-card" onclick="renderMyPage()">
+            <div class="action-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+              </svg>
             </div>
             <span class="action-label">마이페이지</span>
-          </div>
-          <div class="quick-action-item">
-            <div class="action-icon-wrapper gradient-pink">
-              <span class="action-icon">🎁</span>
+          </button>
+          <button class="quick-action-card">
+            <div class="action-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"/>
+              </svg>
             </div>
             <span class="action-label">쿠폰함</span>
-          </div>
-          <div class="quick-action-item">
-            <div class="action-icon-wrapper gradient-teal">
-              <span class="action-icon">📋</span>
-            </div>
-            <span class="action-label">주문내역</span>
-          </div>
+          </button>
         </div>
       </section>
     `;
@@ -214,56 +199,54 @@ export const subMainView = {
     return `
       <section id="favRecentSection">
         <div class="section-header">
-          <h2 class="section-title">
-            <span class="title-icon">💖</span>
-            단골 & 최근 방문
-          </h2>
-          <button class="see-all-btn">전체 ›</button>
+          <h2 class="section-title">단골 & 최근 방문</h2>
+          <button class="see-all-btn">전체</button>
         </div>
-        <div class="favorite-container">
-          <div class="fav-card enhanced">
-            <div class="fav-image">
-              <img src="/api/placeholder/120/90" alt="매장" />
-              <div class="fav-badge">💖</div>
-              <div class="fav-discount">-15%</div>
+        <div class="favorite-list" id="favRecentContainer">
+          <div class="favorite-item">
+            <div class="favorite-image">
+              <img src="/api/placeholder/80/80" alt="매장" />
             </div>
-            <div class="fav-info">
-              <h4 class="fav-name">맛있는 분식집</h4>
-              <div class="fav-rating">
-                <span class="stars">⭐⭐⭐⭐⭐</span>
-                <span class="rating-num">4.8</span>
+            <div class="favorite-info">
+              <div class="favorite-header">
+                <h4 class="favorite-name">맛있는 분식집</h4>
+                <button class="favorite-heart active">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
               </div>
-              <div class="fav-meta">
-                <span class="meta-item">🚶 250m</span>
-                <span class="meta-divider">•</span>
-                <span class="meta-item">⏱️ 15분</span>
+              <div class="favorite-rating">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB800">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span>4.8</span>
+                <span class="favorite-category">분식</span>
               </div>
-              <div class="fav-tags">
-                <span class="tag">분식</span>
-                <span class="tag">배달가능</span>
-              </div>
+              <div class="favorite-distance">250m • 도보 3분</div>
             </div>
           </div>
-          <div class="fav-card enhanced">
-            <div class="fav-image">
-              <img src="/api/placeholder/120/90" alt="매장" />
-              <div class="fav-badge">🕒</div>
+          <div class="favorite-item">
+            <div class="favorite-image">
+              <img src="/api/placeholder/80/80" alt="매장" />
             </div>
-            <div class="fav-info">
-              <h4 class="fav-name">행복한 카페</h4>
-              <div class="fav-rating">
-                <span class="stars">⭐⭐⭐⭐⭐</span>
-                <span class="rating-num">4.6</span>
+            <div class="favorite-info">
+              <div class="favorite-header">
+                <h4 class="favorite-name">행복한 카페</h4>
+                <button class="favorite-heart">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
               </div>
-              <div class="fav-meta">
-                <span class="meta-item">🚶 180m</span>
-                <span class="meta-divider">•</span>
-                <span class="meta-item">⏱️ 10분</span>
+              <div class="favorite-rating">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB800">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span>4.6</span>
+                <span class="favorite-category">카페</span>
               </div>
-              <div class="fav-tags">
-                <span class="tag">카페</span>
-                <span class="tag">테이크아웃</span>
-              </div>
+              <div class="favorite-distance">180m • 도보 2분</div>
             </div>
           </div>
         </div>
@@ -278,24 +261,10 @@ export const subMainView = {
     return `
       <section id="nearbySection">
         <div class="section-header">
-          <h2 class="section-title">
-            <span class="title-icon">📍</span>
-            내 주변 추천
-          </h2>
-          <button class="filter-btn">
-            <span>필터</span>
-            <span class="filter-icon">⚙️</span>
-          </button>
+          <h2 class="section-title">내 주변 맛집</h2>
+          <button class="see-all-btn" onclick="renderMap()">전체</button>
         </div>
-        <div class="category-filters">
-          <button class="category-chip active">전체</button>
-          <button class="category-chip">한식</button>
-          <button class="category-chip">중식</button>
-          <button class="category-chip">일식</button>
-          <button class="category-chip">양식</button>
-          <button class="category-chip">카페</button>
-        </div>
-        <div class="nearby-list">
+        <div class="nearby-list" id="nearbyContainer">
           ${this.renderNearbyDummyCards()}
         </div>
       </section>
@@ -307,38 +276,31 @@ export const subMainView = {
    */
   renderNearbyDummyCards() {
     const dummyStores = [
-      { name: '신선한 초밥', category: '일식', rating: '4.9', distance: '320m', time: '20분', status: '영업중', tag: '오늘의 특가' },
-      { name: '황금 족발', category: '한식', rating: '4.7', distance: '450m', time: '25분', status: '영업중', tag: '배달 가능' },
-      { name: '이탈리아 파스타', category: '양식', rating: '4.8', distance: '580m', time: '30분', status: '영업중', tag: '신규 오픈' },
-      { name: '건강한 샐러드', category: '샐러드', rating: '4.6', distance: '210m', time: '15분', status: '영업중', tag: '건강식' },
+      { name: '신선한 초밥', category: '일식', rating: '4.9', distance: '320m', reviews: 1234 },
+      { name: '황금 족발', category: '한식', rating: '4.7', distance: '450m', reviews: 856 },
+      { name: '이탈리아 파스타', category: '양식', rating: '4.8', distance: '580m', reviews: 692 },
+      { name: '건강한 샐러드', category: '샐러드', rating: '4.6', distance: '210m', reviews: 445 },
     ];
 
     return dummyStores.map(store => `
-      <div class="nearby-card enhanced">
-        <div class="nearby-image">
-          <img src="/api/placeholder/80/80" alt="${store.name}" />
-          <div class="store-status ${store.status === '영업중' ? 'open' : 'closed'}">${store.status}</div>
+      <div class="nearby-item">
+        <div class="nearby-thumb">
+          <img src="/api/placeholder/70/70" alt="${store.name}" />
         </div>
-        <div class="nearby-info">
-          <div class="nearby-header">
-            <h4 class="nearby-name">${store.name}</h4>
-            <button class="nearby-heart">♡</button>
-          </div>
-          <div class="nearby-rating">
-            <span class="rating-star">⭐</span>
-            <span class="rating-value">${store.rating}</span>
-            <span class="category-tag">${store.category}</span>
-          </div>
+        <div class="nearby-details">
+          <h4 class="nearby-title">${store.name}</h4>
           <div class="nearby-meta">
-            <span class="meta-item">🚶 ${store.distance}</span>
-            <span class="meta-divider">•</span>
-            <span class="meta-item">⏱️ ${store.time}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#FFB800">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span class="nearby-rating">${store.rating}</span>
+            <span class="nearby-divider">•</span>
+            <span class="nearby-category">${store.category}</span>
+            <span class="nearby-divider">•</span>
+            <span class="nearby-distance">${store.distance}</span>
           </div>
-          <div class="nearby-tag special">${store.tag}</div>
+          <div class="nearby-reviews">리뷰 ${store.reviews.toLocaleString()}</div>
         </div>
-        <button class="nearby-qr-btn" onclick="event.stopPropagation();">
-          <span class="qr-icon">📱</span>
-        </button>
       </div>
     `).join('');
   },
@@ -350,119 +312,28 @@ export const subMainView = {
     return `
       <section id="promoSection">
         <div class="section-header">
-          <h2 class="section-title">
-            <span class="title-icon">🎉</span>
-            진행중인 혜택
-          </h2>
-          <button class="see-all-btn">더보기 ›</button>
+          <h2 class="section-title">진행중인 혜택</h2>
+          <button class="see-all-btn">전체</button>
         </div>
-        <div class="promo-grid">
-          <div class="promo-card gradient-purple">
-            <div class="promo-badge">NEW</div>
-            <div class="promo-content">
-              <h4 class="promo-title">신규 회원 특별 할인</h4>
-              <p class="promo-desc">첫 주문 20% 할인</p>
-              <div class="promo-validity">~ 2025.02.28</div>
+        <div class="promo-banner" id="promoContainer">
+          <div class="promo-item">
+            <div class="promo-text">
+              <span class="promo-badge">NEW</span>
+              <h3 class="promo-heading">신규 회원 특별 할인</h3>
+              <p class="promo-description">첫 주문 시 20% 할인 쿠폰 증정</p>
             </div>
-            <div class="promo-icon">🎁</div>
-          </div>
-          <div class="promo-card gradient-blue">
-            <div class="promo-badge">HOT</div>
-            <div class="promo-content">
-              <h4 class="promo-title">리뷰 작성 이벤트</h4>
-              <p class="promo-desc">리뷰 쓰고 포인트 받기</p>
-              <div class="promo-validity">~ 2025.03.15</div>
+            <div class="promo-visual">
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="white" opacity="0.9">
+                <path d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2z"/>
+              </svg>
             </div>
-            <div class="promo-icon">⭐</div>
-          </div>
-          <div class="promo-card gradient-green">
-            <div class="promo-content">
-              <h4 class="promo-title">친구 초대 이벤트</h4>
-              <p class="promo-desc">친구 초대하고 쿠폰 받기</p>
-              <div class="promo-validity">상시 진행</div>
-            </div>
-            <div class="promo-icon">👥</div>
           </div>
         </div>
       </section>
     `;
   },
 
-  /**
-   * 통계 섹션 렌더링
-   */
-  renderStatsSection() {
-    return `
-      <section id="statsSection">
-        <div class="section-header">
-          <h2 class="section-title">
-            <span class="title-icon">📊</span>
-            나의 이용 현황
-          </h2>
-          <button class="stats-detail-btn">상세보기 ›</button>
-        </div>
-        <div class="stats-container">
-          <div class="stats-summary">
-            <div class="summary-item">
-              <div class="summary-label">이번 달 주문</div>
-              <div class="summary-value">
-                <span class="value-number">8</span>
-                <span class="value-unit">회</span>
-                <span class="value-trend up">↑ 2</span>
-              </div>
-            </div>
-            <div class="summary-divider"></div>
-            <div class="summary-item">
-              <div class="summary-label">이번 달 사용 금액</div>
-              <div class="summary-value">
-                <span class="value-number">124,000</span>
-                <span class="value-unit">원</span>
-                <span class="value-trend up">↑ 12%</span>
-              </div>
-            </div>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-card enhanced">
-              <div class="stat-icon-wrapper gradient-purple">
-                <span class="stat-icon">📦</span>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value" id="totalOrdersCount">28</div>
-                <div class="stat-label">총 주문</div>
-              </div>
-            </div>
-            <div class="stat-card enhanced">
-              <div class="stat-icon-wrapper gradient-orange">
-                <span class="stat-icon">⭐</span>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value" id="totalReviewsCount">12</div>
-                <div class="stat-label">작성 리뷰</div>
-              </div>
-            </div>
-            <div class="stat-card enhanced">
-              <div class="stat-icon-wrapper gradient-pink">
-                <span class="stat-icon">💖</span>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value" id="favoritesCount">5</div>
-                <div class="stat-label">즐겨찾기</div>
-              </div>
-            </div>
-            <div class="stat-card enhanced">
-              <div class="stat-icon-wrapper gradient-teal">
-                <span class="stat-icon">💰</span>
-              </div>
-              <div class="stat-content">
-                <div class="stat-value" id="totalPointsCount">4,200</div>
-                <div class="stat-label">포인트</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    `;
-  },
+  
 
   /**
    * 바텀 네비게이션 렌더링
