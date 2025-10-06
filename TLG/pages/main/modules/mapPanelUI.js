@@ -4,7 +4,7 @@ window.MapPanelUI = {
   activeFilters: {},
   renderPanelHTML() {
     return `
-      <div id="mapStorePanel" class="collapsed">
+      <div id="mapStorePanel">
         <div id="panelHandle"></div>
         <div id="filterBar" class="filter-bar">
           <button class="filter-btn">
@@ -277,6 +277,12 @@ window.MapPanelUI = {
 
   // 패널 드래그 기능 설정
   setupPanelDrag() {
+    // setupPanelDrag가 이미 실행되었는지 확인 (중복 실행 방지)
+    if (window.mapPanelDragSetup) {
+      console.log('⚠️ setupPanelDrag 이미 실행됨 - 건너뜁니다');
+      return;
+    }
+    
     const storePanel = document.getElementById('mapStorePanel');
     const panelHandle = document.getElementById('panelHandle');
     let isDragging = false;
@@ -497,6 +503,8 @@ window.MapPanelUI = {
       });
     }
 
+    // setupPanelDrag 실행 완료 플래그 설정
+    window.mapPanelDragSetup = true;
     console.log('✅ 지도 패널: 드래그 전용 모드로 설정 완료');
   },
 
