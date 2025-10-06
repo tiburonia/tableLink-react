@@ -587,7 +587,6 @@ section {
   left: 0;
   width: 100%;
   max-width: 430px;
-  height: 60px;
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color);
   display: flex;
