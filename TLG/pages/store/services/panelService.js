@@ -18,6 +18,19 @@ export const panelService = {
   },
 
   /**
+   * 패널 확장 시 top 위치 계산
+   */
+  calculateExpandedTop() {
+    // 상단 헤더 높이 동적 계산
+    const storeHeader = document.getElementById('storeHeader');
+    if (storeHeader) {
+      return storeHeader.offsetHeight;
+    }
+    // 폴백: 기본값 85px
+    return 85;
+  },
+
+  /**
    * 패널 높이 계산
    */
   calculatePanelHeight(elements) {
