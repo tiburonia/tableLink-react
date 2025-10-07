@@ -13,7 +13,7 @@ export const homeTabView = {
       <div class="home-tab-container">
         ${this.renderWaitingTimes()}
         ${this.renderTableStatus()}
-        ${this.renderFacilities()}
+        ${this.renderFacilities(store)}
         ${this.renderMenu(store)}
       </div>
       ${this.getStyles()}
@@ -154,15 +154,31 @@ export const homeTabView = {
   /**
    * 시설정보 섹션 (더미 데이터)
    */
-  renderFacilities() {
-    const facilities = [
-      { icon: '🅿️', name: '주차', available: true },
-      { icon: '🚻', name: '화장실', available: true },
-      { icon: '♿', name: '장애인 편의', available: true },
-      { icon: '🍼', name: '유아시설', available: false },
-      { icon: '📶', name: 'WiFi', available: true },
-      { icon: '🔌', name: '콘센트', available: true }
-    ];
+  renderFacilities(store) {
+    const amenities = store.amenities 
+
+    const amenitiIcons = {
+      wifi: '📶',
+      parking: '🅿️',
+      pet_friendly: '🐶',
+      power_outlet: '🔌',
+      smoking_area: '🚬'
+    } 
+
+    amenities.map(amenity => {
+      amenities.name = amenities[amenity]
+    })
+
+    amenities.map(amenities => {
+        amenities.available = amenities[amenity] ? true : false
+    })
+
+    amenities.map(amenity => {
+      amenity.icon = amenitiIcons[amenity.name]
+    })
+
+  
+    
 
     return `
       <section class="home-section facilities-section">
@@ -173,11 +189,11 @@ export const homeTabView = {
           </h3>
         </div>
         <div class="facilities-grid">
-          ${facilities.map(f => `
-            <div class="facility-item ${f.available ? 'available' : 'unavailable'}">
-              <span class="facility-icon">${f.icon}</span>
-              <span class="facility-name">${f.name}</span>
-              <span class="facility-status">${f.available ? '✓' : '✗'}</span>
+          ${amenities.map(a => `
+            <div class="facility-item ${a.available ? 'available' : 'unavailable'}">
+              <span class="facility-icon">${a.icon}</span>
+              <span class="facility-name">${a.name}</span>
+              <span class="facility-status">${a.available ? '✓' : '✗'}</span>
             </div>
           `).join('')}
         </div>

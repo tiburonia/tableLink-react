@@ -31,3 +31,13 @@ const renderStore = (store) => {
   updateFavoriteBtn(store.name);
 
 }
+
+
+"amenities": {
+    "wifi": {available: true,
+            icon: wifi
+    "parking": true,
+    "pet_friendly": false,
+    "power_outlet": true,
+    "smoking_area": false
+},
