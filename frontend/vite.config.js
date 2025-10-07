@@ -9,7 +9,7 @@ export default defineConfig({
   publicDir: '../../legacy/public',
   base: '/',
   build: {
-    outDir: '../../dist',
+    outDir: '../dist',
     emptyOutDir: true,
     rollupOptions: {
       external: [/^\/legacy\/TLG\//, /^\/legacy\/KDS\//, /^\/legacy\/pos\//, /^\/legacy\/shared\//]

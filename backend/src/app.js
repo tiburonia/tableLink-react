@@ -51,16 +51,6 @@ app.use('/api/kds', kdsRoutes);
 app.use('/api/tll', tllRoutes);
 app.use('/api/toss', tossRoutes);
 
-// 레거시 시스템 정적 파일 (루트 경로)
-app.use('/public', express.static(path.join(__dirname, '../../legacy/public')));
-app.use('/pos', express.static(path.join(__dirname, '../../legacy/pos')));
-app.use('/KDS', express.static(path.join(__dirname, '../../legacy/KDS')));
-app.use('/shared', express.static(path.join(__dirname, '../../shared')));
-app.use('/TLG', express.static(path.join(__dirname, '../../legacy/TLG')));
-app.use('/krp', express.static(path.join(__dirname, '../../legacy/krp')));
-app.use('/admin', express.static(path.join(__dirname, '../../legacy/admin')));
-app.use('/tlm-components', express.static(path.join(__dirname, '../../legacy/tlm-components')));
-app.use('/kds', express.static(path.join(__dirname, '../../legacy/kds')));
 
 // 기본 API 엔드포인트 (테스트용)
 app.get('/api', (req, res) => {

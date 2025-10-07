@@ -34,6 +34,7 @@ setupSocketHandlers(io, pool);
 const PORT = process.env.PORT || 5000;
 
 // 레거시 시스템 정적 파일 서빙 (/legacy 경로 매핑)
+// 주의: 순서가 중요! 가장 구체적인 경로부터 먼저 매칭
 app.use('/legacy/public', express.static(path.join(__dirname, '../legacy/public')));
 app.use('/legacy/shared', express.static(path.join(__dirname, '../shared')));
 app.use('/legacy/TLG', express.static(path.join(__dirname, '../legacy/TLG')));
@@ -44,8 +45,19 @@ app.use('/legacy/admin', express.static(path.join(__dirname, '../legacy/admin'))
 app.use('/legacy/tlm-components', express.static(path.join(__dirname, '../legacy/tlm-components')));
 app.use('/legacy/kds', express.static(path.join(__dirname, '../legacy/kds')));
 
-// React 빌드 파일 서빙 (프로덕션)
-app.use(express.static(path.join(__dirname, '../dist')));
+// /legacy 루트 경로 처리
+app.use('/legacy', express.static(path.join(__dirname, '../legacy/public'), {
+  index: 'index.html'
+}));
+
+// React 빌드 파일 서빙 (프로덕션) - /legacy 경로 제외!
+app.use((req, res, next) => {
+  // /legacy 경로는 React static 미들웨어 건너뛰기
+  if (req.path.startsWith('/legacy')) {
+    return next();
+  }
+  express.static(path.join(__dirname, '../frontend/dist'))(req, res, next);
+});
 
 // SPA 폴백 (React Router 지원) - Express 5 호환
 app.get(/^\/.*/, (req, res, next) => {
@@ -54,18 +66,18 @@ app.get(/^\/.*/, (req, res, next) => {
     return next();
   }
 
-  // 레거시 시스템 제외
+  // 레거시 시스템은 이미 위에서 처리됨
   if (req.path.startsWith('/legacy')) {
     return next();
   }
 
   // 정적 파일 제외
-  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/)) {
+  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|html)$/)) {
     return next();
   }
 
   // React 앱 index.html 제공
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
 // 서버 시작
