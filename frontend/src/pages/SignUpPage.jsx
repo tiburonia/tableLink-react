@@ -1,23 +1,22 @@
-
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export default function SignUpPage() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    userId: '',
-    userPassword: '',
-    userPasswordConfirm: '',
-    userName: '',
-    userPhone: '',
+    id: '',
+    pw: '',
+    pwConfirm: '',
+    name: '',
+    phone: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (formData.userPassword !== formData.userPasswordConfirm) {
+
+    if (formData.pw !== formData.pwConfirm) {
       setError('비밀번호가 일치하지 않습니다');
       return;
     }
@@ -26,15 +25,14 @@ export default function SignUpPage() {
     setError('');
 
     try {
-      // 백엔드 API 스펙에 맞게 필드명 변환
-      const response = await fetch('/api/auth/users/signup', {
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: formData.userId,
-          pw: formData.userPassword,
-          name: formData.userName,
-          phone: formData.userPhone
+          id: formData.id,
+          pw: formData.pw,
+          name: formData.name,
+          phone: formData.phone,
         }),
       });
 
@@ -42,7 +40,7 @@ export default function SignUpPage() {
 
       if (response.ok) {
         console.log('✅ 회원가입 성공:', data);
-        alert(`${formData.userName}님, 회원가입이 완료되었습니다!`);
+        alert(`${formData.name}님, 회원가입이 완료되었습니다!`);
         navigate('/login');
       } else {
         console.error('❌ 회원가입 실패:', response.status, data);
@@ -68,63 +66,67 @@ export default function SignUpPage() {
       <div className="signup-card">
         <h1>TableLink</h1>
         <h2>회원가입</h2>
-        
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="userId">아이디</label>
+            <label htmlFor="id">아이디</label>
             <input
               type="text"
-              id="userId"
-              name="userId"
-              value={formData.userId}
+              id="id"
+              name="id"
+              value={formData.id}
               onChange={handleChange}
+              placeholder="아이디를 입력하세요"
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="userPassword">비밀번호</label>
+            <label htmlFor="pw">비밀번호</label>
             <input
               type="password"
-              id="userPassword"
-              name="userPassword"
-              value={formData.userPassword}
+              id="pw"
+              name="pw"
+              value={formData.pw}
               onChange={handleChange}
+              placeholder="비밀번호를 입력하세요"
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="userPasswordConfirm">비밀번호 확인</label>
+            <label htmlFor="pwConfirm">비밀번호 확인</label>
             <input
               type="password"
-              id="userPasswordConfirm"
-              name="userPasswordConfirm"
-              value={formData.userPasswordConfirm}
+              id="pwConfirm"
+              name="pwConfirm"
+              value={formData.pwConfirm}
               onChange={handleChange}
+              placeholder="비밀번호를 다시 입력하세요"
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="userName">이름</label>
+            <label htmlFor="name">이름</label>
             <input
               type="text"
-              id="userName"
-              name="userName"
-              value={formData.userName}
+              id="name"
+              name="name"
+              value={formData.name}
               onChange={handleChange}
+              placeholder="이름을 입력하세요"
               required
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="userPhone">전화번호</label>
+            <label htmlFor="phone">전화번호</label>
             <input
               type="tel"
-              id="userPhone"
-              name="userPhone"
-              value={formData.userPhone}
+              id="phone"
+              name="phone"
+              value={formData.phone}
               onChange={handleChange}
               placeholder="010-0000-0000"
               required

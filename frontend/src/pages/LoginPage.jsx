@@ -7,8 +7,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    userId: '',
-    userPassword: '',
+    id: '',
+    pw: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,14 +19,10 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // 백엔드 API 스펙에 맞게 필드명 변환
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: formData.userId,
-          pw: formData.userPassword
-        }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -67,12 +63,12 @@ export default function LoginPage() {
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="userId">아이디</label>
+            <label htmlFor="id">아이디</label>
             <input
               type="text"
-              id="userId"
-              name="userId"
-              value={formData.userId}
+              id="id"
+              name="id"
+              value={formData.id}
               onChange={handleChange}
               placeholder="아이디를 입력하세요"
               required
@@ -80,12 +76,12 @@ export default function LoginPage() {
           </div>
 
           <div className="form-group">
-            <label htmlFor="userPassword">비밀번호</label>
+            <label htmlFor="pw">비밀번호</label>
             <input
               type="password"
-              id="userPassword"
-              name="userPassword"
-              value={formData.userPassword}
+              id="pw"
+              name="pw"
+              value={formData.pw}
               onChange={handleChange}
               placeholder="비밀번호를 입력하세요"
               required
