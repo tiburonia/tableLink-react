@@ -2,6 +2,7 @@ require('dotenv').config();
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const { Pool } = require('pg');
+const express = require('express');
 const app = require('./app');
 const setupSocketHandlers = require('./socket/handlers');
 const initializeServices = require('./services/init');
