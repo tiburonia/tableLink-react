@@ -98,13 +98,26 @@ app.get('/legacy', (req, res) => {
 
 app.use('/legacy', express.static(path.join(__dirname, '../../legacy/public')));
 
-// ===== React 빌드 파일 서빙 (프로덕션) =====
+// ==================== 정적 파일 제공 ====================
+// 레거시 시스템 정적 파일 (명시적 경로만)
+app.use('/legacy', express.static(path.join(__dirname, '../../legacy/public')));
+app.use('/legacy/assets', express.static(path.join(__dirname, '../../legacy/TLG/assets')));
+app.use('/legacy/TLG', express.static(path.join(__dirname, '../../legacy/TLG')));
+app.use('/legacy/pos', express.static(path.join(__dirname, '../../legacy/pos')));
+app.use('/legacy/KDS', express.static(path.join(__dirname, '../../legacy/KDS')));
+app.use('/legacy/krp', express.static(path.join(__dirname, '../../legacy/krp')));
+
+// 공용 리소스
+app.use('/shared', express.static(path.join(__dirname, '../../shared')));
+
+// React 앱 (Vite 빌드 결과물) - 마지막에 배치하여 우선순위 최하위
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 
-// ===== SPA 폴백 (React Router 지원) - API와 레거시 경로 제외 =====
-app.get(/^\/(?!api|legacy|public|shared|TLG|pos|KDS|krp|admin|tlm-components|kds).*/, (req, res, next) => {
-  // 정적 파일 제외
-  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|html)$/)) {
+// ==================== SPA 폴백 라우팅 ====================
+// API, Legacy 외 모든 경로는 React 앱으로
+app.get('*', (req, res, next) => {
+  // API 또는 레거시 경로는 제외
+  if (req.path.startsWith('/api') || req.path.startsWith('/legacy')) {
     return next();
   }
 
