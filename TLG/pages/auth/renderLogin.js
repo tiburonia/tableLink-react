@@ -46,9 +46,12 @@ window.quickLogin = async function(userId) {
 
       alert(`${data.user.name}님, 환영합니다!`);
 
-      // React Router 라우팅으로 전환
-      console.log('🔄 React Router로 전환: /react/map');
-      window.location.href = '/react/map';
+      if (typeof renderMap === 'function') {
+        renderMap();
+      } else {
+        console.error('❌ renderMap 함수를 찾을 수 없음');
+        window.location.href = '/';
+      }
     } else {
       throw new Error(data.error || data.message || '로그인에 실패했습니다');
     }
@@ -394,6 +397,3 @@ async function renderLogin() {
 if (typeof window !== 'undefined') {
   window.renderLogin = renderLogin;
 }
-
-// ES6 export (React 통합용)
-export default renderLogin;
