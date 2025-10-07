@@ -1,0 +1,168 @@
+현재 프로젝트 구조를 분석한 결과, Vanilla JS 기반의 레이어드 아키텍처를 점진적으로 React로 전환하는 단계별 계획을 제안합니다.
+
+📋 점진적 React 리팩토링 로드맵
+Phase 1: 기반 구축 (1-2주)
+현재 Vite + React 환경이 이미 설정되어 있으므로, 기본 라우팅과 상태관리 도입
+
+목표:
+
+React Router 도입
+기본 레이아웃 컴포넌트 생성
+Vanilla JS와 React 공존 환경 구축
+작업:
+
+/src/components/ 디렉토리 구조 생성
+React Router v6 설정
+최상위 App.jsx에서 라우팅 구조 정의
+Vanilla JS 페이지를 iframe/wrapper로 감싸는 방식으로 공존
+Phase 2: 인증/로그인 모듈 전환 (1주)
+가장 독립적이고 재사용성이 높은 모듈부터 시작
+
+변환 대상:
+
+TLG/pages/auth/renderLogin.js → React 컴포넌트
+TLG/pages/auth/renderSignUp.js → React 컴포넌트
+새 구조:
+
+src/
+  features/
+    auth/
+      components/
+        LoginForm.jsx
+        SignUpForm.jsx
+        QuickAccess.jsx
+      hooks/
+        useAuth.js
+        useValidation.js
+      services/
+        authService.js
+Phase 3: 메인/지도 페이지 전환 (2-3주)
+복잡한 상태관리가 필요한 핵심 기능
+
+변환 대상:
+
+TLG/pages/main/renderMap.js → MapPage.jsx
+TLG/pages/main/renderSearch.js → SearchPage.jsx
+TLG/pages/main/renderSubMain.js → DashboardPage.jsx
+새 구조:
+
+src/
+  features/
+    map/
+      components/
+        MapView.jsx
+        StorePanel.jsx
+        MarkerLayer.jsx
+      hooks/
+        useMapController.js
+        useViewportStores.js
+      services/
+        mapService.js (기존 재활용)
+React Query 도입:
+
+서버 상태 관리 (매장 데이터, 검색 결과)
+캐싱 및 자동 리프레시
+Phase 4: 매장 상세 페이지 전환 (2주)
+탭 기반 UI와 복잡한 상호작용
+
+변환 대상:
+
+TLG/pages/store/renderStore.js → StorePage.jsx
+5개 탭 뷰 → 개별 React 컴포넌트
+새 구조:
+
+src/
+  features/
+    store/
+      components/
+        StoreHeader.jsx
+        StoreTabs.jsx
+        HomeTab/
+        MenuTab/
+        ReviewTab/
+        InfoTab/
+        RegularTab/
+      hooks/
+        useStoreData.js
+        useFavorite.js
+Phase 5: 주문/결제 플로우 전환 (2-3주)
+가장 중요한 비즈니스 로직
+
+변환 대상:
+
+TLG/pages/pay/ 전체 → React 컴포넌트
+TLL 주문 플로우
+Toss 결제 통합
+새 구조:
+
+src/
+  features/
+    order/
+      components/
+        OrderScreen.jsx
+        CartSummary.jsx
+        PaymentModal.jsx
+      hooks/
+        useOrder.js
+        usePayment.js
+      context/
+        OrderContext.jsx
+상태관리:
+
+Zustand 또는 Redux Toolkit 도입
+주문 상태의 전역 관리
+Phase 6: 마이페이지 전환 (1주)
+변환 대상:
+
+TLG/pages/mypage/ → MyPage.jsx
+새 구조:
+
+src/
+  features/
+    profile/
+      components/
+        ProfileCard.jsx
+        OrderHistory.jsx
+        ReviewList.jsx
+        FavoriteStores.jsx
+Phase 7: 관리자/POS/KDS 시스템 (3-4주)
+별도 앱으로 분리 가능한 모듈
+
+옵션 1: 별도 React 앱
+
+/pos, /kds, /admin → 각각 독립 Vite 프로젝트
+옵션 2: Micro-frontend
+
+Module Federation 사용
+공통 라이브러리 공유
+Phase 8: 최적화 및 마이그레이션 완료 (1-2주)
+작업:
+
+Vanilla JS 코드 완전 제거
+성능 최적화 (Code Splitting, Lazy Loading)
+SEO 개선 (SSR 고려시 Next.js 전환)
+테스트 코드 작성 (Vitest + React Testing Library)
+🛠️ 기술 스택 권장사항
+상태관리:
+
+React Query (서버 상태)
+Zustand (클라이언트 전역 상태)
+라우팅:
+
+React Router v6
+UI/스타일:
+
+Tailwind CSS (기존 CSS와 병행)
+Shadcn/ui (컴포넌트 라이브러리)
+폼 관리:
+
+React Hook Form + Zod (유효성 검사)
+빌드/개발:
+
+Vite (이미 설정됨)
+TypeScript (점진적 도입)
+📌 마이그레이션 전략
+점진적 전환: 각 페이지를 독립적으로 React로 전환
+공존 기간: Vanilla JS와 React가 동시에 작동
+API 재활용: 기존 /src/services/, /src/repositories/ 최대한 재사용
+라우팅 통합: React Router로 점진적 전환

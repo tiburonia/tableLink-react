@@ -14,11 +14,15 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: '0.0.0.0'
+    host: '0.0.0.0',
+    fs: {
+      allow: ['..']
+    }
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      '@TLG': path.resolve(__dirname, './TLG')
     }
   }
 });
