@@ -35,6 +35,15 @@ args = "npm install"
 task = "shell.exec"
 args = "node src/server.js"
 
+[[workflows.workflow]]
+name = "Vite React Dev"
+author = 41585131
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
 [[ports]]
 localPort = 80
 externalPort = 80
@@ -54,6 +63,14 @@ externalPort = 3000
 [[ports]]
 localPort = 5173
 externalPort = 5173
+
+[[ports]]
+localPort = 5174
+externalPort = 3002
+
+[[ports]]
+localPort = 5175
+externalPort = 3003
 
 [agent]
 expertMode = true
