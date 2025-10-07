@@ -128,7 +128,7 @@ export const mapView = {
   renderBottomBar() {
     return `
       <nav class="bottom-nav-bar">
-        <button onclick="renderSubMain()" class="nav-item" style="pointer-events: none">
+        <button onclick="renderSubMain()" class="nav-item">
           <span class="nav-icon">🏠</span>
           <span class="nav-label">홈</span>
         </button>
