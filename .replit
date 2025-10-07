@@ -12,7 +12,7 @@ deploymentTarget = "static"
 build = ["sh", "-c", "npm run build"]
 
 [workflows]
-runButton = "TableLink Server"
+runButton = "Full Stack Dev"
 
 [[workflows.workflow]]
 name = "TableLink Server"
