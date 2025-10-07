@@ -39,6 +39,14 @@ app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
 app.use('/kds', express.static(path.join(__dirname, '../kds')));
 
+// React 앱 빌드 파일 제공
+app.use('/react', express.static(path.join(__dirname, '../dist')));
+
+// React 앱 라우팅 (SPA)
+app.get('/react/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
 // 루트 경로를 레거시 index.html로 리다이렉트
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
