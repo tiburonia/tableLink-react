@@ -10,7 +10,10 @@ export default defineConfig({
   base: '/react/',
   build: {
     outDir: '../dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      external: [/^\/TLG\//, /^\/KDS\//, /^\/pos\//, /^\/shared\//, /^\/tlm-components\//]
+    }
   },
   server: {
     port: 5173,
