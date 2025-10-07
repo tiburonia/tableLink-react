@@ -26,8 +26,7 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// 레거시 시스템 정적 파일
-app.use('/legacy', express.static('public'));
+// 레거시 시스템 정적 파일 (루트 경로)
 app.use('/public', express.static('public'));
 app.use('/pos', express.static('pos'));
 app.use('/KDS', express.static('KDS'));
@@ -37,6 +36,16 @@ app.use('/krp', express.static(path.join(__dirname, '../krp')));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
 app.use('/kds', express.static(path.join(__dirname, '../kds')));
+
+// 레거시 시스템 정적 파일 (/legacy 하위에도 동일하게 서빙)
+app.use('/legacy', express.static('public'));
+app.use('/legacy/public', express.static('public'));
+app.use('/legacy/shared', express.static(path.join(__dirname, '../shared')));
+app.use('/legacy/TLG', express.static(path.join(__dirname, '../TLG')));
+app.use('/legacy/krp', express.static(path.join(__dirname, '../krp')));
+app.use('/legacy/admin', express.static(path.join(__dirname, '../admin')));
+app.use('/legacy/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
+app.use('/legacy/kds', express.static(path.join(__dirname, '../kds')));
 
 // React 앱 빌드 파일 제공 (루트)
 app.use(express.static(path.join(__dirname, '../dist')));
