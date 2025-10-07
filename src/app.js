@@ -43,7 +43,7 @@ app.use('/kds', express.static(path.join(__dirname, '../kds')));
 app.use('/react', express.static(path.join(__dirname, '../dist')));
 
 // React 앱 라우팅 (SPA)
-app.get('/react/*', (req, res) => {
+app.get('/react/:path*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
