@@ -36,15 +36,6 @@ args = "npm install"
 task = "shell.exec"
 args = "node src/server.js"
 
-[[workflows.workflow]]
-name = "Vite React Dev"
-author = 41585131
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "# 이 워크플로우는 삭제됩니다"
-
 [[ports]]
 localPort = 80
 externalPort = 80
