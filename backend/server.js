@@ -1,89 +1,49 @@
-# tablelink/
-# ├── backend/
-# │   ├── src/
-# │   │   ├── routes/
-# │   │   ├── controllers/
-# │   │   ├── services/
-# │   │   ├── repositories/
-# │   │   ├── mw/
-# │   │   ├── db/
-# │   │   ├── socket/
-# │   │   ├── utils/
-# │   │   └── app.js
-# │   ├── server.js
-# │   └── package.json (백엔드 전용)
-# │
-# ├── frontend/
-# │   ├── src/
-# │   │   ├── components/
-# │   │   ├── contexts/
-# │   │   ├── pages/
-# │   │   ├── App.jsx
-# │   │   ├── App.css
-# │   │   ├── main.jsx
-# │   │   └── index.html
-# │   ├── vite.config.js
-# │   └── package.json (프론트엔드 전용)
-# │
-# ├── legacy/
-# │   ├── TLG/
-# │   ├── pos/
-# │   ├── KDS/
-# │   ├── krp/
-# │   └── public/
-# │
-# └── shared/
-#     └── config/
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+require('dotenv').config();
 
-# Placeholder for backend/server.js (assuming it uses the provided change)
-# This is a minimal representation. The actual content would be derived from the original 'server.js' file.
+// Express 앱 import
+const app = require('./src/app');
 
-# The following is a placeholder and does not represent actual code from the original file.
-# It is generated based on the provided change instruction and the conceptual structure.
+// 포트 설정
+const PORT = process.env.PORT || 5000;
 
-# Example structure for backend/server.js
-# const app = require('./src/app'); # This line reflects the change.
-# const PORT = process.env.PORT || 3000;
-#
-# app.listen(PORT, () => {
-#   console.log(`Server running on port ${PORT}`);
-# });
+// 정적 파일 서빙 (레거시 시스템)
+app.use('/legacy', express.static(path.join(__dirname, '../legacy')));
 
-# Example structure for backend/src/app.js
-# const express = require('express');
-# const app = express();
-#
-# // Middleware
-# app.use(express.json());
-#
-# // Routes
-# app.use('/api/routes', require('./routes'));
-# app.use('/api/controllers', require('./controllers'));
-#
-# module.exports = app;
+// React 빌드 파일 서빙 (프로덕션)
+app.use(express.static(path.join(__dirname, '../dist')));
 
-# Example structure for frontend/src/main.jsx
-# import React from 'react';
-# import ReactDOM from 'react-dom/client';
-# import App from './App.jsx';
-# import './index.css';
-#
-# ReactDOM.createRoot(document.getElementById('root')).render(
-#   <React.StrictMode>
-#     <App />
-#   </React.StrictMode>,
-# );
+// SPA 폴백 (React Router 지원)
+app.get('*', (req, res, next) => {
+  // API 요청은 제외
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
 
-# Example structure for frontend/src/App.jsx
-# function App() {
-#   return (
-#     <div>
-#       <h1>Welcome to Frontend!</h1>
-#     </div>
-#   );
-# }
-#
-# export default App;
+  // 레거시 시스템 제외
+  if (req.path.startsWith('/legacy')) {
+    return next();
+  }
 
-# Due to the absence of original file content, this output represents a conceptual file structure
-# and placeholder content based on the provided intention and change snippet.
+  // React 앱 index.html 제공
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
+
+// 서버 시작
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 TableLink Backend Server running on http://0.0.0.0:${PORT}`);
+  console.log(`📱 Frontend (React): http://localhost:5173`);
+  console.log(`🔧 API: http://0.0.0.0:${PORT}/api`);
+  console.log(`🏪 Legacy: http://0.0.0.0:${PORT}/legacy`);
+});
+
+// 에러 핸들링
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
