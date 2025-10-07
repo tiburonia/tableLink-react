@@ -17,6 +17,16 @@ export default defineConfig({
     host: '0.0.0.0',
     fs: {
       allow: ['..']
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      },
+      '/TLG': {
+        target: 'http://localhost:5000',
+        changeOrigin: true
+      }
     }
   },
   resolve: {
