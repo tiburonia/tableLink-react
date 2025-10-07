@@ -45,10 +45,12 @@ app.use('/legacy/admin', express.static(path.join(__dirname, '../legacy/admin'))
 app.use('/legacy/tlm-components', express.static(path.join(__dirname, '../legacy/tlm-components')));
 app.use('/legacy/kds', express.static(path.join(__dirname, '../legacy/kds')));
 
-// /legacy 루트 경로 처리
-app.use('/legacy', express.static(path.join(__dirname, '../legacy/public'), {
-  index: 'index.html'
-}));
+// /legacy 루트 경로 처리 - 명시적 라우트 추가
+app.get('/legacy', (req, res) => {
+  res.sendFile(path.join(__dirname, '../legacy/public/index.html'));
+});
+
+app.use('/legacy', express.static(path.join(__dirname, '../legacy/public')));
 
 // React 빌드 파일 서빙 (프로덕션) - /legacy 경로 제외!
 app.use((req, res, next) => {
