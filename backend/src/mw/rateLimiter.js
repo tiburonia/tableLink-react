@@ -14,12 +14,9 @@ const rateLimiter = rateLimit({
     }
   },
   standardHeaders: true, // `RateLimit-*` 헤더 반환
-  legacyHeaders: false, // `X-RateLimit-*` 헤더 비활성화
-  // Replit 환경 (프록시 뒤) 설정
-  validate: {
-    trustProxy: false, // trust proxy 검증 비활성화
-    xForwardedForHeader: false // X-Forwarded-For 검증 비활성화
-  }
+  legacyHeaders: false // `X-RateLimit-*` 헤더 비활성화
+  // Replit 환경에서 trust proxy는 app.js에서 설정
+  // validation은 기본값 유지 (보안)
 });
 
 module.exports = { rateLimiter };

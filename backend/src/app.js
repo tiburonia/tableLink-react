@@ -25,8 +25,9 @@ const { rateLimiter } = require('./mw/rateLimiter');
 
 const app = express();
 
-// 프록시 신뢰 설정 (Replit 환경)
-app.set('trust proxy', true);
+// 프록시 신뢰 설정 (Replit 환경 - 1 hop)
+// Replit은 단일 프록시 레이어를 사용하므로 1로 설정
+app.set('trust proxy', 1);
 
 // 미들웨어 설정
 app.use(cors()); // CORS 허용
