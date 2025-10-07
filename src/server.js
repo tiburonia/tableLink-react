@@ -98,7 +98,7 @@ app.get('/toss-fail.html', (req, res) => {
 });
 
 // React SPA Catch-all (맨 마지막에 위치)
-app.get('*', (req, res) => {
+app.use((req, res, next) => {
   // API 요청은 제외
   if (req.path.startsWith('/api/') ||
       req.path.startsWith('/socket.io/') ||
