@@ -42,8 +42,8 @@ app.use('/kds', express.static(path.join(__dirname, '../kds')));
 // React 앱 빌드 파일 제공
 app.use('/react', express.static(path.join(__dirname, '../dist')));
 
-// React 앱 라우팅 (SPA)
-app.get('/react/:path*', (req, res) => {
+// React 앱 라우팅 (SPA) - Express 5 호환
+app.get('/react/*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
