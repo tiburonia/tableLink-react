@@ -1,0 +1,36 @@
+~/workspace$ npm run dev
+
+> tablelink@1.0.0 dev
+> vite
+
+
+
+
+
+  VITE v7.1.9  ready in 245 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://172.31.88.226:5173/
+  ➜  press h + enter to show help
+(!) Failed to run dependency scan. Skipping dependency pre-bundling. Error: The following dependencies are imported but could not be resolved:
+
+  TLG/pages/mypage/renderMyAccount.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/renderMap.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/renderSearch.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/renderNotification.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/store/repositories/favoriteRepository.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/store/controllers/favoriteController.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/pay/renderPay.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/pay/confirmPayF.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/pay/renderOrderScreen.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/repositories/subMainRepository.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/services/subMainService.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/views/subMainView.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/controllers/subMainController.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/main/renderSubMain.js (imported by /home/runner/workspace/public/index.html)
+  TLG/pages/pay/TLL.js (imported by /home/runner/workspace/public/index.html)
+
+Are they installed?
+    at file:///home/runner/workspace/node_modules/vite/dist/node/chunks/dep-Chhhsdoe.js:10939:33
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///home/runner/workspace/node_modules/vite/dist/node/chunks/dep-Chhhsdoe.js:34464:15
