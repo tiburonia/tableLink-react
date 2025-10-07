@@ -36,15 +36,6 @@ task = "shell.exec"
 args = "node src/server.js"
 
 [[workflows.workflow]]
-name = "React Dev Server"
-author = 41585131
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-
-[[workflows.workflow]]
 name = "Full Stack Dev"
 author = 41585131
 mode = "parallel"
