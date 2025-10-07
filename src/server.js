@@ -98,7 +98,19 @@ app.get('/toss-fail.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/toss-fail.html'));
 });
 
-// React SPA 라우팅은 app.js에서 처리됨
+// React SPA Catch-all (API/정적 파일 제외)
+app.use((req, res, next) => {
+  // API, WebSocket, SSE, 정적 파일 요청 제외
+  if (req.path.startsWith('/api/') || 
+      req.path.startsWith('/socket.io/') || 
+      req.path.startsWith('/sse/') ||
+      req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i)) {
+    return next();
+  }
+  
+  // React 앱 index.html 제공
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Start Server
 server.listen(PORT, '0.0.0.0', () => {

@@ -40,26 +40,7 @@ app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-component
 app.use('/kds', express.static(path.join(__dirname, '../kds')));
 
 // React 앱 빌드 파일 제공
-app.use('/react', express.static(path.join(__dirname, '../dist')));
-
-// React 앱 SPA 라우팅 - 모든 HTML 요청을 React로 처리
-app.get('*', (req, res, next) => {
-  // API, WebSocket, SSE, 정적 파일 요청 제외
-  if (req.path.startsWith('/api/') || 
-      req.path.startsWith('/socket.io/') || 
-      req.path.startsWith('/sse/') ||
-      req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/i)) {
-    return next();
-  }
-  
-  // React 앱 index.html 제공
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// 루트 경로를 React 앱으로 서빙
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // Health Check
 app.get('/health', (req, res) => {
