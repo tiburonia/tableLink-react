@@ -21,7 +21,11 @@ TableLink 플랫폼
 ### 1. TLG (TableLink Customer)
 고객용 모바일 웹 애플리케이션
 - **QR 주문 (TLL)**: QR 코드 스캔으로 간편 주문
-- **매장 검색**: 위치 기반 매장 찾기 (Kakao Maps API)
+- **매장 검색**: 위치 기반 매장 찾기 (Naver Maps API)
+  - 실시간 뷰포트 기반 매장 표시
+  - 동적 패널 UI (최초 400px → 드래그 가능)
+  - 필터링 시스템 (카테고리, 운영상태, 별점)
+  - 검색 기능 (매장명, 위치)
 - **리뷰 시스템**: 별점 및 텍스트 리뷰
 - **포인트 & 쿠폰**: 적립/사용 시스템
 - **마이페이지**: 주문 내역, 즐겨찾기 관리
@@ -66,7 +70,7 @@ TableLink 플랫폼
 - **Vanilla JavaScript**: 모듈화된 순수 JavaScript
 - **HTML5/CSS3**: 반응형 웹 디자인
 - **WebSocket**: 실시간 통신 (Socket.IO)
-- **Kakao Maps API**: 지도 및 위치 서비스
+- **Naver Maps API**: 지도 및 위치 서비스
 - **Toss Payments**: 결제 시스템 연동
 
 ### Backend
@@ -238,6 +242,31 @@ socket.on('item.updated', handleItemUpdate);
 주문 생성 → PENDING → COOKING → READY → DONE
          ↓
     KDS 표시 → 조리 시작 → 완료 처리 → KRP 출력
+```
+
+## 🎨 UI/UX 개선 사항
+
+### TLG 지도 패널 시스템
+- **최초 렌더링 로직**: `window.mapPanelFirstRender` 전역 객체로 상태 관리
+- **동적 높이 설정**: 최초 렌더링 시 `expanded` 클래스 + 동적 400px 높이 설정
+- **이벤트 리스너 관리**: 페이지 이동 후 재렌더링 시 자동 재등록
+- **중복 실행 방지**: `window.mapPanelDragSetup` 플래그로 setupPanelDrag() 중복 방지
+- **드래그 기능**: 125px(collapsed) ↔ 630px(expanded) 자유 조절
+
+### 패널 상태 관리
+```javascript
+// 최초 렌더링
+window.mapPanelFirstRender = true
+→ expanded 클래스 + 400px 높이
+
+// 이후 렌더링
+window.mapPanelFirstRender = false
+→ collapsed 클래스 + 125px 높이
+
+// 페이지 이동 후 복귀
+패널 DOM 재생성 감지
+→ 이벤트 리스너 플래그 초기화
+→ 드래그 이벤트 재등록
 ```
 
 ## 🔐 보안
