@@ -108,8 +108,8 @@ app.use((req, res, next) => {
     return next();
   }
   
-  // React 앱 index.html 제공
-  res.sendFile(path.join(__dirname, 'index.html'));
+  // React 앱 index.html 제공 (빌드된 dist 폴더에서)
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Start Server
