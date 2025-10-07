@@ -50,7 +50,7 @@ function LegacyModuleWrapper({ modulePath, renderFn }) {
 function LoginPage() {
   return (
     <LegacyModuleWrapper 
-      modulePath="TLG/pages/auth/renderLogin.js" 
+      modulePath="pages/auth/renderLogin.js" 
       renderFn="renderLogin" 
     />
   );
@@ -60,7 +60,7 @@ function LoginPage() {
 function MainPage() {
   return (
     <LegacyModuleWrapper 
-      modulePath="TLG/pages/main/renderMap.js" 
+      modulePath="pages/main/renderMap.js" 
       renderFn="renderMap" 
     />
   );
