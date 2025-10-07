@@ -9,10 +9,11 @@ packages = ["static-web-server", "file"]
 [deployment]
 publicDir = "/"
 deploymentTarget = "static"
-run = ["sh", "-c", "npx live-server --port=5000 --host=0.0.0.0"]
+run = ["sh", "-c", "node src/server.js"]
+build = ["sh", "-c", "npm run build"]
 
 [workflows]
-runButton = "Vite React Dev"
+runButton = "TableLink Server"
 
 [[workflows.workflow]]
 name = "TableLink Server"
@@ -42,7 +43,7 @@ mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run dev"
+args = "# 이 워크플로우는 삭제됩니다"
 
 [[ports]]
 localPort = 80
