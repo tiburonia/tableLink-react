@@ -19,23 +19,34 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // 백엔드 API 스펙에 맞게 필드명 변환
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          id: formData.userId,
+          pw: formData.userPassword
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        login(data.user);
-        navigate('/map');
+        console.log('✅ 로그인 API 성공:', data);
+        if (data.success && data.user) {
+          login(data.user);
+          console.log('✅ 지도 페이지로 이동');
+          navigate('/map');
+        } else {
+          setError(data.message || '로그인 정보가 올바르지 않습니다');
+        }
       } else {
-        setError(data.message || '로그인에 실패했습니다');
+        console.error('❌ 로그인 API 실패:', response.status, data);
+        setError(data.message || data.error || '아이디 또는 비밀번호가 일치하지 않습니다');
       }
     } catch (err) {
-      setError('서버 오류가 발생했습니다');
-      console.error('로그인 오류:', err);
+      console.error('❌ 로그인 오류:', err);
+      setError('서버와 통신할 수 없습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }

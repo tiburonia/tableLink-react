@@ -26,23 +26,31 @@ export default function SignUpPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/signup', {
+      // 백엔드 API 스펙에 맞게 필드명 변환
+      const response = await fetch('/api/auth/users/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          id: formData.userId,
+          pw: formData.userPassword,
+          name: formData.userName,
+          phone: formData.userPhone
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        alert('회원가입이 완료되었습니다');
+        console.log('✅ 회원가입 성공:', data);
+        alert(`${formData.userName}님, 회원가입이 완료되었습니다!`);
         navigate('/login');
       } else {
-        setError(data.message || '회원가입에 실패했습니다');
+        console.error('❌ 회원가입 실패:', response.status, data);
+        setError(data.error || data.message || '회원가입에 실패했습니다');
       }
     } catch (err) {
-      setError('서버 오류가 발생했습니다');
-      console.error('회원가입 오류:', err);
+      console.error('❌ 회원가입 오류:', err);
+      setError('서버와 통신할 수 없습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setLoading(false);
     }

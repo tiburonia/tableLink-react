@@ -13,9 +13,11 @@ export const AuthProvider = ({ children }) => {
     const storedUser = localStorage.getItem('userInfo');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        const parsedUser = JSON.parse(storedUser);
+        console.log('✅ 저장된 사용자 정보 복원:', parsedUser.name || parsedUser.userId);
+        setUser(parsedUser);
       } catch (error) {
-        console.error('사용자 정보 복원 실패:', error);
+        console.error('❌ 사용자 정보 복원 실패:', error);
         localStorage.removeItem('userInfo');
       }
     }
@@ -23,11 +25,13 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData) => {
+    console.log('✅ 로그인 성공:', userData.name || userData.userId);
     setUser(userData);
     localStorage.setItem('userInfo', JSON.stringify(userData));
   };
 
   const logout = () => {
+    console.log('🚪 로그아웃 처리');
     setUser(null);
     localStorage.removeItem('userInfo');
     window.location.href = '/login';
