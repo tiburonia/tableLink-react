@@ -1,74 +1,208 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import './MapPage.css';
 
 export default function MapPage() {
-  const { isAuthenticated, loading } = useAuth();
-  const mapContainerRef = useRef(null);
-  const scriptLoadedRef = useRef(false);
+  const { isAuthenticated, loading, user } = useAuth();
+  const navigate = useNavigate();
+  const mapRef = useRef(null);
+  const naverMapRef = useRef(null);
+  const markersRef = useRef([]);
+  const [stores, setStores] = useState([]);
+  const [selectedStore, setSelectedStore] = useState(null);
 
+  // 네이버 지도 초기화
   useEffect(() => {
     if (loading || !isAuthenticated) return;
 
-    console.log('🗺️ MapPage 마운트됨, 지도 로딩 시작');
-
-    // 중복 로드 방지
-    if (scriptLoadedRef.current) {
-      console.log('⚠️ 지도 스크립트 이미 로드됨, 재로드 생략');
-      if (window.renderMap) {
-        window.renderMap();
+    const initMap = () => {
+      if (!window.naver || !window.naver.maps) {
+        console.error('네이버 지도 API가 로드되지 않았습니다');
+        return;
       }
-      return;
+
+      const mapOptions = {
+        center: new window.naver.maps.LatLng(37.5665, 126.9780), // 서울 중심
+        zoom: 16,
+        minZoom: 10,
+        maxZoom: 19,
+      };
+
+      const map = new window.naver.maps.Map(mapRef.current, mapOptions);
+      naverMapRef.current = map;
+
+      // 지도 이동/줌 이벤트
+      window.naver.maps.Event.addListener(map, 'idle', () => {
+        loadStores();
+      });
+
+      // 초기 매장 로드
+      loadStores();
+    };
+
+    // 네이버 지도 스크립트 로드
+    if (!document.getElementById('naver-map-script')) {
+      const script = document.createElement('script');
+      script.id = 'naver-map-script';
+      script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=y0z49cwule`;
+      script.onload = initMap;
+      document.head.appendChild(script);
+    } else {
+      initMap();
     }
 
-    // 기존 renderMap 모듈 동적 로드
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.src = '/legacy/TLG/pages/main/renderMap.js';
-    script.onload = () => {
-      console.log('✅ renderMap 스크립트 로드 완료');
-      scriptLoadedRef.current = true;
-      
-      // renderMap 함수가 전역으로 export되었다면 호출
-      if (window.renderMap) {
-        window.renderMap();
-      } else {
-        console.error('❌ window.renderMap 함수를 찾을 수 없습니다');
-      }
-    };
-    script.onerror = (err) => {
-      console.error('❌ 지도 모듈 로드 실패:', err);
-    };
-    document.head.appendChild(script);
-
     return () => {
-      // 클린업: 지도 컨트롤러 리셋
-      if (window.mapController && typeof window.mapController.reset === 'function') {
-        window.mapController.reset();
+      // 클린업
+      if (naverMapRef.current) {
+        naverMapRef.current = null;
       }
     };
   }, [isAuthenticated, loading]);
 
-  // 로딩 중
+  // 매장 데이터 로드
+  const loadStores = async () => {
+    if (!naverMapRef.current) return;
+
+    const map = naverMapRef.current;
+    const bounds = map.getBounds();
+    const sw = bounds.getSW();
+    const ne = bounds.getNE();
+
+    try {
+      const response = await fetch(
+        `/api/stores?bbox=${sw.lng()},${sw.lat()},${ne.lng()},${ne.lat()}`
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        setStores(data.stores || []);
+        updateMarkers(data.stores || []);
+      }
+    } catch (error) {
+      console.error('매장 데이터 로드 실패:', error);
+    }
+  };
+
+  // 마커 업데이트
+  const updateMarkers = (storeList) => {
+    // 기존 마커 제거
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+
+    // 새 마커 생성
+    storeList.forEach(store => {
+      if (!store.latitude || !store.longitude) return;
+
+      const marker = new window.naver.maps.Marker({
+        position: new window.naver.maps.LatLng(
+          parseFloat(store.latitude),
+          parseFloat(store.longitude)
+        ),
+        map: naverMapRef.current,
+        title: store.name,
+        icon: {
+          content: `
+            <div class="custom-marker ${store.isOpen ? 'open' : 'closed'}">
+              <div class="marker-inner">${store.name}</div>
+            </div>
+          `,
+          anchor: new window.naver.maps.Point(30, 40),
+        },
+      });
+
+      // 마커 클릭 이벤트
+      window.naver.maps.Event.addListener(marker, 'click', () => {
+        setSelectedStore(store);
+        naverMapRef.current.panTo(marker.getPosition());
+      });
+
+      markersRef.current.push(marker);
+    });
+  };
+
+  // 매장 상세 페이지로 이동
+  const goToStore = (storeId) => {
+    navigate(`/store/${storeId}`);
+  };
+
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh' 
-      }}>
-        <div>로딩 중...</div>
+      <div className="map-loading">
+        <div className="spinner"></div>
+        <p>로딩 중...</p>
       </div>
     );
   }
 
-  // 미인증 시 로그인 페이지로 리다이렉트
   if (!isAuthenticated) {
-    console.log('🚫 MapPage: 인증되지 않음, /login으로 리다이렉트');
     return <Navigate to="/login" replace />;
   }
 
-  return <div id="main" ref={mapContainerRef} />;
+  return (
+    <div className="map-page">
+      {/* 상단 헤더 */}
+      <header className="map-header">
+        <h1>TableLink</h1>
+        <div className="header-actions">
+          <button onClick={() => navigate('/mypage')} className="icon-btn">
+            👤
+          </button>
+        </div>
+      </header>
+
+      {/* 지도 영역 */}
+      <div ref={mapRef} className="map-container"></div>
+
+      {/* 매장 목록 패널 */}
+      <div className={`store-panel ${selectedStore ? 'expanded' : ''}`}>
+        {selectedStore ? (
+          <div className="store-detail">
+            <button 
+              className="close-btn" 
+              onClick={() => setSelectedStore(null)}
+            >
+              ✕
+            </button>
+            <h3>{selectedStore.name}</h3>
+            <p className="category">
+              {selectedStore.category || '분류 없음'}
+            </p>
+            <p className="rating">
+              ⭐ {selectedStore.ratingAverage || '0.0'} ({selectedStore.reviewCount || 0}개 리뷰)
+            </p>
+            <p className="status">
+              {selectedStore.isOpen ? '🟢 영업 중' : '🔴 영업 종료'}
+            </p>
+            <button 
+              className="detail-btn"
+              onClick={() => goToStore(selectedStore.id)}
+            >
+              상세 보기 →
+            </button>
+          </div>
+        ) : (
+          <div className="store-list">
+            <h3>주변 매장 ({stores.length})</h3>
+            <div className="store-cards">
+              {stores.slice(0, 5).map(store => (
+                <div 
+                  key={store.id} 
+                  className="store-card"
+                  onClick={() => setSelectedStore(store)}
+                >
+                  <h4>{store.name}</h4>
+                  <p className="category">{store.category || '분류 없음'}</p>
+                  <p className="rating">
+                    ⭐ {store.ratingAverage || '0.0'}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
