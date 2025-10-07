@@ -159,11 +159,11 @@ export const homeTabView = {
 
     const amenityConfig = {
       wifi: { icon:
-        '<img width="64" height="64" src="https://img.icons8.com/glyph-neue/64/wifi--v1.png" alt="wifi--v1"/>',
+        '<img width="48" height="48" src="https://img.icons8.com/glyph-neue/48/wifi--v1.png" alt="wifi--v1"/>',
              name: 'WiFi' },
       parking: { icon: '<img width="48" height="48" src="https://img.icons8.com/pulsar-line/48/outdoor-parking.png" alt="outdoor-parking"/>', name: '주차' },
-      pet_friendly: { icon: '<img width="50" height="50" src="https://img.icons8.com/ios-filled/50/dog--v1.png" alt="dog--v1"/>', name: '반려동물' },
-      power_outlet: { icon:  '<img width="32" height="32" src="https://img.icons8.com/external-dreamstale-lineal-dreamstale/32/external-socket-ecology-dreamstale-lineal-dreamstale-1.png" alt="external-socket-ecology-dreamstale-lineal-dreamstale-1"/>', name: '콘센트' },
+      pet_friendly: { icon: '<img width="48" height="48" src="https://img.icons8.com/ios-filled/48/dog--v1.png" alt="dog--v1"/>', name: '반려동물' },
+      power_outlet: { icon:  '<img width="48" height="48" src="https://img.icons8.com/external-dreamstale-lineal-dreamstale/48/external-socket-ecology-dreamstale-lineal-dreamstale-1.png" alt="external-socket-ecology-dreamstale-lineal-dreamstale-1"/>', name: '콘센트' },
       smoking_area: { icon:  '<img width="48" height="48" src="https://img.icons8.com/sf-regular/48/smoking.png" alt="smoking"/>', name: '흡연구역' }
     };
 
