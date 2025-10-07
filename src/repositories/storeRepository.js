@@ -183,9 +183,23 @@ class StoreRepository {
    */
   async getStoreAmenities(storeId) {
     const result = await pool.query(`
-    
-    `)
-    
+      SELECT amenities
+      FROM store_info
+      WHERE store_id = $1
+    `, [storeId]);
+
+    if (result.rows.length > 0 && result.rows[0].amenities) {
+      return result.rows[0].amenities;
+    }
+
+    // amenities 정보가 없을 경우 기본값 반환
+    return {
+      wifi: false,
+      parking: false,
+      pet_friendly: false,
+      power_outlet: false,
+      smoking_area: false
+    };
   }
 
   /**
