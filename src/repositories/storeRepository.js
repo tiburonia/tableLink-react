@@ -179,6 +179,16 @@ class StoreRepository {
   }
 
   /**
+   * 매장 편의시설 조회
+   */
+  async getStoreAmenities(storeId) {
+    const result = await pool.query(`
+    
+    `)
+    
+  }
+
+  /**
    * 매장 프로모션 조회 (현재는 더미 데이터)
    */
   async getStorePromotions(storeId) {

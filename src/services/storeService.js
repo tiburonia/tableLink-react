@@ -115,6 +115,9 @@ class StoreService {
     //매장 프로모션 조회 >> store_regular_levels
     const promotion = await storeRepository.getStorePromotion(numericStoreId)
 
+    //매장 편의시설 조회 
+    const amenities = await storeRepository.getStoreAmenities(numericStoreId)
+
 
     if (!store) {
       throw new Error('매장을 찾을 수 없습니다');
@@ -129,7 +132,8 @@ class StoreService {
       menu: menu || [],                    // 메뉴 목록
       tables: table || [],                 // 테이블 정보
       reviews: review || [],               // 최근 리뷰 5개
-      promotions: promotion || [],         // 프로모션/단골레벨 정보
+      promotions: promotion || [], 
+      amenities: amenities || [],          // 프로모션/단골레벨 정보
 
       // 메타 정보
       menuCount: menu ? menu.length : 0,
