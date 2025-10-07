@@ -152,33 +152,25 @@ export const homeTabView = {
   },
 
   /**
-   * 시설정보 섹션 (더미 데이터)
+   * 시설정보 섹션
    */
   renderFacilities(store) {
-    const amenities = store.amenities 
+    const amenitiesData = store.amenities || {};
 
-    const amenitiIcons = {
-      wifi: '📶',
-      parking: '🅿️',
-      pet_friendly: '🐶',
-      power_outlet: '🔌',
-      smoking_area: '🚬'
-    } 
+    const amenityConfig = {
+      wifi: { icon: '📶', name: 'WiFi' },
+      parking: { icon: '🅿️', name: '주차' },
+      pet_friendly: { icon: '🐶', name: '반려동물' },
+      power_outlet: { icon: '🔌', name: '콘센트' },
+      smoking_area: { icon: '🚬', name: '흡연구역' }
+    };
 
-    amenities.map(amenity => {
-      amenities.name = amenities[amenity]
-    })
-
-    amenities.map(amenities => {
-        amenities.available = amenities[amenity] ? true : false
-    })
-
-    amenities.map(amenity => {
-      amenity.icon = amenitiIcons[amenity.name]
-    })
-
-  
-    
+    // 객체를 배열로 변환
+    const amenitiesArray = Object.keys(amenityConfig).map(key => ({
+      name: amenityConfig[key].name,
+      icon: amenityConfig[key].icon,
+      available: amenitiesData[key] === true
+    }));
 
     return `
       <section class="home-section facilities-section">
@@ -189,7 +181,7 @@ export const homeTabView = {
           </h3>
         </div>
         <div class="facilities-grid">
-          ${amenities.map(a => `
+          ${amenitiesArray.map(a => `
             <div class="facility-item ${a.available ? 'available' : 'unavailable'}">
               <span class="facility-icon">${a.icon}</span>
               <span class="facility-name">${a.name}</span>
