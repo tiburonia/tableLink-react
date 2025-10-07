@@ -34,14 +34,23 @@ setupSocketHandlers(io, pool);
 const PORT = process.env.PORT || 5000;
 
 // 레거시 시스템 정적 파일 서빙 (/legacy 경로 매핑)
-app.use('/legacy', express.static(path.join(__dirname, '../legacy')));
 app.use('/legacy/public', express.static(path.join(__dirname, '../legacy/public')));
 app.use('/legacy/shared', express.static(path.join(__dirname, '../shared')));
 app.use('/legacy/TLG', express.static(path.join(__dirname, '../legacy/TLG')));
+app.use('/legacy/pos', express.static(path.join(__dirname, '../legacy/pos')));
+app.use('/legacy/KDS', express.static(path.join(__dirname, '../legacy/KDS')));
 app.use('/legacy/krp', express.static(path.join(__dirname, '../legacy/krp')));
 app.use('/legacy/admin', express.static(path.join(__dirname, '../legacy/admin')));
 app.use('/legacy/tlm-components', express.static(path.join(__dirname, '../legacy/tlm-components')));
 app.use('/legacy/kds', express.static(path.join(__dirname, '../legacy/kds')));
+
+// /legacy/ 요청 시 index.html 제공
+app.get('/legacy', (req, res) => {
+  res.redirect('/legacy/');
+});
+app.get('/legacy/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../legacy/public/index.html'));
+});
 
 // React 빌드 파일 서빙 (프로덕션)
 app.use(express.static(path.join(__dirname, '../dist')));
