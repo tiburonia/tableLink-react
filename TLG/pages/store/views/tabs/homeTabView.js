@@ -167,12 +167,19 @@ export const homeTabView = {
       smoking_area: { icon:  '<img width="48" height="48" src="https://img.icons8.com/sf-regular/48/smoking.png" alt="smoking"/>', name: '흡연구역' }
     };
 
-    // 객체를 배열로 변환
-    const amenitiesArray = Object.keys(amenityConfig).map(key => ({
-      name: amenityConfig[key].name,
-      icon: amenityConfig[key].icon,
-      available: amenitiesData[key] === true
-    }));
+    // 객체를 배열로 변환하고 available이 true인 항목만 필터링
+    const amenitiesArray = Object.keys(amenityConfig)
+      .map(key => ({
+        name: amenityConfig[key].name,
+        icon: amenityConfig[key].icon,
+        available: amenitiesData[key] === true
+      }))
+      .filter(a => a.available === true);
+
+    // 편의시설이 없는 경우 섹션 숨김
+    if (amenitiesArray.length === 0) {
+      return '';
+    }
 
     return `
       <section class="home-section facilities-section">
@@ -184,10 +191,10 @@ export const homeTabView = {
         </div>
         <div class="facilities-grid">
           ${amenitiesArray.map(a => `
-            <div class="facility-item ${a.available ? 'available' : 'unavailable'}">
+            <div class="facility-item available">
               <span class="facility-icon">${a.icon}</span>
               <span class="facility-name">${a.name}</span>
-              <span class="facility-status">${a.available ? '✓' : '✗'}</span>
+              <span class="facility-status">✓</span>
             </div>
           `).join('')}
         </div>
