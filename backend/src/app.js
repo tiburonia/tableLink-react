@@ -68,57 +68,15 @@ app.get('/api', (req, res) => {
   });
 });
 
-// ===== 레거시 시스템 정적 파일 서빙 =====
-// 루트 경로 매핑 (legacy HTML 내부의 절대 경로 처리)
-app.use('/public', express.static(path.join(__dirname, '../../legacy/public')));
-app.use('/shared', express.static(path.join(__dirname, '../../shared')));
-app.use('/TLG', express.static(path.join(__dirname, '../../legacy/TLG')));
-app.use('/pos', express.static(path.join(__dirname, '../../legacy/pos')));
-app.use('/KDS', express.static(path.join(__dirname, '../../legacy/KDS')));
-app.use('/krp', express.static(path.join(__dirname, '../../legacy/krp')));
-app.use('/admin', express.static(path.join(__dirname, '../../legacy/admin')));
-app.use('/tlm-components', express.static(path.join(__dirname, '../../legacy/tlm-components')));
-app.use('/kds', express.static(path.join(__dirname, '../../legacy/kds')));
-
-// /legacy 경로 매핑
-app.use('/legacy/public', express.static(path.join(__dirname, '../../legacy/public')));
-app.use('/legacy/shared', express.static(path.join(__dirname, '../../shared')));
-app.use('/legacy/TLG', express.static(path.join(__dirname, '../../legacy/TLG')));
-app.use('/legacy/pos', express.static(path.join(__dirname, '../../legacy/pos')));
-app.use('/legacy/KDS', express.static(path.join(__dirname, '../../legacy/KDS')));
-app.use('/legacy/krp', express.static(path.join(__dirname, '../../legacy/krp')));
-app.use('/legacy/admin', express.static(path.join(__dirname, '../../legacy/admin')));
-app.use('/legacy/tlm-components', express.static(path.join(__dirname, '../../legacy/tlm-components')));
-app.use('/legacy/kds', express.static(path.join(__dirname, '../../legacy/kds')));
-
-// /legacy 루트 경로 처리
-app.get('/legacy', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../legacy/public/index.html'));
-});
-app.use('/legacy', express.static(path.join(__dirname, '../../legacy/public')));
-
 // ===== React 빌드 파일 서빙 (프로덕션) =====
 app.use(express.static(path.join(__dirname, '../../frontend/dist')));
 
 // ===== SPA 폴백 (React Router 지원) =====
-// API와 레거시 경로 제외, 나머지는 모두 React 앱으로
+// API 경로 제외, 나머지는 모두 React 앱으로
 // Express 5 호환: app.use() 사용
 app.use((req, res, next) => {
-  // API 또는 레거시 경로는 제외
-  if (req.path.startsWith('/api') || req.path.startsWith('/legacy')) {
-    return next();
-  }
-
-  // 레거시 정적 파일 경로 제외
-  if (req.path.startsWith('/public') || 
-      req.path.startsWith('/shared') || 
-      req.path.startsWith('/TLG') || 
-      req.path.startsWith('/pos') || 
-      req.path.startsWith('/KDS') || 
-      req.path.startsWith('/krp') || 
-      req.path.startsWith('/admin') || 
-      req.path.startsWith('/tlm-components') || 
-      req.path.startsWith('/kds')) {
+  // API 경로는 제외
+  if (req.path.startsWith('/api')) {
     return next();
   }
 

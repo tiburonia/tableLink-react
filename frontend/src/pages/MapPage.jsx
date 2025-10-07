@@ -1,11 +1,11 @@
 
-import React, { useEffect, useRef, useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import './MapPage.css';
 
 export default function MapPage() {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const mapRef = useRef(null);
   const naverMapRef = useRef(null);
@@ -15,7 +15,6 @@ export default function MapPage() {
 
   // 네이버 지도 초기화
   useEffect(() => {
-    if (loading || !isAuthenticated) return;
 
     const initMap = () => {
       if (!window.naver || !window.naver.maps) {
@@ -59,7 +58,7 @@ export default function MapPage() {
         naverMapRef.current = null;
       }
     };
-  }, [isAuthenticated, loading]);
+  }, []);
 
   // 매장 데이터 로드
   const loadStores = async () => {
@@ -126,19 +125,6 @@ export default function MapPage() {
   const goToStore = (storeId) => {
     navigate(`/store/${storeId}`);
   };
-
-  if (loading) {
-    return (
-      <div className="map-loading">
-        <div className="spinner"></div>
-        <p>로딩 중...</p>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
 
   return (
     <div className="map-page">

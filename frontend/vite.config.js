@@ -6,14 +6,11 @@ import path from 'path';
 export default defineConfig({
   plugins: [react()],
   root: './src',
-  publicDir: '../../legacy/public',
+  publicDir: false,
   base: '/',
   build: {
     outDir: '../dist',
     emptyOutDir: true,
-    rollupOptions: {
-      external: [/^\/legacy\/TLG\//, /^\/legacy\/KDS\//, /^\/legacy\/pos\//, /^\/legacy\/shared\//]
-    }
   },
   server: {
     port: 5173,

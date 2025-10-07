@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -56,12 +56,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-container">
+    <div className="login-container" data-testid="page-login">
       <div className="login-card">
-        <h1>TableLink</h1>
-        <h2>로그인</h2>
+        <h1 data-testid="text-title">TableLink</h1>
+        <h2 data-testid="text-heading">로그인</h2>
         
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} data-testid="form-login">
           <div className="form-group">
             <label htmlFor="id">아이디</label>
             <input
@@ -71,6 +71,7 @@ export default function LoginPage() {
               value={formData.id}
               onChange={handleChange}
               placeholder="아이디를 입력하세요"
+              data-testid="input-id"
               required
             />
           </div>
@@ -84,20 +85,21 @@ export default function LoginPage() {
               value={formData.pw}
               onChange={handleChange}
               placeholder="비밀번호를 입력하세요"
+              data-testid="input-password"
               required
             />
           </div>
 
-          {error && <div className="error-message">{error}</div>}
+          {error && <div className="error-message" data-testid="text-error">{error}</div>}
 
-          <button type="submit" className="login-btn" disabled={loading}>
+          <button type="submit" className="login-btn" data-testid="button-login" disabled={loading}>
             {loading ? '로그인 중...' : '로그인'}
           </button>
         </form>
 
         <div className="signup-link">
           <p>계정이 없으신가요?</p>
-          <Link to="/signup" className="signup-btn">회원가입</Link>
+          <Link to="/signup" className="signup-btn" data-testid="link-signup">회원가입</Link>
         </div>
       </div>
     </div>
