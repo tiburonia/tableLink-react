@@ -52,27 +52,11 @@ app.get('/legacy', (req, res) => {
 
 app.use('/legacy', express.static(path.join(__dirname, '../legacy/public')));
 
-// React 빌드 파일 서빙 (프로덕션) - /legacy 경로 제외!
-app.use((req, res, next) => {
-  // /legacy 경로는 React static 미들웨어 건너뛰기
-  if (req.path.startsWith('/legacy')) {
-    return next();
-  }
-  express.static(path.join(__dirname, '../frontend/dist'))(req, res, next);
-});
+// React 빌드 파일 서빙 (프로덕션)
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// SPA 폴백 (React Router 지원) - Express 5 호환
-app.get(/^\/.*/, (req, res, next) => {
-  // API 요청은 제외
-  if (req.path.startsWith('/api')) {
-    return next();
-  }
-
-  // 레거시 시스템은 이미 위에서 처리됨
-  if (req.path.startsWith('/legacy')) {
-    return next();
-  }
-
+// SPA 폴백 (React Router 지원) - /api, /legacy 제외
+app.get(/^\/(?!api|legacy).*/, (req, res, next) => {
   // 정적 파일 제외
   if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|html)$/)) {
     return next();
