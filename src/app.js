@@ -26,21 +26,19 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Static file serving
-app.use(express.static('public'));
+// React 앱 빌드 파일 제공 (최우선)
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// 레거시 시스템 정적 파일 (특정 경로만)
+app.use('/public', express.static('public'));
 app.use('/pos', express.static('pos'));
 app.use('/KDS', express.static('KDS'));
-
-// 레거시 TLG 시스템 정적 파일 서빙
 app.use('/shared', express.static(path.join(__dirname, '../shared')));
 app.use('/TLG', express.static(path.join(__dirname, '../TLG')));
 app.use('/krp', express.static(path.join(__dirname, '../krp')));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
 app.use('/kds', express.static(path.join(__dirname, '../kds')));
-
-// React 앱 빌드 파일 제공
-app.use(express.static(path.join(__dirname, '../dist')));
 
 // Health Check
 app.get('/health', (req, res) => {
