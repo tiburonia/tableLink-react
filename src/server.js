@@ -5,6 +5,8 @@ const { Pool } = require('pg');
 const app = require('./app');
 const setupSocketHandlers = require('./socket/handlers');
 const initializeServices = require('./services/init');
+const path = require('path');
+const fs = require('fs');
 
 const PORT = process.env.PORT || 5000;
 
@@ -39,6 +41,75 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
+});
+
+// Express Routes
+// 🔹 레거시 리소스 제공 (React보다 먼저 매칭되도록)
+app.use('/TLG', express.static(path.join(__dirname, '../TLG')));
+app.use('/KDS', express.static(path.join(__dirname, '../KDS')));
+app.use('/pos', express.static(path.join(__dirname, '../pos')));
+app.use('/shared', express.static(path.join(__dirname, '../shared')));
+app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
+app.use('/krp', express.static(path.join(__dirname, '../krp')));
+app.use('/admin', express.static(path.join(__dirname, '../admin')));
+
+// 🔹 정적 파일 제공 (이미지, 폰트 등)
+app.use('/public', express.static(path.join(__dirname, '../public'), {
+  index: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js')) {
+      res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    }
+  }
+}));
+
+// ===========================
+// 🌐 HTML 라우팅
+// ===========================
+
+// 레거시 시스템 HTML 명시적 라우팅
+app.get('/kds.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/kds.html'));
+});
+
+app.get('/pos.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../pos/index.html'));
+});
+
+app.get('/krp.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/krp.html'));
+});
+
+app.get('/admin.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/admin.html'));
+});
+
+app.get('/tlm.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/tlm.html'));
+});
+
+app.get('/toss-success.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/toss-success.html'));
+});
+
+app.get('/toss-fail.html', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/toss-fail.html'));
+});
+
+// React SPA Catch-all (맨 마지막에 위치)
+app.get('*', (req, res) => {
+  // API 요청은 제외
+  if (req.path.startsWith('/api/') ||
+      req.path.startsWith('/socket.io/') ||
+      req.path.startsWith('/sse/')) {
+    return res.status(404).json({
+      success: false,
+      error: 'API endpoint not found'
+    });
+  }
+
+  // React 앱의 index.html 제공
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Start Server
