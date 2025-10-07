@@ -76,9 +76,18 @@ class AuthController {
    */
   async signup(req, res, next) {
     try {
-      const { id, pw, name, phone } = req.body;
+      // React 앱 필드명 + 레거시 필드명 모두 지원
+      const userId = req.body.id || req.body.userId;
+      const password = req.body.pw || req.body.userPassword;
+      const userName = req.body.name || req.body.userName;
+      const userPhone = req.body.phone || req.body.userPhone;
 
-      const newUser = await authService.signup({ id, pw, name, phone });
+      const newUser = await authService.signup({ 
+        id: userId, 
+        pw: password, 
+        name: userName, 
+        phone: userPhone 
+      });
 
       res.json({
         success: true,
@@ -95,9 +104,11 @@ class AuthController {
    */
   async login(req, res, next) {
     try {
-      const { id, pw } = req.body;
+      // React 앱 필드명(userId, userPassword) + 레거시 필드명(id, pw) 모두 지원
+      const userId = req.body.id || req.body.userId;
+      const password = req.body.pw || req.body.userPassword;
 
-      const user = await authService.login(id, pw);
+      const user = await authService.login(userId, password);
 
       res.json({
         success: true,
