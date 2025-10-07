@@ -33,39 +33,6 @@ setupSocketHandlers(io, pool);
 // 포트 설정
 const PORT = process.env.PORT || 5000;
 
-// 레거시 시스템 정적 파일 서빙 (/legacy 경로 매핑)
-// 주의: 순서가 중요! 가장 구체적인 경로부터 먼저 매칭
-app.use('/legacy/public', express.static(path.join(__dirname, '../legacy/public')));
-app.use('/legacy/shared', express.static(path.join(__dirname, '../shared')));
-app.use('/legacy/TLG', express.static(path.join(__dirname, '../legacy/TLG')));
-app.use('/legacy/pos', express.static(path.join(__dirname, '../legacy/pos')));
-app.use('/legacy/KDS', express.static(path.join(__dirname, '../legacy/KDS')));
-app.use('/legacy/krp', express.static(path.join(__dirname, '../legacy/krp')));
-app.use('/legacy/admin', express.static(path.join(__dirname, '../legacy/admin')));
-app.use('/legacy/tlm-components', express.static(path.join(__dirname, '../legacy/tlm-components')));
-app.use('/legacy/kds', express.static(path.join(__dirname, '../legacy/kds')));
-
-// /legacy 루트 경로 처리 - 명시적 라우트 추가
-app.get('/legacy', (req, res) => {
-  res.sendFile(path.join(__dirname, '../legacy/public/index.html'));
-});
-
-app.use('/legacy', express.static(path.join(__dirname, '../legacy/public')));
-
-// React 빌드 파일 서빙 (프로덕션)
-app.use(express.static(path.join(__dirname, '../frontend/dist')));
-
-// SPA 폴백 (React Router 지원) - /api, /legacy 제외
-app.get(/^\/(?!api|legacy).*/, (req, res, next) => {
-  // 정적 파일 제외
-  if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|html)$/)) {
-    return next();
-  }
-
-  // React 앱 index.html 제공
-  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-});
-
 // 서버 시작
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 TableLink Server running on http://0.0.0.0:${PORT}`);

@@ -1,0 +1,40 @@
+Refused to apply style from 'https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/review/css/reviewWrite.css' because its MIME type ('text/html') is not a supported stylesheet MIME type, and strict MIME checking is enabled.Understand this error
+legacy/:75  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/auth/renderLogin.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:79  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/order/renderAllOrderHTML.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:82  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/review/renderReviewWrite.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:87  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/services/favoriteService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:86  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/favoriteButtonView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+renderMyPage.js:43 ✅ renderMyPage 전역 등록 완료 (레이어드 아키텍처)
+5Refused to execute script from '<URL>' because its MIME type ('text/html') is not executable, and strict MIME type checking is enabled.Understand this error
+legacy/:90  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/review/renderAllReview.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:93  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/repositories/reviewDataRepository.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:95  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/controllers/reviewPreviewController.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:94  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/reviewPreviewView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:98  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/promotion/renderPromotionDetail.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:83 Refused to apply style from 'https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/review/css/reviewWrite.css' because its MIME type ('text/html') is not a supported stylesheet MIME type, and strict MIME checking is enabled.Understand this error
+legacy/:114  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/repositories/panelRepository.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:117  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/controllers/panelController.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:116  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/modules/panelView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:115  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/services/panelService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:119  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/services/reviewDataService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:121  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/tabs/homeTabView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:122  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/tabs/menuTabView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:124  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/tabs/storeInfoTabView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:125  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/tabs/regularTabView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:123  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/tabs/reviewTabView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:128  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/services/storeInfoService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:127  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/repositories/storeInfoRepository.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:132  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/services/tableService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:133  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/tableStatusView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:135  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/services/storeEventService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:137  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/controllers/tableController.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:139  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/controllers/tllController.js net::ERR_ABORTED 404 (Not Found)Understand this error
+renderStore.js:109 🔧 renderStore 전역 함수 등록 중...
+renderStore.js:114 ✅ renderStore 전역 등록 완료
+legacy/:129  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/modules/storeAdditionalInfoHTML.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:153  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/views/modules/menuHTML.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:157  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/utils/globalKeyboardEvents.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:158  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/utils/regularLevelManager.js net::ERR_ABORTED 404 (Not Found)Understand this error
+legacy/:131  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/repositories/tableRepository.js net::ERR_ABORTED 404 (Not Found)Understand this error
+storeCache.js:4 ℹ️ 매장 캐시 시스템이 제거되었습니다. 뷰포트 기반 실시간 로딩을 사용합니다.
+legacy/:170  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/utils/authManager.js net::ERR_ABORTED 404 (Not Found)
