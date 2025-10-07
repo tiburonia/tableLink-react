@@ -152,19 +152,37 @@ export const homeTabView = {
   },
 
   /**
-   * 시설정보 섹션
+   * 시설정보 섹션 - 네이티브 앱 스타일
    */
   renderFacilities(store) {
     const amenitiesData = store.amenities || {};
 
     const amenityConfig = {
-      wifi: { icon:
-        '<img width="48" height="48" src="https://img.icons8.com/glyph-neue/48/wifi--v1.png" alt="wifi--v1"/>',
-             name: 'WiFi' },
-      parking: { icon: '<img width="48" height="48" src="https://img.icons8.com/pulsar-line/48/outdoor-parking.png" alt="outdoor-parking"/>', name: '주차' },
-      pet_friendly: { icon: '<img width="48" height="48" src="https://img.icons8.com/ios-filled/48/dog--v1.png" alt="dog--v1"/>', name: '반려동물' },
-      power_outlet: { icon:  '<img width="48" height="48" src="https://img.icons8.com/external-dreamstale-lineal-dreamstale/48/external-socket-ecology-dreamstale-lineal-dreamstale-1.png" alt="external-socket-ecology-dreamstale-lineal-dreamstale-1"/>', name: '콘센트' },
-      smoking_area: { icon:  '<img width="48" height="48" src="https://img.icons8.com/sf-regular/48/smoking.png" alt="smoking"/>', name: '흡연구역' }
+      wifi: { 
+        icon: '📶',
+        name: 'WiFi',
+        color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      },
+      parking: { 
+        icon: '🅿️',
+        name: '주차',
+        color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+      },
+      pet_friendly: { 
+        icon: '🐾',
+        name: '반려동물',
+        color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+      },
+      power_outlet: { 
+        icon: '🔌',
+        name: '콘센트',
+        color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+      },
+      smoking_area: { 
+        icon: '🚬',
+        name: '흡연구역',
+        color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+      }
     };
 
     // 객체를 배열로 변환하고 available이 true인 항목만 필터링
@@ -172,6 +190,7 @@ export const homeTabView = {
       .map(key => ({
         name: amenityConfig[key].name,
         icon: amenityConfig[key].icon,
+        color: amenityConfig[key].color,
         available: amenitiesData[key] === true
       }))
       .filter(a => a.available === true);
@@ -182,19 +201,28 @@ export const homeTabView = {
     }
 
     return `
-      <section class="home-section facilities-section">
+      <section class="home-section facilities-section-native">
         <div class="section-header">
           <h3 class="section-title">
             <span class="section-icon">🏪</span>
             편의시설
           </h3>
+          <div class="facilities-count-badge">
+            ${amenitiesArray.length}개
+          </div>
         </div>
-        <div class="facilities-grid">
-          ${amenitiesArray.map(a => `
-            <div class="facility-item available">
-              <span class="facility-icon">${a.icon}</span>
-              <span class="facility-name">${a.name}</span>
-              <span class="facility-status">✓</span>
+        <div class="facilities-grid-native">
+          ${amenitiesArray.map((a, index) => `
+            <div class="facility-card-native" style="animation-delay: ${index * 0.1}s;">
+              <div class="facility-icon-wrapper" style="background: ${a.color};">
+                <span class="facility-icon-native">${a.icon}</span>
+              </div>
+              <span class="facility-name-native">${a.name}</span>
+              <div class="facility-check-badge">
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M10 3L4.5 8.5L2 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
             </div>
           `).join('')}
         </div>
@@ -469,7 +497,135 @@ export const homeTabView = {
           }
         }
 
-        /* 시설정보 스타일 */
+        /* 네이티브 앱 스타일 편의시설 */
+        .facilities-section-native {
+          background: white;
+          margin-bottom: 12px;
+          padding: 20px 16px;
+          border-radius: 16px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .facilities-section-native .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #f1f3f5;
+        }
+
+        .facilities-count-badge {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          padding: 4px 12px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 700;
+          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .facilities-grid-native {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+          gap: 12px;
+        }
+
+        .facility-card-native {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          padding: 16px 12px;
+          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+          border-radius: 16px;
+          border: 1px solid #e2e8f0;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          animation: facilityFadeIn 0.5s ease-out forwards;
+          opacity: 0;
+          transform: translateY(10px);
+        }
+
+        @keyframes facilityFadeIn {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .facility-card-native:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+          border-color: transparent;
+        }
+
+        .facility-icon-wrapper {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .facility-icon-wrapper::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 50%;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
+          border-radius: 14px 14px 0 0;
+        }
+
+        .facility-icon-native {
+          font-size: 24px;
+          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+          position: relative;
+          z-index: 1;
+        }
+
+        .facility-name-native {
+          font-size: 13px;
+          font-weight: 600;
+          color: #1e293b;
+          text-align: center;
+          line-height: 1.2;
+          margin-top: 4px;
+        }
+
+        .facility-check-badge {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 20px;
+          height: 20px;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+          animation: checkPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes checkPulse {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+          }
+          50% {
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
+          }
+        }
+
+        /* 레거시 스타일 (하위 호환성) */
         .facilities-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -491,11 +647,6 @@ export const homeTabView = {
           background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
         }
 
-        .facility-item.unavailable {
-          opacity: 0.5;
-          filter: grayscale(1);
-        }
-
         .facility-icon {
           font-size: 24px;
         }
@@ -510,14 +661,7 @@ export const homeTabView = {
         .facility-status {
           font-size: 14px;
           font-weight: 700;
-        }
-
-        .facility-item.available .facility-status {
           color: #22c55e;
-        }
-
-        .facility-item.unavailable .facility-status {
-          color: #ef4444;
         }
 
         /* 메뉴 섹션 스타일 */
@@ -550,8 +694,52 @@ export const homeTabView = {
         }
 
         @media (max-width: 480px) {
+          .facilities-grid-native {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
+
+          .facility-card-native {
+            padding: 14px 10px;
+          }
+
+          .facility-icon-wrapper {
+            width: 40px;
+            height: 40px;
+          }
+
+          .facility-icon-native {
+            font-size: 20px;
+          }
+
+          .facility-name-native {
+            font-size: 12px;
+          }
+
+          .facility-check-badge {
+            width: 18px;
+            height: 18px;
+          }
+
+          /* 레거시 */
           .facilities-grid {
             grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        @media (max-width: 360px) {
+          .facilities-grid-native {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+          }
+
+          .facility-card-native {
+            padding: 12px 8px;
+          }
+
+          .facilities-count-badge {
+            font-size: 11px;
+            padding: 3px 10px;
           }
         }
       </style>
