@@ -283,94 +283,42 @@ export const homeTabView = {
       <style>
         .home-tab-container {
           padding: 0;
-          background: linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%);
+          background: #f8f9fa;
         }
 
         .home-section {
           background: white;
-          margin: 0 16px 16px 16px;
-          padding: 24px 20px;
-          border-radius: 20px;
-          box-shadow: 
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            0 2px 8px rgba(0, 0, 0, 0.02);
-          border: 1px solid rgba(0, 0, 0, 0.03);
-          position: relative;
-          overflow: hidden;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        .home-section::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
-          opacity: 0;
-          transition: opacity 0.3s ease;
-        }
-
-        .home-section:hover::before {
-          opacity: 1;
-        }
-
-        .home-section:hover {
-          transform: translateY(-2px);
-          box-shadow: 
-            0 8px 24px rgba(0, 0, 0, 0.08),
-            0 4px 12px rgba(0, 0, 0, 0.04);
+          margin-bottom: 12px;
+          padding: 20px 16px;
+          border-radius: 12px;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
         }
 
         .section-header {
-          margin-bottom: 20px;
-          padding-bottom: 16px;
-          border-bottom: 2px solid #f1f5f9;
-          position: relative;
-        }
-
-        .section-header::after {
-          content: '';
-          position: absolute;
-          bottom: -2px;
-          left: 0;
-          width: 60px;
-          height: 2px;
-          background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
-          border-radius: 2px;
+          margin-bottom: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2px solid #f1f3f5;
         }
 
         .section-title {
           margin: 0;
-          font-size: 19px;
-          font-weight: 800;
-          color: #111827;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1e293b;
           display: flex;
           align-items: center;
-          gap: 10px;
-          letter-spacing: -0.5px;
+          gap: 8px;
         }
 
         .section-icon {
-          font-size: 22px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-          border-radius: 10px;
-          border: 1px solid #bfdbfe;
-          filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.1));
+          font-size: 20px;
         }
 
         /* 요일별 대기시간 스타일 */
         .waiting-times-section {
-          padding: 24px 20px;
+          padding: 20px;
           font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
           position: relative;
-          background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
         }
 
         .waiting-times-section .section-header {
@@ -722,59 +670,30 @@ export const homeTabView = {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 48px 20px;
-          gap: 16px;
-          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-          border-radius: 16px;
-          border: 2px dashed #e2e8f0;
+          padding: 40px 20px;
+          gap: 12px;
         }
 
         .empty-icon {
-          font-size: 56px;
-          opacity: 0.6;
-          filter: grayscale(0.3);
+          font-size: 48px;
+          opacity: 0.5;
         }
 
         .empty-text {
           margin: 0;
-          font-size: 15px;
-          font-weight: 500;
-          color: #64748b;
-          letter-spacing: -0.3px;
+          font-size: 14px;
+          color: #94a3b8;
         }
 
-        /* 테이블 상태 및 리뷰 섹션 */
+        /* 테이블 상태 및 리뷰 섹션은 기존 모듈의 스타일 사용 */
         .table-status-section,
         .review-preview-section {
-          padding: 24px 20px;
-          background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
-          box-shadow: 
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            0 2px 8px rgba(0, 0, 0, 0.02);
+          padding: 0;
+          background: transparent;
+          box-shadow: none;
         }
 
         @media (max-width: 480px) {
-          .home-section {
-            margin: 0 12px 12px 12px;
-            padding: 20px 16px;
-            border-radius: 16px;
-          }
-
-          .section-header {
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-          }
-
-          .section-title {
-            font-size: 17px;
-          }
-
-          .section-icon {
-            font-size: 20px;
-            width: 28px;
-            height: 28px;
-          }
-
           .facilities-grid-native {
             grid-template-columns: repeat(2, 1fr);
             gap: 10px;
@@ -809,26 +728,6 @@ export const homeTabView = {
         }
 
         @media (max-width: 360px) {
-          .home-section {
-            margin: 0 8px 10px 8px;
-            padding: 18px 14px;
-            border-radius: 14px;
-          }
-
-          .section-header {
-            margin-bottom: 14px;
-          }
-
-          .section-title {
-            font-size: 16px;
-          }
-
-          .section-icon {
-            font-size: 18px;
-            width: 26px;
-            height: 26px;
-          }
-
           .facilities-grid-native {
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
