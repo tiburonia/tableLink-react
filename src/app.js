@@ -43,8 +43,13 @@ app.use('/kds', express.static(path.join(__dirname, '../kds')));
 app.use('/react', express.static(path.join(__dirname, '../dist')));
 
 // React 앱 라우팅 (SPA) - Express 5 호환
-app.get('/react/*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+app.use('/react', (req, res, next) => {
+  // 파일이 존재하면 정적 파일 제공, 없으면 index.html 반환
+  if (req.method === 'GET' && !req.path.match(/\.[a-z]+$/i)) {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  } else {
+    next();
+  }
 });
 
 // 루트 경로를 레거시 index.html로 리다이렉트
