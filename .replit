@@ -9,7 +9,6 @@ packages = ["static-web-server", "file"]
 [deployment]
 publicDir = "/"
 deploymentTarget = "static"
-run = ["sh", "-c", "node src/server.js"]
 build = ["sh", "-c", "npm run build"]
 
 [workflows]
@@ -35,6 +34,28 @@ args = "npm install"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "node src/server.js"
+
+[[workflows.workflow]]
+name = "React Dev Server"
+author = 41585131
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "Full Stack Dev"
+author = 41585131
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node src/server.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
 
 [[ports]]
 localPort = 80
