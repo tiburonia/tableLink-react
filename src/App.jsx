@@ -31,7 +31,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter basename="/react">
+        <BrowserRouter>
           <Routes>
             {/* 인증 페이지 */}
             <Route path="/login" element={<LoginPage />} />
