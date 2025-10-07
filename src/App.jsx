@@ -1,55 +1,62 @@
 
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css';
 
-// Legacy JS 모듈을 마운트하는 Wrapper 컴포넌트
-function LegacyModuleWrapper({ modulePath, renderFn }) {
-  const containerRef = useRef(null);
+// Pages
+import LoginPage from './pages/LoginPage';
+import SignUpPage from './pages/SignUpPage';
+import MapPage from './pages/MapPage';
+import StorePage from './pages/StorePage';
+import MyPage from './pages/MyPage';
+import OrderPage from './pages/OrderPage';
+import PaymentPage from './pages/PaymentPage';
+import NotFoundPage from './pages/NotFoundPage';
 
-  useEffect(() => {
-    // 기존 Vanilla JS 모듈 동적 로드
-    import(`../${modulePath}`).then(mod => {
-      if (mod[renderFn]) {
-        mod[renderFn]();
-      }
-    }).catch(err => {
-      console.error(`Failed to load ${modulePath}:`, err);
-    });
-  }, [modulePath, renderFn]);
+// Providers
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './contexts/AuthContext';
 
-  return <div id="main" ref={containerRef} />;
-}
-
-// 임시 로그인 페이지 (Phase 2에서 React로 전환 예정)
-function LoginPage() {
-  return (
-    <LegacyModuleWrapper 
-      modulePath="TLG/pages/auth/renderLogin.js" 
-      renderFn="renderLogin" 
-    />
-  );
-}
-
-// 임시 메인 페이지 (Phase 3에서 React로 전환 예정)
-function MainPage() {
-  return (
-    <LegacyModuleWrapper 
-      modulePath="TLG/pages/main/renderMap.js" 
-      renderFn="renderMap" 
-    />
-  );
-}
+// React Query 클라이언트 설정
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5분
+      retry: 1,
+    },
+  },
+});
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LoginPage />} />
-        <Route path="/map" element={<MainPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* 인증 페이지 */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+
+            {/* 메인 페이지 */}
+            <Route path="/map" element={<MapPage />} />
+            
+            {/* 매장 페이지 */}
+            <Route path="/store/:storeId" element={<StorePage />} />
+            
+            {/* 마이페이지 */}
+            <Route path="/mypage" element={<MyPage />} />
+            
+            {/* 주문/결제 */}
+            <Route path="/order/:storeId" element={<OrderPage />} />
+            <Route path="/payment" element={<PaymentPage />} />
+            
+            {/* 기본 라우팅 */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 

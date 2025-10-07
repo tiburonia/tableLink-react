@@ -12,7 +12,7 @@ deploymentTarget = "static"
 build = ["sh", "-c", "npm run build"]
 
 [workflows]
-runButton = "TableLink Server"
+runButton = "React Dev"
 
 [[workflows.workflow]]
 name = "TableLink Server"
@@ -37,6 +37,19 @@ args = "node src/server.js"
 
 [[workflows.workflow]]
 name = "Full Stack Dev"
+author = 41585131
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node src/server.js"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+
+[[workflows.workflow]]
+name = "React Dev"
 author = 41585131
 mode = "parallel"
 
