@@ -26,10 +26,8 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// React 앱 빌드 파일 제공
-app.use('/react', express.static(path.join(__dirname, '../dist')));
-
 // 레거시 시스템 정적 파일
+app.use('/legacy', express.static('public'));
 app.use('/public', express.static('public'));
 app.use('/pos', express.static('pos'));
 app.use('/KDS', express.static('KDS'));
@@ -39,6 +37,9 @@ app.use('/krp', express.static(path.join(__dirname, '../krp')));
 app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
 app.use('/kds', express.static(path.join(__dirname, '../kds')));
+
+// React 앱 빌드 파일 제공 (루트)
+app.use(express.static(path.join(__dirname, '../dist')));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -132,14 +133,14 @@ try {
   console.error('세부 내용:', error.message);
 }
 
-// React 앱 SPA 라우팅 (모든 /react/* 경로를 index.html로)
-app.get(/^\/react\/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+// 레거시 시스템 라우팅
+app.get('/legacy', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
-// 루트 경로는 레거시 시스템으로
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+// React 앱 SPA 라우팅 (API, 레거시 경로 제외하고 모든 경로를 React로)
+app.get(/^\/(?!api|legacy|public|pos|KDS|shared|TLG|krp|admin|tlm-components|kds|health).*/, (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // KRP 진입을 위한 루트 라우트 설정
