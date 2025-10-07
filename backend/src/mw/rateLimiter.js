@@ -14,7 +14,12 @@ const rateLimiter = rateLimit({
     }
   },
   standardHeaders: true, // `RateLimit-*` 헤더 반환
-  legacyHeaders: false // `X-RateLimit-*` 헤더 비활성화
+  legacyHeaders: false, // `X-RateLimit-*` 헤더 비활성화
+  // Replit 환경 (프록시 뒤) 설정
+  validate: {
+    trustProxy: false, // trust proxy 검증 비활성화
+    xForwardedForHeader: false // X-Forwarded-For 검증 비활성화
+  }
 });
 
 module.exports = { rateLimiter };

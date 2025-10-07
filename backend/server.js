@@ -46,8 +46,8 @@ app.use('/legacy/kds', express.static(path.join(__dirname, '../legacy/kds')));
 // React 빌드 파일 서빙 (프로덕션)
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// SPA 폴백 (React Router 지원)
-app.get('*', (req, res, next) => {
+// SPA 폴백 (React Router 지원) - Express 5 호환
+app.get(/^\/.*/, (req, res, next) => {
   // API 요청은 제외
   if (req.path.startsWith('/api')) {
     return next();

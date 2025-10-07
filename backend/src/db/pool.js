@@ -43,15 +43,16 @@ async function queryWithRetry(text, params, maxRetries = 3) {
   }
 }
 
-// 연결 테스트
-pool.connect((err, client, release) => {
-  if (err) {
-    console.error('❌ PostgreSQL 연결 실패:', err.stack);
-  } else {
+// 연결 테스트 (비동기)
+(async () => {
+  try {
+    const client = await pool.connect();
     console.log('✅ PostgreSQL 연결 테스트 성공');
-    release();
+    client.release();
+  } catch (err) {
+    console.error('❌ PostgreSQL 연결 실패:', err.stack);
   }
-});
+})();
 
 module.exports = pool;
 module.exports.queryWithRetry = queryWithRetry;

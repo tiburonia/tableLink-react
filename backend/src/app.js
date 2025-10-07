@@ -25,6 +25,9 @@ const { rateLimiter } = require('./mw/rateLimiter');
 
 const app = express();
 
+// 프록시 신뢰 설정 (Replit 환경)
+app.set('trust proxy', true);
+
 // 미들웨어 설정
 app.use(cors()); // CORS 허용
 app.use(express.json()); // JSON 본문 파싱
