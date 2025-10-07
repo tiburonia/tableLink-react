@@ -397,3 +397,6 @@ async function renderLogin() {
 if (typeof window !== 'undefined') {
   window.renderLogin = renderLogin;
 }
+
+// ES6 export (React 통합용)
+export default renderLogin;
