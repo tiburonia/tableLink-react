@@ -98,21 +98,7 @@ app.get('/toss-fail.html', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/toss-fail.html'));
 });
 
-// React SPA Catch-all (맨 마지막에 위치)
-app.use((req, res, next) => {
-  // API 요청은 제외
-  if (req.path.startsWith('/api/') ||
-      req.path.startsWith('/socket.io/') ||
-      req.path.startsWith('/sse/')) {
-    return res.status(404).json({
-      success: false,
-      error: 'API endpoint not found'
-    });
-  }
-
-  // React 앱의 index.html 제공
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+// React SPA 라우팅은 app.js에서 처리됨
 
 // Start Server
 server.listen(PORT, '0.0.0.0', () => {
