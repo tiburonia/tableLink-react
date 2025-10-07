@@ -98,11 +98,9 @@ export function setupLoginFormEvents() {
 
         alert(`${data.user.name}님, 환영합니다!`);
 
-        if (typeof renderMap === 'function') {
-          renderMap();
-        } else {
-          window.location.href = '/';
-        }
+        // React Router 라우팅으로 전환
+        console.log('🔄 React Router로 전환: /react/map');
+        window.location.href = '/react/map';
       } else {
         hideLoadingScreen();
         throw new Error(data.error || data.message || '로그인에 실패했습니다');

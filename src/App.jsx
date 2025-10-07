@@ -94,7 +94,7 @@ function MainPage() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/react">
       <Routes>
         <Route path="/" element={<LoginPage />} />
         <Route path="/map" element={<MainPage />} />

@@ -26,8 +26,13 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Static file serving
-app.use(express.static('public'));
+// 루트 경로를 React 앱으로 리다이렉트 (static보다 먼저 처리)
+app.get('/', (req, res) => {
+  res.redirect('/react/');
+});
+
+// Static file serving (index.html 자동 서빙 비활성화)
+app.use(express.static('public', { index: false }));
 app.use('/pos', express.static('pos'));
 app.use('/KDS', express.static('KDS'));
 
@@ -50,11 +55,6 @@ app.use('/react', (req, res, next) => {
   } else {
     next();
   }
-});
-
-// 루트 경로를 레거시 index.html로 리다이렉트
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 // Health Check
