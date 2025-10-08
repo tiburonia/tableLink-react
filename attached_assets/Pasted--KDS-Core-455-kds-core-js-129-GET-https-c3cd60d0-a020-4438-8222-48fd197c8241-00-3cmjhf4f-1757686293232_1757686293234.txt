@@ -1,0 +1,75 @@
+🚀 KDS Core 시작: 매장 455
+kds-core.js:129  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/stations?store_id=455 500 (Internal Server Error)
+fetchStations @ kds-core.js:129
+loadInitialData @ kds-core.js:68
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this error
+kds-core.js:151 ❌ 스테이션 조회 실패: Error: HTTP 500: Internal Server Error
+    at KDSCore.fetchStations (kds-core.js:132:15)
+    at async Promise.allSettled (:5000/kds/index 1)
+    at async KDSCore.loadInitialData (kds-core.js:72:5)
+    at async KDSCore.initialize (kds-core.js:43:7)
+    at async Object.init (kds-controller.js:21:27)
+    at async HTMLDocument.<anonymous> (kds.js:76:5)
+fetchStations @ kds-core.js:151
+await in fetchStations
+loadInitialData @ kds-core.js:68
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this error
+kds-core.js:584 ⚠️ 재시도 1/3: HTTP 500: Internal Server Error
+handleError @ kds-core.js:584
+fetchStations @ kds-core.js:152
+await in fetchStations
+loadInitialData @ kds-core.js:68
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this warning
+kds-core.js:159  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/dashboard?store_id=455 500 (Internal Server Error)
+fetchDashboard @ kds-core.js:159
+loadInitialData @ kds-core.js:69
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this error
+kds-core.js:176 ❌ 대시보드 조회 실패: Error: HTTP 500: Internal Server Error
+    at KDSCore.fetchDashboard (kds-core.js:162:15)
+    at async Promise.allSettled (:5000/kds/index 2)
+    at async KDSCore.loadInitialData (kds-core.js:72:5)
+    at async KDSCore.initialize (kds-core.js:43:7)
+    at async Object.init (kds-controller.js:21:27)
+    at async HTMLDocument.<anonymous> (kds.js:76:5)
+fetchDashboard @ kds-core.js:176
+await in fetchDashboard
+loadInitialData @ kds-core.js:69
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this error
+kds-core.js:584 ⚠️ 재시도 2/3: HTTP 500: Internal Server Error
+handleError @ kds-core.js:584
+fetchDashboard @ kds-core.js:177
+await in fetchDashboard
+loadInitialData @ kds-core.js:69
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this warning
+kds-core.js:86  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/tickets?store_id=455&status=PENDING%2CCOOKING 500 (Internal Server Error)
+fetchTickets @ kds-core.js:86
+loadInitialData @ kds-core.js:67
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this error
+kds-core.js:121 ❌ 티켓 조회 실패: Error: HTTP 500: Internal Server Error
+    at KDSCore.fetchTickets (kds-core.js:89:15)
+    at async Promise.allSettled (:5000/kds/index 0)
+    at async KDSCore.loadInitialData (kds-core.js:72:5)
+    at async KDSCore.initialize (kds-core.js:43:7)
+    at async Object.init (kds-controller.js:21:27)
+    at async HTMLDocument.<anonymous> (kds.js:76:5)
+fetchTickets @ kds-core.js:121
+await in fetchTickets
+loadInitialData @ kds-core.js:67
+initialize @ kds-core.js:43
+init @ kds-controller.js:21
+(anonymous) @ kds.js:76Understand this error
+kds-core.js:581 ❌ 최대 재시도 횟수 초과 (3회)

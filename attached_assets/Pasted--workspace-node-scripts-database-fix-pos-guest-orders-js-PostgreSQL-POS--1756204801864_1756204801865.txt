@@ -1,0 +1,53 @@
+~/workspace$ node scripts/database/fix-pos-guest-orders.js
+✅ PostgreSQL 데이터베이스 연결 
+🔄 POS 게스트 주문 지원을 위한 orders 테이블 수정 시작...
+✅ orders.guest_phone 컬럼 추가 완료
+✅ 기존 제약조건 제거 완료
+✅ 새로운 제약조건 추가 완료
+✅ guest_phone 인덱스 추가 완료
+
+📊 수정된 orders 테이블 구조:
+  - id (integer) NOT NULL DEFAULT nextval('orders_id_seq'::regclass)
+  - store_id (integer) NOT NULL 
+  - user_id (character varying) NULL 
+  - table_number (integer) NULL 
+  - order_data (jsonb) NOT NULL 
+  - total_amount (integer) NOT NULL 
+  - discount_amount (integer) NULL DEFAULT 0
+  - final_amount (integer) NOT NULL 
+  - payment_method (character varying) NULL DEFAULT 'card'::character varying
+  - order_status (character varying) NULL DEFAULT 'pending'::character varying
+  - order_date (timestamp without time zone) NULL DEFAULT CURRENT_TIMESTAMP
+  - completed_at (timestamp without time zone) NULL 
+  - created_at (timestamp without time zone) NULL DEFAULT CURRENT_TIMESTAMP
+  - table_unique_id (character varying) NULL 
+  - original_amount (integer) NULL 
+  - used_point (integer) NULL DEFAULT 0
+  - coupon_discount (integer) NULL DEFAULT 0
+  - order_source (USER-DEFINED) NULL DEFAULT 'TLL'::order_source_enum
+  - payment_status (character varying) NULL DEFAULT 'pending'::character varying
+  - payment_date (timestamp without time zone) NULL 
+  - guest_phone (character varying) NULL 
+  - store_name (character varying) NULL 
+❌ orders 테이블 수정 실패: error: column "consrc" does not exist
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async fixPOSGuestOrders (/home/runner/workspace/scripts/database/fix-pos-guest-orders.js:59:31) {
+  length: 210,
+  severity: 'ERROR',
+  code: '42703',
+  detail: undefined,
+  hint: 'Perhaps you meant to reference the column "pg_constraint.conkey" or the column "pg_constraint.conbin".',
+  position: '24',
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'parse_relation.c',
+  line: '3743',
+  routine: 'errorMissingColumn'
+}

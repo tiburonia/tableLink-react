@@ -1,0 +1,15 @@
+GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/services/favoriteService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):68  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/favoriteButtonView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+TLL.js:1037 🔧 TLL 함수 전역 등록 시작...
+TLL.js:1041 ✅ TLL 함수가 이미 등록되어 있음
+(index):71  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/renderAllReview.js net::ERR_ABORTED 404 (Not Found)Understand this error
+renderReviewWrite.js:6 Uncaught SyntaxError: Cannot use import statement outside a module (at renderReviewWrite.js:6:1)Understand this error
+VM41720 favoriteButtonView.js:5 Uncaught SyntaxError: Unexpected token 'export' (at VM41720 favoriteButtonView.js:5:1)Understand this error
+VM41721 favoriteService.js:8 Uncaught SyntaxError: await is only valid in async functions and the top level bodies of modules (at VM41721 favoriteService.js:8:22)Understand this error
+reviewDataRepository.js:5 Uncaught SyntaxError: Unexpected token 'export' (at reviewDataRepository.js:5:1)Understand this error
+reviewPreviewView.js:5 Uncaught SyntaxError: Unexpected token 'export' (at reviewPreviewView.js:5:1)Understand this error
+reviewPreviewController.js:5 Uncaught SyntaxError: Cannot use import statement outside a module (at reviewPreviewController.js:5:1)Understand this error
+(index):80  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/repositories/reviewDataRepository.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):81  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/services/reviewDataService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):83  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/controllers/reviewPreviewController.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):82  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/views/reviewPreviewView.js net::ERR_ABORTED 404 (Not Found)

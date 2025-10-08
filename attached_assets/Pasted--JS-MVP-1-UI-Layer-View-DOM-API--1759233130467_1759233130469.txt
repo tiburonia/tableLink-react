@@ -1,0 +1,128 @@
+📌 바닐라 JS 레이어드 아키텍처 (MVP 프론트 기준)
+1. UI Layer (View)
+
+역할: DOM 조작, 화면 렌더링
+
+특징: 비즈니스 로직, API 호출 없음 → 화면 그리기만
+
+예시:
+
+// views/renderMain.js
+export function renderMain(storeList) {
+  const main = document.querySelector('#app');
+  main.innerHTML = storeList.map(store => `
+    <div class="store-card">${store.name}</div>
+  `).join('');
+}
+
+2. Controller (이벤트 & 흐름 제어)
+
+역할: 버튼 클릭 → 서비스 호출 → 뷰 업데이트
+
+특징: UI 이벤트와 Service 연결 담당
+
+예시:
+
+// controllers/storeController.js
+import { getStores } from '../services/storeService.js';
+import { renderMain } from '../views/renderMain.js';
+
+export async function showMainPage() {
+  const stores = await getStores();
+  renderMain(stores);
+}
+
+3. Service Layer (비즈니스 로직)
+
+역할: “무슨 데이터를 가져와서 어떻게 가공할지” 담당
+
+특징: 여러 repository 조합, 데이터 변환, 조건 처리
+
+예시:
+
+// services/storeService.js
+import { storeRepository } from '../repositories/storeRepository.js';
+
+export async function getStores() {
+  const data = await storeRepository.fetchAll();
+  return data.map(store => ({
+    id: store.id,
+    name: store.name,
+    status: store.status
+  }));
+}
+
+4. Repository Layer (데이터 접근)
+
+역할: API 호출, localStorage 접근, DB 조회 등
+
+특징: 오직 데이터 소스 접근만 담당 (로직 없음)
+
+예시:
+
+// repositories/storeRepository.js
+export const storeRepository = {
+  async fetchAll() {
+    const res = await fetch('/api/stores');
+    return await res.json();
+  }
+};
+
+5. Core/Utils (공통 모듈)
+
+역할: 헬퍼 함수, 에러 처리, 상태 저장
+
+예시:
+
+// utils/state.js
+export const appState = {
+  currentUser: null,
+  cart: []
+};
+
+📂 폴더 구조 예시
+/src
+  /controllers
+    storeController.js
+    orderController.js
+  /services
+    storeService.js
+    orderService.js
+  /repositories
+    storeRepository.js
+    orderRepository.js
+  /views
+    renderMain.js
+    renderCart.js
+  /utils
+    state.js
+    helpers.js
+  app.js (진입점)
+
+📌 장점
+
+의존성 방향이 명확함
+Repository → Service → Controller → View
+(위에서 아래로만 호출, 반대로는 안 감)
+
+테스트/리팩토링 편리
+
+API 바꾸면 repository만 수정
+
+화면 바꾸면 view만 수정
+
+흐름 바꾸면 controller만 수정
+
+실제 서비스 아키텍처와 유사
+지금 경험이 나중에 React/Vue/Flutter/SPA 전환할 때 그대로 적용 가능
+
+👉 결론:
+바닐라 JS 프론트에서도 백엔드랑 똑같이 레이어드 아키텍처 적용 가능
+
+View: 화면 그리기
+
+Controller: 이벤트/흐름 제어
+
+Service: 비즈니스 로직
+
+Repository: 데이터 소스 접근

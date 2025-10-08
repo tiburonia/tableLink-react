@@ -1,0 +1,93 @@
+~/workspace$ node scripts/database/import-sql-dump.js schema-export-2025-09-07T07-38-47-953Z.sql
+📂 SQL 덤프 파일 적용 시작
+ ✅ PostgreSQL 새 연결 생성
+
+🗑️ 기존 데이터베이스 완전 초기화...
+🚨 TableLink 데이터베이스 완전 초기화 시작
+⚠️  이 작업은 되돌릴 수 없습니다!
+📊 모든 사용자 데이터와 테이블이 완전히 삭제됩니다.
+
+🔍 1단계: 현재 데이터베이스 상태 분석...
+✅ PostgreSQL 새 연결 생성
+✅ PostgreSQL 데이터베이스 연결 성공
+✅ PostgreSQL 새 연결 생성
+  📊 사용자 테이블: 0개
+  👁️ 사용자 뷰: 0개
+  📋 사용자 ENUM 타입: 0개
+
+🗂️ 2단계: 모든 사용자 데이터 삭제...
+  📊 총 0개 테이블 데이터 삭제 완료
+
+🗑️ 3단계: 사용자 테이블 삭제...
+  📊 삭제 대상 테이블: 0개
+  📊 총 0개 테이블 삭제 완료
+
+👁️ 4단계: 사용자 뷰 삭제...
+  📊 총 0개 뷰 삭제 완료
+
+📋 5단계: 사용자 ENUM 타입 삭제...
+  📊 총 0개 ENUM 타입 삭제 완료
+
+🔧 6단계: 사용자 함수 삭제...
+  ✅ FUNCTION 삭제: batch_sync_all_users()
+  ✅ FUNCTION 삭제: calc_check_total()
+  ✅ FUNCTION 삭제: calculate_regular_level()
+  ✅ FUNCTION 삭제: issue_level_benefits()
+  ✅ FUNCTION 삭제: sync_store_users_level_data()
+  ✅ FUNCTION 삭제: sync_user_level_data()
+  ✅ FUNCTION 삭제: update_user_store_stats()
+  ✅ FUNCTION 삭제: update_user_store_stats()
+  ⚠️ FUNCTION 삭제 실패: uuid_generate_v1 - cannot drop function uuid_generate_v1() because extension uuid-ossp requires it
+  ⚠️ FUNCTION 삭제 실패: uuid_generate_v1mc - cannot drop function uuid_generate_v1mc() because extension uuid-ossp requires it
+  ✅ FUNCTION 삭제: uuid_generate_v3()
+  ⚠️ FUNCTION 삭제 실패: uuid_generate_v4 - cannot drop function uuid_generate_v4() because extension uuid-ossp requires it
+  ✅ FUNCTION 삭제: uuid_generate_v5()
+  ⚠️ FUNCTION 삭제 실패: uuid_nil - cannot drop function uuid_nil() because extension uuid-ossp requires it
+  ⚠️ FUNCTION 삭제 실패: uuid_ns_dns - cannot drop function uuid_ns_dns() because extension uuid-ossp requires it
+  ⚠️ FUNCTION 삭제 실패: uuid_ns_oid - cannot drop function uuid_ns_oid() because extension uuid-ossp requires it
+  ⚠️ FUNCTION 삭제 실패: uuid_ns_url - cannot drop function uuid_ns_url() because extension uuid-ossp requires it
+  ⚠️ FUNCTION 삭제 실패: uuid_ns_x500 - cannot drop function uuid_ns_x500() because extension uuid-ossp requires it
+  📊 총 10개 함수/프로시저 삭제 완료
+
+✅ 7단계: 최종 정리 및 검증...
+  📊 정리 후 상태:
+    - 사용자 테이블: 0개
+    - 사용자 뷰: 0개
+    - 사용자 ENUM 타입: 0개
+  ✅ 데이터베이스가 완전히 정리되었습니다!
+  🛡️ PostGIS 시스템 구성 요소는 보존되었습니다.
+
+🎉 데이터베이스 완전 초기화 성공!
+📊 현재 데이터베이스는 완전히 비어있는 상태입니다.
+🔄 새로운 스키마를 생성하려면 다음 명령을 실행하세요:
+   node shared/config/init-db.js
+
+📖 SQL 파일 읽는 중: schema-export-2025-09-07T07-38-47-953Z.sql
+
+⚡ SQL 덤프 적용 중...
+  📊 1/805 문장 처리 중...
+⚠️ 문장 실행 실패 (12): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (13): syntax error at or near "Schema"
+⚠️ 문장 실행 실패 (14): syntax error at or near "Owner"
+⚠️ 문장 실행 실패 (16): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (17): syntax error at or near "Schema"
+⚠️ 문장 실행 실패 (18): syntax error at or near "Owner"
+⚠️ 문장 실행 실패 (19): current transaction is aborted, commands ignored until end of transaction block
+⚠️ 문장 실행 실패 (20): current transaction is aborted, commands ignored until end of transaction block
+⚠️ 문장 실행 실패 (22): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (23): syntax error at or near "Schema"
+⚠️ 문장 실행 실패 (24): syntax error at or near "Owner"
+⚠️ 문장 실행 실패 (26): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (27): syntax error at or near "Schema"
+⚠️ 문장 실행 실패 (28): syntax error at or near "Owner"
+⚠️ 문장 실행 실패 (30): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (31): syntax error at or near "Schema"
+⚠️ 문장 실행 실패 (32): syntax error at or near "Owner"
+⚠️ 문장 실행 실패 (34): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (35): syntax error at or near "Schema"
+⚠️ 문장 실행 실패 (36): syntax error at or near "Owner"
+⚠️ 문장 실행 실패 (38): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (39): syntax error at or near "Schema"
+⚠️ 문장 실행 실패 (40): syntax error at or near "Owner"
+⚠️ 문장 실행 실패 (42): syntax error at or near "Type"
+⚠️ 문장 실행 실패 (43): syntax error at or near "Schema"

@@ -1,0 +1,151 @@
+📊 현재 데이터베이스 스키마 상세 확인 중...
+
+🏗️ 현재 존재하는 테이블들:
+  - adjustments
+  - administrative_offices
+  - carts
+  - check_items
+  - checks
+  - coupon_issues
+  - coupons
+  - favorites
+  - geography_columns
+  - geometry_columns
+  - guests
+  - item_option_groups
+  - kds_screen_stations
+  - kds_screens
+  - line_options
+  - menu_groups
+  - menu_items
+  - notifications
+  - option_groups
+  - options
+  - order_events
+  - order_lines
+  - orders
+  - orders_backup
+  - paid_orders_view
+  - payment_allocations
+  - payments
+  - points_ledger
+  - prep_stations
+  - print_jobs
+  - printers
+  - promotions
+  - qr_codes
+  - qr_sessions
+  - regular_level_benefit_issues
+  - regular_level_history
+  - regular_levels
+  - reservations
+  - reviews
+  - roles
+  - spatial_ref_sys
+  - staff
+  - staff_roles
+  - store_address
+  - store_holidays
+  - store_hours
+  - store_tables
+  - stores
+  - terminals
+  - user_paid_orders_view
+  - user_store_stats
+  - users
+  - waitlists
+  - webhook_events
+  - webhooks
+
+✅ PostgreSQL 데이터베이스 연결 
+⚠️ stores 테이블이 존재하지 않음
+⚠️ store_address 테이블이 존재하지 않음
+⚠️ store_tables 테이블이 존재하지 않음
+⚠️ users 테이블이 존재하지 않음
+⚠️ checks 테이블이 존재하지 않음
+⚠️ check_items 테이블이 존재하지 않음
+⚠️ payments 테이블이 존재하지 않음
+⚠️ guests 테이블이 존재하지 않음
+⚠️ reviews 테이블이 존재하지 않음
+🔗 외래키 제약조건:
+  - adjustments.check_id → checks.id
+  - adjustments.line_id → order_lines.id
+  - carts.store_id → stores.id
+  - carts.user_id → users.id
+  - checks.store_id → stores.id
+  - checks.user_id → users.id
+  - coupon_issues.coupon_id → coupons.id
+  - coupon_issues.user_id → users.id
+  - coupons.store_id → stores.id
+  - favorites.store_id → stores.id
+  - favorites.user_id → users.id
+  - item_option_groups.group_id → option_groups.id
+  - item_option_groups.item_id → menu_items.id
+  - kds_screen_stations.screen_id → kds_screens.id
+  - kds_screen_stations.station_id → prep_stations.id
+  - kds_screens.store_id → stores.id
+  - kds_screens.terminal_id → terminals.id
+  - line_options.line_id → order_lines.id
+  - line_options.option_id → options.id
+  - menu_groups.store_id → stores.id
+  - menu_items.group_id → menu_groups.id
+  - menu_items.station_id → prep_stations.id
+  - menu_items.store_id → stores.id
+  - notifications.store_id → stores.id
+  - notifications.user_id → users.id
+  - option_groups.store_id → stores.id
+  - options.group_id → option_groups.id
+  - order_events.check_id → checks.id
+  - order_events.line_id → order_lines.id
+  - order_events.order_id → orders.id
+  - order_lines.menu_id → menu_items.id
+  - order_lines.order_id → orders.id
+  - orders.check_id → checks.id
+  - payment_allocations.line_id → order_lines.id
+  - payment_allocations.payment_id → payments.id
+  - payments.check_id → checks.id
+  - points_ledger.related_check_id → checks.id
+  - points_ledger.store_id → stores.id
+  - points_ledger.user_id → users.id
+  - prep_stations.store_id → stores.id
+  - print_jobs.printer_id → printers.id
+  - print_jobs.store_id → stores.id
+  - printers.store_id → stores.id
+  - printers.target_station_id → prep_stations.id
+  - promotions.store_id → stores.id
+  - qr_codes.store_id → stores.id
+  - qr_sessions.check_id → checks.id
+  - qr_sessions.qr_id → qr_codes.id
+  - qr_sessions.user_id → users.id
+  - regular_level_benefit_issues.level_id → regular_levels.id
+  - regular_level_history.from_level_id → regular_levels.id
+  - regular_level_history.to_level_id → regular_levels.id
+  - reservations.store_id → stores.id
+  - reservations.user_id → users.id
+  - reviews.check_id → checks.id
+  - reviews.store_id → stores.id
+  - reviews.user_id → users.id
+  - roles.store_id → stores.id
+  - staff.store_id → stores.id
+  - staff_roles.role_id → roles.id
+  - staff_roles.staff_id → staff.id
+  - store_address.store_id → stores.id
+  - store_holidays.store_id → stores.id
+  - store_hours.store_id → stores.id
+  - store_tables.store_id → stores.id
+  - terminals.store_id → stores.id
+  - user_store_stats.store_id → stores.id
+  - user_store_stats.user_id → users.id
+  - waitlists.store_id → stores.id
+  - waitlists.user_id → users.id
+  - webhook_events.webhook_id → webhooks.id
+  - webhooks.store_id → stores.id
+
+📊 현재 데이터 상태:
+  - stores: 1개
+  - users: 1개
+  - store_address: 1개
+  - store_tables: 10개
+  - checks: 0개
+  - reviews: 0개
+~/workspace$ 
