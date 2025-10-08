@@ -1,0 +1,291 @@
+좋아, **KDS(주방 디스플레이)**랑 **KRP(주방 프린터)**를 TL 표준으로 설계해줄게. TLL(웹/앱 주문)·POS(카운터)까지 한 번에 물리는 구조로.
+
+목표
+
+하나의 체크(check) 안에서 여러 번 주문 → 주방 처리 → 픽업/서빙 → 결제가 자연스럽게 흐르도록.
+
+주문은 check_items, 조리는 KDS 티켓/아이템, 출력은 KRP print_jobs로 분리.
+
+TLL·POS 어디서 들어오든 같은 파이프라인으로 처리.
+
+전체 아키텍처(요약)
+
+주문 계층: checks, check_items, payments(기존 유지, 결제는 “확정 시점” 생성 권장)
+
+KDS 계층: kds_tickets, kds_ticket_items, kds_events, kds_stations, kds_station_routes
+
+KRP 계층: printers, print_jobs, print_events, print_templates
+
+실시간 전송: 초기엔 폴링(updated_since), 이후 SSE/WS 옵션
+
+소스 표기: source_system = TLL | POS | ADMIN …
+
+상태(State) 정의
+아이템(KDS) 상태 머신
+
+PENDING(주문접수) → COOKING(조리중) → DONE(완료) → EXPO(픽업대 도착/합판) → SERVED(서빙/수령)
+
+보조 상태: HOLD(보류), CANCELED(취소/환불)
+
+티켓(KDS) 상태
+
+OPEN(미시작) / IN_PROGRESS / READY(티켓 내 모든 아이템 DONE) / BUMPED(보드에서 내림)
+
+프린트(KRP) 상태
+
+QUEUED → PRINTING → SUCCESS / FAILED(retry N회) / CANCELED
+
+데이터 모델(DDL 초안)
+1) 스테이션 & 라우팅
+-- 주방 스테이션 (볶음, 튀김, 바, 익스포 등)
+CREATE TABLE kds_stations (
+  id SERIAL PRIMARY KEY,
+  store_id INT NOT NULL,
+  name TEXT NOT NULL,           -- "FRY", "WOK", "EXPO" 등
+  code TEXT UNIQUE,             -- 단축코드
+  is_expo BOOLEAN DEFAULT FALSE,
+  default_printer_id INT,       -- 기본 출력 프린터(선택)
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 메뉴 → 스테이션 라우팅 (카테고리/메뉴 단위 매핑)
+CREATE TABLE kds_station_routes (
+  id SERIAL PRIMARY KEY,
+  store_id INT NOT NULL,
+  menu_id INT,                  -- or nullable + category_id로도 확장
+  category_id INT,
+  station_id INT NOT NULL,
+  prep_sec INT DEFAULT 0,       -- 예상 조리시간
+  UNIQUE (store_id, menu_id, category_id, station_id)
+);
+
+2) KDS 티켓/아이템/이벤트
+-- 스테이션별 묶음(한 번의 "파이어" 단위, add-on은 course_no 증가)
+CREATE TABLE kds_tickets (
+  id SERIAL PRIMARY KEY,
+  store_id INT NOT NULL,
+  check_id INT NOT NULL,
+  station_id INT NOT NULL,
+  course_no INT DEFAULT 1,           -- 1차 주문, 2차 추가주문…
+  status TEXT NOT NULL DEFAULT 'OPEN',  -- OPEN/IN_PROGRESS/READY/BUMPED
+  priority INT DEFAULT 0,            -- 우선순위(홀 요청 등)
+  source_system TEXT NOT NULL,       -- 'TLL'/'POS'
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  fired_at TIMESTAMP,
+  ready_at TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE kds_ticket_items (
+  id SERIAL PRIMARY KEY,
+  ticket_id INT NOT NULL,
+  check_item_id INT NOT NULL,
+  menu_id INT,
+  menu_name TEXT NOT NULL,
+  quantity INT NOT NULL DEFAULT 1,
+  options JSONB NOT NULL DEFAULT '{}',
+  kds_status TEXT NOT NULL DEFAULT 'PENDING', -- PENDING/COOKING/DONE/EXPO/SERVED/HOLD/CANCELED
+  cook_station TEXT,                 -- 캐시용("FRY" 등)
+  est_prep_sec INT DEFAULT 0,
+  notes TEXT,
+  started_at TIMESTAMP,
+  done_at TIMESTAMP,
+  expo_at TIMESTAMP,
+  served_at TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 상태 변경/이력(실시간 동기화와 회고 분석용)
+CREATE TABLE kds_events (
+  id BIGSERIAL PRIMARY KEY,
+  store_id INT NOT NULL,
+  ticket_id INT,
+  ticket_item_id INT,
+  event_type TEXT NOT NULL,          -- ITEM_STARTED/ITEM_DONE/TICKET_READY/VOID/REPRINT 등
+  payload JSONB DEFAULT '{}',
+  actor_type TEXT,                   -- 'KDS_DEVICE'/'USER'/'SYSTEM'
+  actor_id TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+3) KRP 프린터/잡
+CREATE TABLE printers (
+  id SERIAL PRIMARY KEY,
+  store_id INT NOT NULL,
+  name TEXT NOT NULL,                -- "주방1", "바", "익스포"
+  type TEXT NOT NULL,                -- 'ESCPOS_NET'/'ESCPOS_USB'/'CLOUD_AGENT'
+  conn_uri TEXT,                     -- ip:port, usb path, agent id 등
+  status TEXT DEFAULT 'ONLINE',      -- ONLINE/OFFLINE/UNKNOWN
+  last_seen TIMESTAMP
+);
+
+CREATE TABLE print_jobs (
+  id BIGSERIAL PRIMARY KEY,
+  store_id INT NOT NULL,
+  printer_id INT NOT NULL,
+  ref_type TEXT NOT NULL,            -- 'TICKET'/'TICKET_ITEM'/'CHECK'
+  ref_id INT NOT NULL,
+  job_type TEXT NOT NULL,            -- 'NEW_ORDER'/'ADD_ON'/'VOID'/'READY_SLIP'/'REPRINT'
+  template_code TEXT NOT NULL,       -- 'KITCHEN_A5'/'CHIT_58MM' 등
+  payload JSONB NOT NULL,            -- 렌더링에 필요한 데이터(메뉴, 수량, 옵션 등)
+  status TEXT NOT NULL DEFAULT 'QUEUED',
+  attempts INT NOT NULL DEFAULT 0,
+  last_error TEXT,
+  idempotency_key TEXT,              -- 중복 방지
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+4) 기존 테이블 보강(권장)
+-- check_items에 KDS용 컬럼(경량 캐시) 추가: 조인 줄이고 즉시성↑
+ALTER TABLE check_items
+  ADD COLUMN kds_status TEXT DEFAULT 'PENDING',
+  ADD COLUMN station_id INT,
+  ADD COLUMN course_no INT DEFAULT 1,
+  ADD COLUMN fired_at TIMESTAMP,
+  ADD COLUMN started_at TIMESTAMP,
+  ADD COLUMN done_at TIMESTAMP;
+
+-- payments는 1:N 허용(분할결제 대응). 생성 시점은 "결제 확정"에.
+-- 결제 분석용 표준 컬럼 추천(브랜드, 승인번호 등)
+ALTER TABLE payments
+  ADD COLUMN provider TEXT,          -- 'TOSS','CARD','NFC','CASH'...
+  ADD COLUMN card_brand TEXT,
+  ADD COLUMN approval_no TEXT,
+  ADD COLUMN is_refund BOOLEAN DEFAULT FALSE;
+
+핵심 플로우
+A. 주문 인입(TLL/POS 공통)
+
+/api/orders/create (혹은 현재의 /api/tll/orders)
+
+check_items에 라인 추가
+
+라우팅 규칙으로 station_id, course_no 계산
+
+스테이션별로 kds_tickets upsert(같은 check_id+station_id+course_no면 append)
+
+kds_ticket_items 생성
+
+KRP: 스테이션별 NEW_ORDER 또는 ADD_ON print_jobs 큐잉
+
+KDS 이벤트: ITEM_CREATED, TICKET_OPENED 기록
+
+장점: TLL이든 POS든 동일 파이프라인. 주방은 소스에 관심 없음.
+
+B. KDS 작업
+
+스테이션 화면: PENDING 리스트 → 시작(Start) 누르면 COOKING
+
+아이템 완료: DONE → 티켓 내 전부 DONE이면 티켓 READY
+
+EXPO 화면(is_expo=TRUE): 각 스테이션 READY 아이템 모아 합판(Pickup) 관리
+
+모든 스테이션 아이템 합쳐지면 픽업 슬립(job_type=READY_SLIP) 자동 출력(옵션)
+
+서빙/수령 시 SERVED 처리, 티켓 BUMPED
+
+C. 취소/수정/재출력
+
+POS나 TLL에서 취소/수정 → 해당 kds_ticket_items 상태 CANCELED → VOID 슬립 자동 출력
+
+프린터 장애 시 print_jobs.status='FAILED' → 백오프 재시도 & 대시보드에서 재출력 버튼
+
+D. 결제
+
+선결제(TLL 기본): “결제하기” 시점에 payments 생성(pending → completed).
+
+복수 주문 후 일괄 결제 옵션 필요 시(미래): 티켓/아이템 상태와 무관하게 check 합산 금액으로 1건 결제 생성.
+
+결제 완료 시 checks.status='closed' + 테이블 해제.
+
+API 설계(예시)
+
+GET /api/kds/tickets?store_id=&station_id=&status=&updated_since=ts
+
+GET /api/kds/tickets/:id/items
+
+PATCH /api/kds/items/:id body: { action: "start|done|hold|cancel" }
+
+PATCH /api/kds/tickets/:id body: { action: "start_all|complete_all|bump|unbump|raise_priority" }
+
+GET /api/kds/expo?store_id=&updated_since=ts
+
+POST /api/print/jobs/:id/retry / POST /api/print/test
+
+실시간:
+
+(초기) updated_since 폴링(2~3초)
+
+(후속) GET /api/kds/stream (SSE) or /ws/kds (WS)
+
+KRP(프린팅) 구현 전략
+
+클라우드 서버 → 로컬 KRP-Agent(라즈베리파이/윈도PC) → 유선/무선 프린터
+
+Agent가 주기적으로 print_jobs 폴링 → 템플릿 렌더 → ESC/POS 전송
+
+장애 시: 상태 업데이트 + 관리자 대시보드 알림 + 재시도
+
+템플릿 타입:
+
+NEW_ORDER(스테이션별 초도 티켓)
+
+ADD_ON(추가주문)
+
+VOID(취소)
+
+READY_SLIP(익스포/픽업 안내)
+
+CUSTOMER_RECEIPT(필요시)
+
+운영 포인트(현장 UX)
+
+Add-on 시각화: KDS에 “ADD-ON” 배지, 프린트에 “ADD-ON” 헤더 인쇄
+
+우선순위(PRIO): 홀/관리자 앱에서 요청 시 티켓 priority↑
+
+알러지/옵션 크게: KDS 카드/프린트 템플릿에서 옵션은 굵고 크게
+
+타이머: PENDING→COOKING→DONE까지 경과 시간 표시(스테이션 KPI)
+
+리프린트: Expo/KDS에서 “재출력” 원터치
+
+TLL·POS 연동 포인트
+
+소스 라벨: source_system로 주문 출처 명확화(TLL/POSTerminal)
+
+권한: POS는 CANCEL, VOID, DISCOUNT 가능 범위를 더 넓힘
+
+정산: POS 대시보드에서 READY/SERVED 상태와 결제 상태 교차검증(누락 방지)
+
+KRP와 TLR(리텐션) 연결 아이디어(선택)
+
+픽업 지연(EXPO 대기시간 초과) → 사용자 푸시/쿠폰 트리거(다음 방문 할인)
+
+조리 리드타임 데이터 → 혼잡 시간대에 사전 쿠폰 제한/예약 분산 전략에 활용
+
+이행(마이그레이션) 제안
+
+kds_stations, kds_station_routes 먼저 생성 → 최소 라우팅 구성
+
+kds_tickets, kds_ticket_items, kds_events 생성
+
+주문 인입 훅에서 티켓 생성 로직 연결(TLL/POS 공통)
+
+printers, print_jobs + 간단 템플릿/로컬 Agent PoC
+
+KDS 화면: 폴링 버전으로 시작 → 안정화 후 SSE/WS 전환
+
+점차 check_items 컬럼 캐시(fired_at, kds_status, station_id) 활용해 쿼리 최적화
+
+왜 이 구조가 좋은가
+
+소스 중립: TLL·POS 어디서 오든 KDS/KRP 경로 동일
+
+확장/복원력: 이벤트/프린트 잡 분리로 장애에도 복구 쉽고, 재처리 용이
+
+분석 가능: KDS 이벤트 기반으로 리드타임, 병목, 피크타임 데이터 축적
+
+현장 적합: Add-on, 취소/재출력, 우선순위 등 실전 운영 니즈 커버

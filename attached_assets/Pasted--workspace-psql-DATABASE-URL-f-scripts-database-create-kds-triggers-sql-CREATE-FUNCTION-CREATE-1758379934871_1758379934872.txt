@@ -1,0 +1,35 @@
+~/workspace$ psql $DATABASE_URL -f scripts/database/create-kds-triggers.sql
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+CREATE FUNCTION
+psql:scripts/database/create-kds-triggers.sql:203: NOTICE:  trigger "orders_kds_notify" for relation "orders" does not exist, skipping
+DROP TRIGGER
+psql:scripts/database/create-kds-triggers.sql:207: ERROR:  trigger "orders_kds_notify" for relation "orders" already exists
+psql:scripts/database/create-kds-triggers.sql:210: NOTICE:  trigger "orders_session_close" for relation "orders" does not exist, skipping
+DROP TRIGGER
+psql:scripts/database/create-kds-triggers.sql:211: NOTICE:  trigger "orders_session_status_trigger" for relation "orders" does not exist, skipping
+DROP TRIGGER
+psql:scripts/database/create-kds-triggers.sql:218: ERROR:  trigger "orders_session_close" for relation "orders" already exists
+psql:scripts/database/create-kds-triggers.sql:221: NOTICE:  trigger "order_tickets_kds_notify" for relation "order_tickets" does not exist, skipping
+DROP TRIGGER
+psql:scripts/database/create-kds-triggers.sql:225: ERROR:  trigger "order_tickets_kds_notify" for relation "order_tickets" already exists
+psql:scripts/database/create-kds-triggers.sql:228: NOTICE:  trigger "order_items_kds_notify" for relation "order_items" does not exist, skipping
+DROP TRIGGER
+psql:scripts/database/create-kds-triggers.sql:232: ERROR:  trigger "order_items_kds_notify" for relation "order_items" already exists
+psql:scripts/database/create-kds-triggers.sql:235: NOTICE:  trigger "payments_kds_notify" for relation "payments" does not exist, skipping
+DROP TRIGGER
+CREATE TRIGGER
+psql:scripts/database/create-kds-triggers.sql:242: NOTICE:  relation "idx_order_tickets_status" already exists, skipping
+CREATE INDEX
+psql:scripts/database/create-kds-triggers.sql:243: NOTICE:  relation "idx_order_items_status" already exists, skipping
+CREATE INDEX
+psql:scripts/database/create-kds-triggers.sql:244: NOTICE:  relation "idx_payments_status" already exists, skipping
+CREATE INDEX
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+COMMENT
+~/workspace$

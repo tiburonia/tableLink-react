@@ -1,0 +1,78 @@
+🚀 TableLink KDS v3.0 시작
+VM1447 kds.js:41 ✅ KDS 메인 스크립트 로드 완료
+kds-controller.js:1 Uncaught SyntaxError: Identifier 'KDSController' has already been declared (at kds-controller.js:1:1)Understand this error
+kds.js:1 Uncaught SyntaxError: Identifier 'kds' has already been declared (at kds.js:1:1)Understand this error
+VM1446 kds-controller.js:18 📟 KDS 컨트롤러 초기화 시작, 매장 ID: 2
+kds-core.js:18  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/stations?store_id=2 500 (Internal Server Error)
+loadStations @ kds-core.js:18
+loadStations @ VM1446 kds-controller.js:36
+init @ VM1446 kds-controller.js:21
+(anonymous) @ VM1447 kds.js:21Understand this error
+kds-core.js:28 ❌ 스테이션 로딩 실패: Error: 스테이션 조회 실패
+    at KDSDataManager.loadStations (kds-core.js:25:23)
+    at async KDSController.loadStations (kds-controller.js:36:30)
+    at async KDSController.init (kds-controller.js:21:13)
+loadStations @ kds-core.js:28
+await in loadStations
+loadStations @ VM1446 kds-controller.js:36
+init @ VM1446 kds-controller.js:21
+(anonymous) @ VM1447 kds.js:21Understand this error
+VM1446 kds-controller.js:49 ❌ 스테이션 로딩 실패: Error: 스테이션 조회 실패
+    at KDSDataManager.loadStations (kds-core.js:25:23)
+    at async KDSController.loadStations (kds-controller.js:36:30)
+    at async KDSController.init (kds-controller.js:21:13)
+loadStations @ VM1446 kds-controller.js:49
+await in loadStations
+init @ VM1446 kds-controller.js:21
+(anonymous) @ VM1447 kds.js:21Understand this error
+kds-core.js:39  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/tickets?store_id=2&station_id=null&updated_since=0 500 (Internal Server Error)
+loadTickets @ kds-core.js:39
+loadTickets @ VM1446 kds-controller.js:70
+init @ VM1446 kds-controller.js:22
+await in init
+(anonymous) @ VM1447 kds.js:21Understand this error
+kds-core.js:54 ❌ 티켓 로딩 실패: Error: 티켓 조회 실패
+    at KDSDataManager.loadTickets (kds-core.js:51:23)
+    at async KDSController.loadTickets (kds-controller.js:70:33)
+    at async KDSController.init (kds-controller.js:22:13)
+loadTickets @ kds-core.js:54
+await in loadTickets
+loadTickets @ VM1446 kds-controller.js:70
+init @ VM1446 kds-controller.js:22
+await in init
+(anonymous) @ VM1447 kds.js:21Understand this error
+VM1446 kds-controller.js:77 ❌ 티켓 로딩 실패: Error: 티켓 조회 실패
+    at KDSDataManager.loadTickets (kds-core.js:51:23)
+    at async KDSController.loadTickets (kds-controller.js:70:33)
+    at async KDSController.init (kds-controller.js:22:13)
+loadTickets @ VM1446 kds-controller.js:77
+await in loadTickets
+init @ VM1446 kds-controller.js:22
+await in init
+(anonymous) @ VM1447 kds.js:21Understand this error
+VM1446 kds-controller.js:27 ✅ KDS 컨트롤러 초기화 완료
+kds-core.js:109 🔌 KDS 실시간 연결 성공
+kds-core.js:39  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/tickets?store_id=2&station_id=null&updated_since=0 500 (Internal Server Error)
+loadTickets @ kds-core.js:39
+loadTickets @ VM1446 kds-controller.js:70
+(anonymous) @ VM1446 kds-controller.js:183
+setInterval
+setupAutoRefresh @ VM1446 kds-controller.js:182
+init @ VM1446 kds-controller.js:25
+await in init
+(anonymous) @ VM1447 kds.js:21Understand this error
+kds-core.js:54 ❌ 티켓 로딩 실패: Error: 티켓 조회 실패
+    at KDSDataManager.loadTickets (kds-core.js:51:23)
+    at async KDSController.loadTickets (kds-controller.js:70:33)
+loadTickets @ kds-core.js:54
+await in loadTickets
+loadTickets @ VM1446 kds-controller.js:70
+(anonymous) @ VM1446 kds-controller.js:183
+setInterval
+setupAutoRefresh @ VM1446 kds-controller.js:182
+init @ VM1446 kds-controller.js:25
+await in init
+(anonymous) @ VM1447 kds.js:21Understand this error
+VM1446 kds-controller.js:77 ❌ 티켓 로딩 실패: Error: 티켓 조회 실패
+    at KDSDataManager.loadTickets (kds-core.js:51:23)
+    at async KDSController.loadTickets (kds-controller.js:70:33)

@@ -1,0 +1,177 @@
+🔹 전체 구조 분석
+1️⃣ 상단 헤더 영역
+
+시간, 네트워크 상태 (기기 기본 표시)
+
+앱 내부 헤더:
+
+왼쪽: 로그인해주세요 > (비로그인 상태)
+
+오른쪽: ⚙️ (설정 버튼)
+
+2️⃣ 예약/이용예정 카드
+
+😢 이모지 + “이용 예정인 내역이 없어요.” 문구
+
+하단에 버튼: 내 주변 매장 보러가기
+
+(배경 살짝 회색톤, 둥근 모서리 카드 형태)
+
+3️⃣ 결제 섹션
+
+제목: “결제”
+
+리스트형 메뉴:
+
+결제 내역
+
+테이블링 간편결제 관리
+
+테이블링페이 머니 관리
+
+4️⃣ 이용 정보 섹션
+
+제목: “이용 정보”
+
+리스트형 메뉴:
+
+내 리뷰
+
+원픽 리뷰
+
+이용 내역
+
+5️⃣ 하단 네비게이션 바
+
+홈 / 내주변 / 관심매장 / 내정보
+
+선택된 탭(내정보)은 강조 표시
+
+🔹 HTML + CSS 기본 예시 구조
+
+아래는 네이티브 앱처럼 보이게 만드는 웹용 HTML/CSS 예시야:
+
+<!-- mypage.html -->
+<div class="mypage-container">
+  <header class="mypage-header">
+    <span class="login-link">로그인해 주세요 ></span>
+    <button class="settings-btn">⚙️</button>
+  </header>
+
+  <section class="mypage-reserve-card">
+    <div class="reserve-icon">😢</div>
+    <p class="reserve-text">이용 예정인 내역이 없어요.</p>
+    <button class="reserve-btn">📍 내 주변 매장 보러가기</button>
+  </section>
+
+  <section class="mypage-section">
+    <h3>결제</h3>
+    <ul class="menu-list">
+      <li>결제 내역</li>
+      <li>테이블링 간편결제 관리</li>
+      <li>테이블링페이 머니 관리</li>
+    </ul>
+  </section>
+
+  <section class="mypage-section">
+    <h3>이용 정보</h3>
+    <ul class="menu-list">
+      <li>내 리뷰</li>
+      <li>원픽 리뷰</li>
+      <li>이용 내역</li>
+    </ul>
+  </section>
+
+  <nav class="bottom-nav">
+    <button>🏠 홈</button>
+    <button>🔍 내주변</button>
+    <button>⭐ 관심매장</button>
+    <button class="active">👤 내정보</button>
+  </nav>
+</div>
+
+/* mypage.css */
+body {
+  margin: 0;
+  font-family: 'Pretendard', sans-serif;
+  background-color: #fafafa;
+}
+
+.mypage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  font-weight: 600;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+}
+
+.mypage-reserve-card {
+  text-align: center;
+  background-color: #fff;
+  border-radius: 12px;
+  margin: 16px;
+  padding: 24px 12px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.reserve-icon { font-size: 28px; margin-bottom: 8px; }
+.reserve-text { color: #555; margin-bottom: 12px; }
+.reserve-btn {
+  border: none;
+  background-color: #f1f3f5;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.mypage-section {
+  background-color: #fff;
+  margin-top: 16px;
+  padding: 16px;
+  border-top: 1px solid #eee;
+}
+
+.mypage-section h3 {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-list li {
+  padding: 14px 0;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: #fff;
+  display: flex;
+  justify-content: space-around;
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+}
+
+.bottom-nav button {
+  background: none;
+  border: none;
+  font-size: 14px;
+}
+
+.bottom-nav .active {
+  color: #007aff;
+  font-weight: 600;
+}
+
+
+이 디자인은 네이티브앱 느낌을 웹에서 그대로 재현한 형태야.

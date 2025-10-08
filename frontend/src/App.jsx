@@ -1,20 +1,9 @@
-
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import LoginPage from './pages/LoginPage'
-import SignUpPage from './pages/SignUpPage'
-import MapPage from './pages/MapPage'
-import './App.css'
-
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/map" element={<MapPage />} />
-      </Routes>
-    </Router>
+    <div className="app">
+      <h1>TableLink</h1>
+      <p>React 앱을 처음부터 만ㅇㅇㅇ들어보세요!</p>
+    </div>
   )
 }
 

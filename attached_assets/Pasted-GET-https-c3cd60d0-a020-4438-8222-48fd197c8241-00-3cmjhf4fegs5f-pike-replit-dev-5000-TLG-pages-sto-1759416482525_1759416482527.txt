@@ -1,0 +1,14 @@
+GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/views/css/reviewWrite.css net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):52  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/services/favoriteService.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):53  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/favoriteButtonView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):91  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/promotion/renderPromotionDetail.js net::ERR_ABORTED 404 (Not Found)Understand this error
+renderMyPage.js:43 ✅ renderMyPage 전역 등록 완료 (레이어드 아키텍처)
+TLL.js:1037 🔧 TLL 함수 전역 등록 시작...
+TLL.js:1041 ✅ TLL 함수가 이미 등록되어 있음
+(index):37  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/order/renderAllOrderHTML.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):41  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/renderReviewWrite.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):56  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/renderAllReview.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):68  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/controllers/reviewPreviewController.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):67  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/views/reviewPreviewView.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):65  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/TLG/pages/store/review/repositories/reviewDataRepository.js net::ERR_ABORTED 404 (Not Found)Understand this error
+(index):66 

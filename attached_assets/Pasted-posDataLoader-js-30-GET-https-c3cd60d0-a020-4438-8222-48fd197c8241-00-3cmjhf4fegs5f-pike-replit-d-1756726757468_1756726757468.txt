@@ -1,0 +1,41 @@
+posDataLoader.js:30  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/pos/stores/1/menu 500 (Internal Server Error)
+loadStoreMenus @ posDataLoader.js:30
+loadStoreForTableMap @ renderPOS.js:53
+await in loadStoreForTableMap
+renderPOS @ renderPOS.js:30
+(anonymous) @ pos.html?storeId=1:111Understand this error
+posDataLoader.js:49 ❌ 매장 메뉴 로드 실패: Error: POS 메뉴 조회 실패
+    at POSDataLoader.loadStoreMenus (posDataLoader.js:34:15)
+    at async Promise.all (:5000/index 0)
+    at async loadStoreForTableMap (renderPOS.js:52:5)
+    at async renderPOS (renderPOS.js:30:7)
+loadStoreMenus @ posDataLoader.js:49
+await in loadStoreMenus
+loadStoreForTableMap @ renderPOS.js:53
+await in loadStoreForTableMap
+renderPOS @ renderPOS.js:30
+(anonymous) @ pos.html?storeId=1:111Understand this error
+renderPOS.js:59 ✅ 매장 테스트 매장 로드 완료
+renderPOS.js:37 ✅ TableLink POS 시스템 초기화 완료
+posTableManager.js:75 🪑 테이블 undefined 선택
+posDataLoader.js:105 📊 테이블 undefined 주문 로드 시작 (새 스키마)
+posDataLoader.js:107  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/pos/stores/1/table/undefined/all-orders 500 (Internal Server Error)
+loadTableOrders @ posDataLoader.js:107
+loadTableOrders @ posOrderManager.js:13
+switchToOrderView @ renderPOS.js:90
+selectTableFromMap @ renderPOS.js:72
+await in selectTableFromMap
+onclick @ pos.html?storeId=1:1Understand this error
+posDataLoader.js:137 ❌ 테이블 주문 로드 실패: Error: 테이블 주문 조회 실패
+    at POSDataLoader.loadTableOrders (posDataLoader.js:111:15)
+    at async POSOrderManager.loadTableOrders (posOrderManager.js:13:29)
+    at async switchToOrderView (renderPOS.js:90:3)
+    at async selectTableFromMap (renderPOS.js:72:5)
+loadTableOrders @ posDataLoader.js:137
+await in loadTableOrders
+loadTableOrders @ posOrderManager.js:13
+switchToOrderView @ renderPOS.js:90
+selectTableFromMap @ renderPOS.js:72
+await in selectTableFromMap
+onclick @ pos.html?storeId=1:1Understand this error
+posOrderManager.js:22 📭 테이블 undefined 주문 없음

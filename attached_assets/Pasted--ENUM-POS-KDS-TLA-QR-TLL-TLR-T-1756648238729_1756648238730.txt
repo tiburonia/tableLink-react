@@ -1,0 +1,730 @@
+실행 순서: ENUM/기본확장 → 코어 레퍼런스 → 스토어/주소/테이블 → 메뉴/옵션 → 주문/결제/POS/KDS → 접근(TLA) → QR(TLL) → 로열티/프로모션(TLR/TLP) → 리뷰/즐겨찾기 → 장바구니 → 직원/TLM/단말 → 알림 → 뷰/함수/트리거.
+
+0) 기본 준비 (확장 & ENUM)
+-- (선택) 유니크 키 생성용
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- ENUMs
+DO $$ BEGIN
+  CREATE TYPE check_status AS ENUM ('open','closed','canceled');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE order_status AS ENUM ('pending','confirmed','void');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE item_status  AS ENUM ('queued','cooking','ready','served','canceled');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE pay_status   AS ENUM ('authorized','paid','void','refunded','failed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE channel_type AS ENUM ('DINE_IN','TAKEOUT','DELIVERY');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE source_type  AS ENUM ('POS','TLL','ADMIN');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE adj_scope AS ENUM ('CHECK','LINE');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE adj_type  AS ENUM ('COUPON','PROMO','MANUAL','POINT');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE value_type AS ENUM ('amount','percent');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+1) 코어 레퍼런스 (유저/게스트)
+-- 사용자
+CREATE TABLE IF NOT EXISTS users (
+  id               VARCHAR(50) PRIMARY KEY,
+  pw               VARCHAR(255) NOT NULL,
+  name             VARCHAR(100),
+  phone            VARCHAR(20) UNIQUE,
+  email            VARCHAR(255) UNIQUE,
+  birth            DATE,
+  gender           VARCHAR(10),
+  address          VARCHAR(500),
+  detail_address   VARCHAR(255),
+  point            INT DEFAULT 0,
+  email_notifications BOOLEAN DEFAULT true,
+  sms_notifications   BOOLEAN DEFAULT true,
+  push_notifications  BOOLEAN DEFAULT false,
+  created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 게스트(전화번호 기반)
+CREATE TABLE IF NOT EXISTS guests (
+  id        BIGSERIAL PRIMARY KEY,
+  phone     VARCHAR(20) NOT NULL UNIQUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+2) 스토어/주소/테이블/영업시간
+-- 매장
+CREATE TABLE IF NOT EXISTS stores (
+  id              BIGSERIAL PRIMARY KEY,
+  name            VARCHAR(255) NOT NULL,
+  category        VARCHAR(100),
+  is_open         BOOLEAN DEFAULT true,
+  rating_average  NUMERIC(3,2),
+  review_count    INT DEFAULT 0,
+  favorite_count  INT DEFAULT 0,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 매장 주소/좌표
+CREATE TABLE IF NOT EXISTS store_address (
+  id           BIGSERIAL PRIMARY KEY,
+  store_id     BIGINT NOT NULL UNIQUE REFERENCES stores(id) ON DELETE CASCADE,
+  address_full VARCHAR(500),
+  sido         VARCHAR(50),
+  sigungu      VARCHAR(50),
+  eupmyeondong VARCHAR(100),
+  latitude     NUMERIC(10,8),
+  longitude    NUMERIC(11,8),
+  region_code  VARCHAR(20),
+  updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 테이블(좌석)
+CREATE TABLE IF NOT EXISTS store_tables (
+  id             BIGSERIAL PRIMARY KEY,
+  store_id       BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  table_number   INT NOT NULL,
+  table_name     VARCHAR(50) NOT NULL,
+  seats          INT NOT NULL,
+  is_occupied    BOOLEAN DEFAULT false,
+  occupied_since TIMESTAMP,
+  auto_release_source VARCHAR(20),
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(store_id, table_number)
+);
+
+-- 영업시간
+CREATE TABLE IF NOT EXISTS store_hours (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  dow       INT NOT NULL CHECK (dow BETWEEN 0 AND 6), -- 0=Sun
+  open_time TIME NOT NULL,
+  close_time TIME NOT NULL,
+  is_closed BOOLEAN DEFAULT false,
+  UNIQUE(store_id, dow)
+);
+
+-- 휴무일
+CREATE TABLE IF NOT EXISTS store_holidays (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  holiday_date DATE NOT NULL,
+  reason    VARCHAR(200),
+  UNIQUE(store_id, holiday_date)
+);
+
+3) 메뉴/옵션/프린터 스테이션(조리파트)
+-- 조리 스테이션(KDS 라우팅용)
+CREATE TABLE IF NOT EXISTS prep_stations (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  code      VARCHAR(50) NOT NULL,     -- FRY/GRILL/DRINK 등
+  name      VARCHAR(100) NOT NULL,
+  is_active BOOLEAN DEFAULT true,
+  UNIQUE(store_id, code)
+);
+
+-- 메뉴 카테고리
+CREATE TABLE IF NOT EXISTS menu_groups (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  name      VARCHAR(100) NOT NULL,
+  sort_order INT DEFAULT 0
+);
+
+-- 메뉴 아이템
+CREATE TABLE IF NOT EXISTS menu_items (
+  id          BIGSERIAL PRIMARY KEY,
+  store_id    BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  group_id    BIGINT REFERENCES menu_groups(id) ON DELETE SET NULL,
+  name        VARCHAR(255) NOT NULL,
+  price       INT NOT NULL,
+  station_id  BIGINT REFERENCES prep_stations(id) ON DELETE SET NULL,
+  is_active   BOOLEAN DEFAULT true,
+  description TEXT,
+  image_url   TEXT,
+  sort_order  INT DEFAULT 0
+);
+
+-- 옵션 그룹 (Size/Spice 등)
+CREATE TABLE IF NOT EXISTS option_groups (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  name      VARCHAR(100) NOT NULL,
+  selection VARCHAR(10) NOT NULL DEFAULT 'SINGLE', -- SINGLE/MULTI
+  min_select INT DEFAULT 0,
+  max_select INT DEFAULT 1,
+  UNIQUE(store_id, name)
+);
+
+-- 옵션 항목
+CREATE TABLE IF NOT EXISTS options (
+  id        BIGSERIAL PRIMARY KEY,
+  group_id  BIGINT NOT NULL REFERENCES option_groups(id) ON DELETE CASCADE,
+  name      VARCHAR(100) NOT NULL,
+  price_delta INT NOT NULL DEFAULT 0,
+  sort_order INT DEFAULT 0
+);
+
+-- 메뉴-옵션 그룹 연결 (어떤 옵션 그룹을 이 메뉴에 붙일지)
+CREATE TABLE IF NOT EXISTS item_option_groups (
+  id        BIGSERIAL PRIMARY KEY,
+  item_id   BIGINT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+  group_id  BIGINT NOT NULL REFERENCES option_groups(id) ON DELETE CASCADE,
+  sort_order INT DEFAULT 0,
+  UNIQUE(item_id, group_id)
+);
+
+-- 프린터(주방/홀)
+CREATE TABLE IF NOT EXISTS printers (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  name      VARCHAR(100) NOT NULL,
+  type      VARCHAR(20) NOT NULL DEFAULT 'KITCHEN', -- KITCHEN/TICKET
+  target_station_id BIGINT REFERENCES prep_stations(id) ON DELETE SET NULL,
+  conn_info JSONB, -- IP/PORT 등
+  is_active BOOLEAN DEFAULT true
+);
+
+-- 출력 잡(주문서/주방지시서)
+CREATE TABLE IF NOT EXISTS print_jobs (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  printer_id BIGINT REFERENCES printers(id) ON DELETE SET NULL,
+  payload   JSONB NOT NULL,
+  status    VARCHAR(20) NOT NULL DEFAULT 'queued', -- queued/sent/failed
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sent_at    TIMESTAMP
+);
+
+4) 주문/결제(POS/KDS의 심장)
+-- 체크(영수증/방문 단위)
+CREATE TABLE IF NOT EXISTS checks (
+  id            BIGSERIAL PRIMARY KEY,
+  store_id      BIGINT NOT NULL REFERENCES stores(id),
+  table_number  INT,
+  user_id       VARCHAR(50) REFERENCES users(id),
+  guest_phone   VARCHAR(20),
+  channel       channel_type NOT NULL DEFAULT 'DINE_IN',
+  source        source_type  NOT NULL DEFAULT 'POS',
+  status        check_status NOT NULL DEFAULT 'open',
+  opened_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  closed_at     TIMESTAMP,
+  notes         TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_checks_store_status ON checks(store_id, status);
+CREATE INDEX IF NOT EXISTS idx_checks_user ON checks(user_id);
+
+-- 주문(추가주문 묶음)
+CREATE TABLE IF NOT EXISTS orders (
+  id         BIGSERIAL PRIMARY KEY,
+  check_id   BIGINT NOT NULL REFERENCES checks(id) ON DELETE CASCADE,
+  source     source_type NOT NULL DEFAULT 'POS',
+  status     order_status NOT NULL DEFAULT 'pending',
+  ext_key    VARCHAR(100) UNIQUE,          -- TLL idempotency
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_orders_check ON orders(check_id);
+
+-- 주문 라인(단품 단위) - quantity=1 권장
+CREATE TABLE IF NOT EXISTS order_lines (
+  id           BIGSERIAL PRIMARY KEY,
+  order_id     BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  menu_id      BIGINT REFERENCES menu_items(id) ON DELETE SET NULL,
+  menu_name    VARCHAR(255) NOT NULL,
+  unit_price   INT NOT NULL,
+  status       item_status NOT NULL DEFAULT 'queued',
+  cook_station VARCHAR(50),
+  notes        TEXT,
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_lines_order ON order_lines(order_id);
+CREATE INDEX IF NOT EXISTS idx_lines_status ON order_lines(status);
+CREATE INDEX IF NOT EXISTS idx_lines_created ON order_lines(created_at);
+
+-- 라인별 선택 옵션(가격 반영)
+CREATE TABLE IF NOT EXISTS line_options (
+  id        BIGSERIAL PRIMARY KEY,
+  line_id   BIGINT NOT NULL REFERENCES order_lines(id) ON DELETE CASCADE,
+  option_id BIGINT REFERENCES options(id) ON DELETE SET NULL,
+  name      VARCHAR(100) NOT NULL,
+  price_delta INT NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_line_options_line ON line_options(line_id);
+
+-- 할인/조정
+CREATE TABLE IF NOT EXISTS adjustments (
+  id          BIGSERIAL PRIMARY KEY,
+  check_id    BIGINT REFERENCES checks(id) ON DELETE CASCADE,
+  line_id     BIGINT REFERENCES order_lines(id) ON DELETE CASCADE,
+  scope       adj_scope NOT NULL,
+  adj_type    adj_type  NOT NULL,
+  value_type  value_type NOT NULL,
+  value       NUMERIC(10,2) NOT NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK ((scope='CHECK' AND line_id IS NULL) OR (scope='LINE' AND line_id IS NOT NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_adj_check ON adjustments(check_id);
+CREATE INDEX IF NOT EXISTS idx_adj_line  ON adjustments(line_id);
+
+-- 결제
+CREATE TABLE IF NOT EXISTS payments (
+  id               BIGSERIAL PRIMARY KEY,
+  check_id         BIGINT NOT NULL REFERENCES checks(id) ON DELETE CASCADE,
+  method           VARCHAR(30) NOT NULL, -- card/cash/point/kakao 등
+  amount           INT NOT NULL,         -- +결제 / -환불
+  status           pay_status NOT NULL,
+  krp_provider     VARCHAR(30),
+  krp_txn_id       VARCHAR(100),
+  idempotency_key  VARCHAR(100),
+  paid_at          TIMESTAMP,
+  created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(krp_provider, krp_txn_id),
+  UNIQUE(idempotency_key)
+);
+CREATE INDEX IF NOT EXISTS idx_pay_check ON payments(check_id);
+
+-- 결제-라인 배분 (부분환불/부분결제)
+CREATE TABLE IF NOT EXISTS payment_allocations (
+  payment_id BIGINT NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+  line_id    BIGINT NOT NULL REFERENCES order_lines(id) ON DELETE CASCADE,
+  amount     INT NOT NULL,
+  PRIMARY KEY(payment_id, line_id)
+);
+
+-- 이벤트 로그(감사/복구)
+CREATE TABLE IF NOT EXISTS order_events (
+  id         BIGSERIAL PRIMARY KEY,
+  check_id   BIGINT REFERENCES checks(id),
+  order_id   BIGINT REFERENCES orders(id),
+  line_id    BIGINT REFERENCES order_lines(id),
+  actor      source_type NOT NULL,       -- POS/TLL/ADMIN
+  event_type VARCHAR(50) NOT NULL,       -- CREATED/LINE_CANCELED/STATUS_CHANGED/PAID...
+  payload    JSONB,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_evt_check ON order_events(check_id);
+CREATE INDEX IF NOT EXISTS idx_evt_created ON order_events(created_at);
+
+5) 접근(TLA): 예약/줄서기
+-- 예약
+CREATE TABLE IF NOT EXISTS reservations (
+  id          BIGSERIAL PRIMARY KEY,
+  store_id    BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  user_id     VARCHAR(50) REFERENCES users(id),
+  guest_phone VARCHAR(20),
+  visit_time  TIMESTAMP NOT NULL,
+  party_size  INT NOT NULL,
+  status      VARCHAR(20) NOT NULL DEFAULT 'requested', -- requested/confirmed/canceled/no_show/completed
+  requests    TEXT,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_res_store_time ON reservations(store_id, visit_time);
+
+-- 웨이팅(줄서기)
+CREATE TABLE IF NOT EXISTS waitlists (
+  id         BIGSERIAL PRIMARY KEY,
+  store_id   BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  user_id    VARCHAR(50) REFERENCES users(id),
+  guest_phone VARCHAR(20),
+  party_size INT NOT NULL,
+  status     VARCHAR(20) NOT NULL DEFAULT 'waiting', -- waiting/called/canceled/seated
+  ticket_no  INT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_wait_store ON waitlists(store_id, status, created_at);
+
+6) QR(TLL): QR코드/세션
+-- 테이블별 QR
+CREATE TABLE IF NOT EXISTS qr_codes (
+  id         BIGSERIAL PRIMARY KEY,
+  store_id   BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  table_number INT,
+  code       VARCHAR(100) NOT NULL UNIQUE, -- 실제 QR 페이로드 키
+  is_active  BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_qr_store_table ON qr_codes(store_id, table_number);
+
+-- QR 기반 체크 세션 매핑
+CREATE TABLE IF NOT EXISTS qr_sessions (
+  id         BIGSERIAL PRIMARY KEY,
+  qr_id      BIGINT NOT NULL REFERENCES qr_codes(id) ON DELETE CASCADE,
+  check_id   BIGINT NOT NULL REFERENCES checks(id) ON DELETE CASCADE,
+  user_id    VARCHAR(50) REFERENCES users(id),
+  opened_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  closed_at  TIMESTAMP
+);
+
+7) 로열티/프로모션(TLR/TLP)
+-- 매장별 유저 스탯(단골/실적)
+CREATE TABLE IF NOT EXISTS user_store_stats (
+  id          BIGSERIAL PRIMARY KEY,
+  user_id     VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  store_id    BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  points      INT DEFAULT 0,
+  total_spent INT DEFAULT 0,
+  visit_count INT DEFAULT 0,
+  level_name  VARCHAR(50) DEFAULT 'Bronze',
+  level_points INT DEFAULT 0,
+  level_benefits JSONB DEFAULT '{}',
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, store_id)
+);
+
+-- 포인트 원장
+CREATE TABLE IF NOT EXISTS points_ledger (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  store_id   BIGINT REFERENCES stores(id) ON DELETE SET NULL,
+  delta      INT NOT NULL,    -- +적립 / -차감
+  reason     VARCHAR(100),
+  related_check_id BIGINT REFERENCES checks(id) ON DELETE SET NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_points_user ON points_ledger(user_id, created_at DESC);
+
+-- 쿠폰 정의
+CREATE TABLE IF NOT EXISTS coupons (
+  id          BIGSERIAL PRIMARY KEY,
+  code        VARCHAR(50) UNIQUE,            -- 브랜드 제휴/캠페인 코드 등
+  name        VARCHAR(100) NOT NULL,
+  desc        TEXT,
+  scope       VARCHAR(10) NOT NULL DEFAULT 'CHECK', -- CHECK/LINE
+  value_type  value_type NOT NULL,
+  value       NUMERIC(10,2) NOT NULL,
+  min_order_total INT DEFAULT 0,
+  store_id    BIGINT REFERENCES stores(id) ON DELETE SET NULL, -- 특정 매장 전용이면 지정
+  starts_at   TIMESTAMP,
+  ends_at     TIMESTAMP,
+  max_uses_per_user INT DEFAULT 1,
+  is_active   BOOLEAN DEFAULT true,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 쿠폰 발급
+CREATE TABLE IF NOT EXISTS coupon_issues (
+  id         BIGSERIAL PRIMARY KEY,
+  coupon_id  BIGINT NOT NULL REFERENCES coupons(id) ON DELETE CASCADE,
+  user_id    VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status     VARCHAR(20) NOT NULL DEFAULT 'unused', -- unused/used/expired
+  issued_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  used_at    TIMESTAMP,
+  UNIQUE(coupon_id, user_id, status) DEFERRABLE INITIALLY DEFERRED
+);
+
+-- 프로모션(노출/배너)
+CREATE TABLE IF NOT EXISTS promotions (
+  id         BIGSERIAL PRIMARY KEY,
+  store_id   BIGINT REFERENCES stores(id) ON DELETE SET NULL,
+  title      VARCHAR(200) NOT NULL,
+  payload    JSONB, -- 배너/슬롯/우선순위 등
+  starts_at  TIMESTAMP,
+  ends_at    TIMESTAMP,
+  is_active  BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+8) 리뷰/즐겨찾기(TLR)
+-- 리뷰
+CREATE TABLE IF NOT EXISTS reviews (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  store_id   BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  check_id   BIGINT REFERENCES checks(id) ON DELETE SET NULL, -- 실제 방문 연계 권장
+  rating     INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  review_text TEXT NOT NULL,
+  photos     JSONB,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, store_id, check_id)
+);
+
+-- 즐겨찾기
+CREATE TABLE IF NOT EXISTS favorites (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    VARCHAR(50) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  store_id   BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, store_id)
+);
+
+9) 장바구니(TLG)
+CREATE TABLE IF NOT EXISTS carts (
+  id         BIGSERIAL PRIMARY KEY,
+  user_id    VARCHAR(50) NOT NULL REFERENCES users(id),
+  store_id   BIGINT NOT NULL REFERENCES stores(id),
+  table_num  INT,
+  payload    JSONB NOT NULL,  -- 프론트 임시 구조(서버 합류 시 서버 라인으로 전환)
+  saved_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, store_id)
+);
+
+10) 직원/TLM/단말(장치)
+-- 직원
+CREATE TABLE IF NOT EXISTS staff (
+  id         BIGSERIAL PRIMARY KEY,
+  store_id   BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  name       VARCHAR(100) NOT NULL,
+  phone      VARCHAR(20) UNIQUE,
+  email      VARCHAR(255) UNIQUE,
+  is_active  BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 역할
+CREATE TABLE IF NOT EXISTS roles (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  name      VARCHAR(50) NOT NULL, -- OWNER/MANAGER/WAITER/KITCHEN
+  permissions JSONB,              -- 세부 권한
+  UNIQUE(store_id, name)
+);
+
+-- 직원-역할 매핑
+CREATE TABLE IF NOT EXISTS staff_roles (
+  staff_id BIGINT NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+  role_id  BIGINT NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
+  PRIMARY KEY (staff_id, role_id)
+);
+
+-- 단말(포스/키친/키오스크)
+CREATE TABLE IF NOT EXISTS terminals (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  type      VARCHAR(20) NOT NULL, -- POS/KDS/KIOSK
+  name      VARCHAR(100),
+  api_key   VARCHAR(100) UNIQUE,
+  meta      JSONB,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- KDS 스크린(스테이션 바인딩)
+CREATE TABLE IF NOT EXISTS kds_screens (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  terminal_id BIGINT REFERENCES terminals(id) ON DELETE SET NULL,
+  name      VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS kds_screen_stations (
+  screen_id  BIGINT NOT NULL REFERENCES kds_screens(id) ON DELETE CASCADE,
+  station_id BIGINT NOT NULL REFERENCES prep_stations(id) ON DELETE CASCADE,
+  PRIMARY KEY (screen_id, station_id)
+);
+
+11) 알림/웹훅/노티
+-- 알림 큐
+CREATE TABLE IF NOT EXISTS notifications (
+  id        BIGSERIAL PRIMARY KEY,
+  user_id   VARCHAR(50) REFERENCES users(id) ON DELETE CASCADE,
+  store_id  BIGINT REFERENCES stores(id) ON DELETE SET NULL,
+  type      VARCHAR(30) NOT NULL, -- PUSH/SMS/EMAIL
+  title     VARCHAR(200),
+  payload   JSONB,
+  status    VARCHAR(20) DEFAULT 'queued', -- queued/sent/failed
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sent_at    TIMESTAMP
+);
+
+-- 외부 웹훅 엔드포인트
+CREATE TABLE IF NOT EXISTS webhooks (
+  id        BIGSERIAL PRIMARY KEY,
+  store_id  BIGINT REFERENCES stores(id) ON DELETE CASCADE,
+  url       TEXT NOT NULL,
+  secret    TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 웹훅 이벤트 원장
+CREATE TABLE IF NOT EXISTS webhook_events (
+  id        BIGSERIAL PRIMARY KEY,
+  webhook_id BIGINT NOT NULL REFERENCES webhooks(id) ON DELETE CASCADE,
+  event_type VARCHAR(50) NOT NULL, -- ORDER_CREATED/PAYMENT_PAID 등
+  payload    JSONB NOT NULL,
+  status     VARCHAR(20) DEFAULT 'queued', -- queued/sent/failed
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  sent_at    TIMESTAMP
+);
+
+12) 합계 함수/뷰/트리거(KDS 실시간)
+-- 합계 계산 (옵션/조정 반영)
+CREATE OR REPLACE FUNCTION calc_check_total(p_check_id BIGINT)
+RETURNS INT LANGUAGE plpgsql AS $$
+DECLARE
+  subtotal INT := 0;
+  optsum   INT := 0;
+  line_amt NUMERIC := 0;
+  line_pct NUMERIC := 0;
+  chk_amt  NUMERIC := 0;
+  chk_pct  NUMERIC := 0;
+  final    NUMERIC := 0;
+BEGIN
+  -- 라인 금액
+  SELECT COALESCE(SUM(ol.unit_price),0)
+    INTO subtotal
+  FROM order_lines ol
+  JOIN orders o ON o.id=ol.order_id
+  WHERE o.check_id=p_check_id
+    AND ol.status IN ('queued','cooking','ready','served');
+
+  -- 옵션 합
+  SELECT COALESCE(SUM(lo.price_delta),0)
+    INTO optsum
+  FROM order_lines ol
+  JOIN orders o ON o.id=ol.order_id
+  LEFT JOIN line_options lo ON lo.line_id=ol.id
+  WHERE o.check_id=p_check_id
+    AND ol.status IN ('queued','cooking','ready','served');
+
+  subtotal := subtotal + optsum;
+
+  -- 라인 조정: amount
+  SELECT COALESCE(SUM(a.value),0)
+    INTO line_amt
+  FROM adjustments a
+  JOIN order_lines ol ON ol.id=a.line_id
+  JOIN orders o ON o.id=ol.order_id
+  WHERE a.scope='LINE' AND a.value_type='amount'
+    AND o.check_id=p_check_id;
+
+  -- 라인 조정: percent
+  SELECT COALESCE(SUM(ol.unit_price * (a.value/100.0)),0)
+    INTO line_pct
+  FROM adjustments a
+  JOIN order_lines ol ON ol.id=a.line_id
+  JOIN orders o ON o.id=ol.order_id
+  WHERE a.scope='LINE' AND a.value_type='percent'
+    AND o.check_id=p_check_id;
+
+  -- 체크 조정: amount
+  SELECT COALESCE(SUM(a.value),0)
+    INTO chk_amt
+  FROM adjustments a
+  WHERE a.scope='CHECK' AND a.value_type='amount'
+    AND a.check_id=p_check_id;
+
+  -- 체크 조정: percent
+  SELECT COALESCE(SUM(subtotal * (a.value/100.0)),0)
+    INTO chk_pct
+  FROM adjustments a
+  WHERE a.scope='CHECK' AND a.value_type='percent'
+    AND a.check_id=p_check_id;
+
+  final := subtotal - line_amt - line_pct - chk_amt - chk_pct;
+  IF final < 0 THEN final := 0; END IF;
+  RETURN ROUND(final)::INT;
+END $$;
+
+-- 결제/내역 뷰(구 호환)
+CREATE OR REPLACE VIEW paid_orders_view AS
+SELECT
+  p.id,
+  ch.store_id,
+  ch.user_id,
+  ch.guest_phone,
+  ch.table_number,
+  p.amount AS final_amount,
+  p.method AS payment_method,
+  p.paid_at AS payment_date,
+  p.created_at
+FROM payments p
+JOIN checks ch ON ch.id=p.check_id
+WHERE p.status='paid';
+
+CREATE OR REPLACE VIEW user_paid_orders_view AS
+SELECT
+  p.id,
+  ch.user_id,
+  ch.store_id,
+  s.name AS store_name,
+  ch.table_number,
+  p.amount AS final_amount,
+  p.method AS payment_method,
+  p.paid_at AS payment_date,
+  p.created_at
+FROM payments p
+JOIN checks ch ON ch.id=p.check_id
+JOIN stores s ON s.id=ch.store_id
+WHERE ch.user_id IS NOT NULL AND p.status='paid';
+
+-- KDS 실시간: LISTEN/NOTIFY
+CREATE OR REPLACE FUNCTION kds_line_notify() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM pg_notify(
+    'kds_line_events',
+    json_build_object(
+      'line_id', NEW.id,
+      'order_id', NEW.order_id,
+      'status', NEW.status,
+      'created_at', NEW.created_at
+    )::text
+  );
+  RETURN NEW;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_kds_line_ins ON order_lines;
+CREATE TRIGGER trg_kds_line_ins
+AFTER INSERT ON order_lines
+FOR EACH ROW EXECUTE FUNCTION kds_line_notify();
+
+DROP TRIGGER IF EXISTS trg_kds_line_upd ON order_lines;
+CREATE TRIGGER trg_kds_line_upd
+AFTER UPDATE OF status ON order_lines
+FOR EACH ROW EXECUTE FUNCTION kds_line_notify();
+
+13) 인덱스/무결성 체크리스트
+
+checks(store_id, status), checks(user_id)
+
+orders(check_id), order_lines(order_id), order_lines(status, created_at)
+
+payments(check_id), payments(idempotency_key), payments(krp_provider, krp_txn_id)
+
+user_store_stats(user_id, store_id)
+
+menu_items(store_id, group_id, is_active)
+
+prep_stations(store_id, code) / kds_screen_stations(screen_id, station_id)
+
+외래키 ON DELETE 정책 검토(SET NULL vs CASCADE)
+
+14) 운영 포인트
+
+POS/TLL는 항상 checks → orders → order_lines 순으로 생성, 라인은 수량=1로 여러 줄.
+
+KDS는 order_lines만 구독해서 상태 전환(queued→cooking→ready→served).
+
+**결제(KRP)**는 payments에 기록하고, idempotency_key로 중복 방지.
+
+결제 총합이 calc_check_total(check_id) 이상이면 checks.status='closed'.
+
+부분환불은 payments에 음수 행 + payment_allocations로 라인 배분.
+
+쿠폰/포인트/프로모션은 adjustments/points_ledger/coupon_issues로 추적.
+
+**TLM(사장님앱)**은 staff/roles/terminals/kds_screens로 권한/단말 관리.
+
+**TLG(소비자앱)**은 users/points_ledger/coupon_issues/favorites/reviews/carts를 사용.
+
+필요하면 위 스키마를 파일 단위로 쪼개준 DDL 패키지(migrations 001~005) 형태로도 뽑아줄 수 있어.
+이 상태면 POS·KDS·TLL·TLG·TLM·KRP 전부 한 축(checks) 기준으로 안정적으로 붙는다.

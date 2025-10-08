@@ -1,0 +1,174 @@
+{
+    "success": true,
+    "store": {
+        "store": {
+            "id": 497,
+            "name": "정통 양념",
+            "is_open": true,
+            "store_tel_number": 38834382,
+            "rating_average": 3,
+            "review_count": 76,
+            "sido": "서울특별시",
+            "sigungu": "종로구",
+            "eupmyeondong": "종로동",
+            "full_address": "서울특별시 종로구 종로동",
+            "lng": 126.98015966362088,
+            "lat": 37.56861563037005
+        },
+        "menu": [
+            {
+                "id": 2476,
+                "store_id": 497,
+                "name": "후라이드치킨",
+                "description": "바삭한 후라이드",
+                "cook_station": "KITCHEN",
+                "price": 16000
+            },
+            {
+                "id": 2477,
+                "store_id": 497,
+                "name": "양념치킨",
+                "description": "달콤매콤 양념치킨",
+                "cook_station": "KITCHEN",
+                "price": 17000
+            },
+            {
+                "id": 2478,
+                "store_id": 497,
+                "name": "간장치킨",
+                "description": "고소한 간장치킨",
+                "cook_station": "KITCHEN",
+                "price": 17000
+            },
+            {
+                "id": 2479,
+                "store_id": 497,
+                "name": "치킨무",
+                "description": "시원한 치킨무",
+                "cook_station": "KITCHEN",
+                "price": 2000
+            },
+            {
+                "id": 2480,
+                "store_id": 497,
+                "name": "콜라",
+                "description": "시원한 콜라",
+                "cook_station": "DRINK",
+                "price": 2000
+            }
+        ],
+        "tables": [
+            {
+                "id": 3210,
+                "store_id": 497,
+                "table_name": "테이블 5",
+                "capacity": 5,
+                "status": "OCCUPIED"
+            },
+            {
+                "id": 3214,
+                "store_id": 497,
+                "table_name": "테이블 9",
+                "capacity": 4,
+                "status": "AVAILABLE"
+            },
+            {
+                "id": 3215,
+                "store_id": 497,
+                "table_name": "테이블 10",
+                "capacity": 6,
+                "status": "OCCUPIED"
+            },
+            {
+                "id": 3209,
+                "store_id": 497,
+                "table_name": "테이블 4",
+                "capacity": 4,
+                "status": "OCCUPIED"
+            },
+            {
+                "id": 3207,
+                "store_id": 497,
+                "table_name": "테이블 2",
+                "capacity": 2,
+                "status": "OCCUPIED"
+            },
+            {
+                "id": 3213,
+                "store_id": 497,
+                "table_name": "테이블 8",
+                "capacity": 3,
+                "status": "OCCUPIED"
+            },
+            {
+                "id": 3208,
+                "store_id": 497,
+                "table_name": "테이블 3",
+                "capacity": 4,
+                "status": "OCCUPIED"
+            },
+            {
+                "id": 3212,
+                "store_id": 497,
+                "table_name": "테이블 7",
+                "capacity": 5,
+                "status": "OCCUPIED"
+            },
+            {
+                "id": 3206,
+                "store_id": 497,
+                "table_name": "테이블 1",
+                "capacity": 2,
+                "status": "AVAILABLE"
+            },
+            {
+                "id": 3211,
+                "store_id": 497,
+                "table_name": "테이블 6",
+                "capacity": 3,
+                "status": "AVAILABLE"
+            }
+        ],
+        "reviews": [],
+        "promotions": [
+            {
+                "id": 1983,
+                "store_id": 497,
+                "level": "골드",
+                "min_orders": 15,
+                "min_spent": 150000
+            },
+            {
+                "id": 1981,
+                "store_id": 497,
+                "level": "브론즈",
+                "min_orders": 0,
+                "min_spent": 0
+            },
+            {
+                "id": 1982,
+                "store_id": 497,
+                "level": "실버",
+                "min_orders": 5,
+                "min_spent": 50000
+            },
+            {
+                "id": 1984,
+                "store_id": 497,
+                "level": "플래티넘",
+                "min_orders": 30,
+                "min_spent": 300000
+            }
+        ],
+        "menuCount": 5,
+        "tableCount": 10,
+        "reviewCount": 0,
+        "promotionCount": 4,
+        "tableStatusSummary": {
+            "available": 3,
+            "occupied": 7,
+            "total": 10
+        }
+    },
+    "userId": "1"
+}

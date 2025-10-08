@@ -1,0 +1,100 @@
+~/workspace$ node scripts/database/check-foreign-keys.js
+✅ PostgreSQL 데이터베이스 연결 
+🔍 stores 테이블 외래 키 관계 확인
+
+1️⃣ stores 테이블 존재 확인:
+✅ stores 테이블 존재 확인
+
+2️⃣ stores 테이블을 참조하는 외래 키들:
+📋 stores를 참조하는 테이블들:
+  • carts.store_id → stores.id
+    제약조건: carts_store_id_fkey
+  • checks.store_id → stores.id
+    제약조건: checks_store_id_fkey
+  • coupons.store_id → stores.id
+    제약조건: coupons_store_id_fkey
+  • favorites.store_id → stores.id
+    제약조건: favorites_store_id_fkey
+  • kds_screens.store_id → stores.id
+    제약조건: kds_screens_store_id_fkey
+  • menu_groups.store_id → stores.id
+    제약조건: menu_groups_store_id_fkey
+  • menu_items.store_id → stores.id
+    제약조건: menu_items_store_id_fkey
+  • notifications.store_id → stores.id
+    제약조건: notifications_store_id_fkey
+  • option_groups.store_id → stores.id
+    제약조건: option_groups_store_id_fkey
+  • points_ledger.store_id → stores.id
+    제약조건: points_ledger_store_id_fkey
+  • prep_stations.store_id → stores.id
+    제약조건: prep_stations_store_id_fkey
+  • print_jobs.store_id → stores.id
+    제약조건: print_jobs_store_id_fkey
+  • printers.store_id → stores.id
+    제약조건: printers_store_id_fkey
+  • promotions.store_id → stores.id
+    제약조건: promotions_store_id_fkey
+  • qr_codes.store_id → stores.id
+    제약조건: qr_codes_store_id_fkey
+  • reservations.store_id → stores.id
+    제약조건: reservations_store_id_fkey
+  • reviews.store_id → stores.id
+    제약조건: reviews_store_id_fkey
+  • roles.store_id → stores.id
+    제약조건: roles_store_id_fkey
+  • staff.store_id → stores.id
+    제약조건: staff_store_id_fkey
+  • store_address.store_id → stores.id
+    제약조건: store_address_store_id_fkey
+  • store_holidays.store_id → stores.id
+    제약조건: store_holidays_store_id_fkey
+  • store_hours.store_id → stores.id
+    제약조건: store_hours_store_id_fkey
+  • store_tables.store_id → stores.id
+    제약조건: store_tables_store_id_fkey
+  • terminals.store_id → stores.id
+    제약조건: terminals_store_id_fkey
+  • user_store_stats.store_id → stores.id
+    제약조건: user_store_stats_store_id_fkey
+  • waitlists.store_id → stores.id
+    제약조건: waitlists_store_id_fkey
+  • webhooks.store_id → stores.id
+    제약조건: webhooks_store_id_fkey
+
+3️⃣ stores 테이블이 참조하는 외래 키들:
+ℹ️ stores가 참조하는 외래 키가 없습니다.
+
+4️⃣ 관련 테이블들 존재 확인:
+  ✅ store_address
+      레코드 수: 101개
+  ✅ store_tables
+      레코드 수: 577개
+  ❌ store_promotions
+  ✅ reviews
+      레코드 수: 155개
+  ✅ orders
+      레코드 수: 0개
+  ✅ regular_levels
+      레코드 수: 8248개
+  ✅ favorites
+      레코드 수: 24개
+
+5️⃣ stores 테이블 기본 정보:
+  총 매장 수: 101개
+
+6️⃣ stores 테이블 컬럼 구조:
+  • id (bigint) - NOT NULL
+  • name (character varying) - NOT NULL
+  • category (character varying) - NULL
+  • is_open (boolean) - NULL
+  • rating_average (numeric) - NULL
+  • review_count (integer) - NULL
+  • favorite_count (integer) - NULL
+  • created_at (timestamp without time zone) - NULL
+
+7️⃣ stores 테이블 인덱스:
+  • stores_pkey
+    CREATE UNIQUE INDEX stores_pkey ON public.stores USING btree (id)
+
+🎯 외래 키 관계 확인 완료!

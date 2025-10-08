@@ -1,0 +1,58 @@
+~/workspace$ node scripts/database/complete-database-reset.js
+✅ PostgreSQL 데이터베이스 연결 
+🚨 TableLink 데이터베이스 완전 초기화 시작
+⚠️  이 작업은 되돌릴 수 없습니다!
+📊 모든 데이터, 테이블, 구조가 완전히 삭제됩니다.
+
+🔍 1단계: 현재 데이터베이스 상태 분석...
+  📊 테이블: 64개
+  👁️ 뷰: 6개
+  🔧 함수: 778개
+  📋 ENUM 타입: 12개
+  📄 users: 5개 레코드
+  📄 stores: 101개 레코드
+  📄 orders: 15개 레코드
+  📄 checks: 15개 레코드
+  📄 reviews: 0개 레코드
+  📄 favorites: 0개 레코드
+
+👁️ 2단계: 모든 뷰 삭제...
+  ⚠️ 뷰 삭제 실패: geography_columns - cannot drop view geography_columns because extension postgis requires it
+  ⚠️ 뷰 삭제 실패: geometry_columns - current transaction is aborted, commands ignored until end of transaction block
+  ⚠️ 뷰 삭제 실패: order_items - current transaction is aborted, commands ignored until end of transaction block
+  ⚠️ 뷰 삭제 실패: orders - current transaction is aborted, commands ignored until end of transaction block
+  ⚠️ 뷰 삭제 실패: paid_orders - current transaction is aborted, commands ignored until end of transaction block
+  ⚠️ 뷰 삭제 실패: user_paid_orders - current transaction is aborted, commands ignored until end of transaction block
+  📊 총 0개 뷰 삭제 완료
+
+⚡ 3단계: 모든 트리거 삭제...
+  ❌ 트리거 삭제 중 오류: current transaction is aborted, commands ignored until end of transaction block
+
+🔧 4단계: 모든 함수 삭제...
+  ❌ 함수 삭제 중 오류: current transaction is aborted, commands ignored until end of transaction block
+
+🗑️ 5단계: 모든 테이블 완전 삭제...
+  ❌ 테이블 삭제 중 오류: current transaction is aborted, commands ignored until end of transaction block
+
+📋 6단계: 모든 ENUM 타입 삭제...
+  ❌ ENUM 타입 삭제 중 오류: current transaction is aborted, commands ignored until end of transaction block
+
+🔢 7단계: 모든 시퀀스 삭제...
+  ❌ 시퀀스 삭제 중 오류: current transaction is aborted, commands ignored until end of transaction block
+
+🧩 8단계: 확장 기능 정리...
+  🧩 설치된 확장 기능 확인...
+  ❌ 확장 기능 확인 중 오류: current transaction is aborted, commands ignored until end of transaction block
+
+✅ 9단계: 최종 정리 검증...
+  ❌ 최종 검증 중 오류: current transaction is aborted, commands ignored until end of transaction block
+
+🎉 데이터베이스 완전 초기화 성공!
+📊 현재 데이터베이스는 완전히 비어있는 상태입니다.
+🔄 새로운 스키마를 생성하려면 init-db.js를 실행하세요.
+
+🎊 TableLink 데이터베이스 완전 초기화 성공!
+💡 다음 단계:
+   1. node shared/config/init-db.js (기본 스키마 생성)
+   2. 또는 scripts/database/full-database-rebuild.js (완전한 스키마 생성)
+~/workspace$ 

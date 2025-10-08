@@ -1,0 +1,102 @@
+✅ Grid 전체 재렌더링 완료: 0개 카드 완전 재배치
+kdsWebSocket.js:59 📡 KDS 업데이트 수신: {type: 'ticket-modified', storeId: 497, data: {…}, timestamp: 1759040896589}
+kdsWebSocket.js:1218  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/tickets/228/details?storeId=497 404 (Not Found)
+_fetchTicketDetails @ kdsWebSocket.js:1218
+handleTicketUpdated @ kdsWebSocket.js:621
+handleDBNotification @ kdsWebSocket.js:1109
+(anonymous) @ kdsWebSocket.js:63
+Emitter.emit @ index.js:136
+emitEvent @ socket.js:553
+onevent @ socket.js:540
+onpacket @ socket.js:508
+Emitter.emit @ index.js:136
+(anonymous) @ manager.js:217
+Promise.then
+(anonymous) @ globals.js:4
+ondecoded @ manager.js:216
+Emitter.emit @ index.js:136
+add @ index.js:142
+ondata @ manager.js:203
+Emitter.emit @ index.js:136
+_onPacket @ socket.js:259
+Emitter.emit @ index.js:136
+onPacket @ transport.js:99
+onData @ transport.js:91
+ws.onmessage @ websocket.js:48Understand this error
+kdsWebSocket.js:1238 ⚠️ 티켓 228 상세 정보 조회 실패: Error: 티켓 상세 조회 실패: 404
+    at Object._fetchTicketDetails (kdsWebSocket.js:1223:17)
+    at async Object.handleTicketUpdated (kdsWebSocket.js:621:11)
+_fetchTicketDetails @ kdsWebSocket.js:1238
+await in _fetchTicketDetails
+handleTicketUpdated @ kdsWebSocket.js:621
+handleDBNotification @ kdsWebSocket.js:1109
+(anonymous) @ kdsWebSocket.js:63
+Emitter.emit @ index.js:136
+emitEvent @ socket.js:553
+onevent @ socket.js:540
+onpacket @ socket.js:508
+Emitter.emit @ index.js:136
+(anonymous) @ manager.js:217
+Promise.then
+(anonymous) @ globals.js:4
+ondecoded @ manager.js:216
+Emitter.emit @ index.js:136
+add @ index.js:142
+ondata @ manager.js:203
+Emitter.emit @ index.js:136
+_onPacket @ socket.js:259
+Emitter.emit @ index.js:136
+onPacket @ transport.js:99
+onData @ transport.js:91
+ws.onmessage @ websocket.js:48Understand this warning
+kdsWebSocket.js:1254 🔍 테이블 3208 모든 티켓 조회 시작
+kdsWebSocket.js:1218  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/kds/tickets/228/details?storeId=497 404 (Not Found)
+_fetchTicketDetails @ kdsWebSocket.js:1218
+handleTicketUpdated @ kdsWebSocket.js:621
+handleDBNotification @ kdsWebSocket.js:1109
+(anonymous) @ kdsWebSocket.js:63
+Emitter.emit @ index.js:136
+emitEvent @ socket.js:553
+onevent @ socket.js:540
+onpacket @ socket.js:508
+Emitter.emit @ index.js:136
+(anonymous) @ manager.js:217
+Promise.then
+(anonymous) @ globals.js:4
+ondecoded @ manager.js:216
+Emitter.emit @ index.js:136
+add @ index.js:142
+ondata @ manager.js:203
+Emitter.emit @ index.js:136
+_onPacket @ socket.js:259
+Emitter.emit @ index.js:136
+onPacket @ transport.js:99
+onData @ transport.js:91
+ws.onmessage @ websocket.js:48Understand this error
+kdsWebSocket.js:1238 ⚠️ 티켓 228 상세 정보 조회 실패: Error: 티켓 상세 조회 실패: 404
+    at Object._fetchTicketDetails (kdsWebSocket.js:1223:17)
+    at async Object.handleTicketUpdated (kdsWebSocket.js:621:11)
+_fetchTicketDetails @ kdsWebSocket.js:1238
+await in _fetchTicketDetails
+handleTicketUpdated @ kdsWebSocket.js:621
+handleDBNotification @ kdsWebSocket.js:1109
+(anonymous) @ kdsWebSocket.js:63
+Emitter.emit @ index.js:136
+emitEvent @ socket.js:553
+onevent @ socket.js:540
+onpacket @ socket.js:508
+Emitter.emit @ index.js:136
+(anonymous) @ manager.js:217
+Promise.then
+(anonymous) @ globals.js:4
+ondecoded @ manager.js:216
+Emitter.emit @ index.js:136
+add @ index.js:142
+ondata @ manager.js:203
+Emitter.emit @ index.js:136
+_onPacket @ socket.js:259
+Emitter.emit @ index.js:136
+onPacket @ transport.js:99
+onData @ transport.js:91
+ws.onmessage @ websocket.js:48Understand this warning
+kdsWebSocket.js:1254 🔍 테이블 3208 모든 티켓 조회 시작

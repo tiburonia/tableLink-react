@@ -1,0 +1,81 @@
+/**
+ * 주문 수정 로직
+ * - 추가는 새 batch 생성
+ * - 감소는 batch_no 높은 티켓부터 차감, 소진 시 다음 batch로 이동
+ * - 감소 반영된 티켓은 version +1 새 티켓으로 생성
+ */
+
+async function updateOrderTickets(orderId, modifications, db) {
+  // modifications: { add: {a:3}, remove: {b:4, c:3} }
+
+  // 1. 추가된 아이템은 무조건 새 batch로 생성
+  if (Object.keys(modifications.add).length > 0) {
+    const newBatchNo = await db.one(
+      `SELECT COALESCE(MAX(batch_no), 0) + 1 AS next_batch FROM order_tickets WHERE order_id=$1`,
+      [orderId]
+    );
+
+    const newTicket = await db.one(
+      `INSERT INTO order_tickets (order_id, batch_no, version, status)
+       VALUES ($1, $2, 1, 'PENDING') RETURNING *`,
+      [orderId, newBatchNo.next_batch]
+    );
+
+    for (const [menu, qty] of Object.entries(modifications.add)) {
+      await db.none(
+        `INSERT INTO order_items (ticket_id, menu_name, quantity, item_status, order_id, store_id)
+         VALUES ($1, $2, $3, 'PENDING', $4, $5)`,
+        [newTicket.id, menu, qty, orderId, newTicket.store_id]
+      );
+    }
+  }
+
+  // 2. 감소는 batch_no 높은 순으로 처리
+  for (const [menu, removeQty] of Object.entries(modifications.remove)) {
+    let remaining = removeQty;
+
+    // batch_no 높은 순으로 가져오기
+    const tickets = await db.manyOrNone(
+      `SELECT ot.*, oi.id AS item_id, oi.menu_name, oi.quantity
+       FROM order_tickets ot
+       JOIN order_items oi ON ot.id = oi.ticket_id
+       WHERE ot.order_id=$1 AND oi.menu_name=$2
+       ORDER BY ot.batch_no DESC`,
+      [orderId, menu]
+    );
+
+    for (const ticket of tickets) {
+      if (remaining <= 0) break;
+
+      const deduct = Math.min(ticket.quantity, remaining);
+      const newQty = ticket.quantity - deduct;
+      remaining -= deduct;
+
+      // 기존 티켓/아이템 CANCELED 처리
+      await db.none(
+        `UPDATE order_tickets SET status='CANCELED' WHERE id=$1`,
+        [ticket.id]
+      );
+      await db.none(
+        `UPDATE order_items SET item_status='CANCELED' WHERE id=$1`,
+        [ticket.item_id]
+      );
+
+      // 새 버전 티켓 생성
+      const newTicket = await db.one(
+        `INSERT INTO order_tickets (order_id, batch_no, version, status)
+         VALUES ($1, $2, $3, 'PENDING') RETURNING *`,
+        [orderId, ticket.batch_no, ticket.version + 1]
+      );
+
+      // 새 아이템 반영
+      if (newQty > 0) {
+        await db.none(
+          `INSERT INTO order_items (ticket_id, menu_name, quantity, item_status, order_id, store_id)
+           VALUES ($1, $2, $3, 'PENDING', $4, $5)`,
+          [newTicket.id, ticket.menu_name, newQty, orderId, newTicket.store_id]
+        );
+      }
+    }
+  }
+}

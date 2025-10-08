@@ -1,0 +1,47 @@
+myAccountRepository.js:8  POST https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/users/info 404 (Not Found)
+fetchUserInfo @ myAccountRepository.js:8
+fetchAllAccountData @ myAccountRepository.js:83
+buildAccountViewModel @ myAccountService.js:232
+init @ myAccountController.js:24
+await in init
+renderMyAccount @ renderMyAccount.js:29
+await in renderMyAccount
+onclick @ (index):1Understand this error
+myAccountRepository.js:21 ❌ fetchUserInfo 에러: Error: 사용자 정보 조회 실패
+    at Object.fetchUserInfo (myAccountRepository.js:15:15)
+    at async Promise.all (:5000/index 0)
+    at async Object.fetchAllAccountData (myAccountRepository.js:82:43)
+    at async Object.buildAccountViewModel (myAccountService.js:232:45)
+    at async Object.init (myAccountController.js:24:25)
+    at async renderMyAccount (renderMyAccount.js:29:5)
+fetchUserInfo @ myAccountRepository.js:21
+await in fetchUserInfo
+fetchAllAccountData @ myAccountRepository.js:83
+buildAccountViewModel @ myAccountService.js:232
+init @ myAccountController.js:24
+await in init
+renderMyAccount @ renderMyAccount.js:29
+await in renderMyAccount
+onclick @ (index):1Understand this error
+myAccountRepository.js:94 ❌ fetchAllAccountData 에러: Error: 사용자 정보 조회 실패
+    at Object.fetchUserInfo (myAccountRepository.js:15:15)
+    at async Promise.all (:5000/index 0)
+    at async Object.fetchAllAccountData (myAccountRepository.js:82:43)
+    at async Object.buildAccountViewModel (myAccountService.js:232:45)
+    at async Object.init (myAccountController.js:24:25)
+    at async renderMyAccount (renderMyAccount.js:29:5)
+fetchAllAccountData @ myAccountRepository.js:94
+await in fetchAllAccountData
+buildAccountViewModel @ myAccountService.js:232
+init @ myAccountController.js:24
+await in init
+renderMyAccount @ renderMyAccount.js:29
+await in renderMyAccount
+onclick @ (index):1Understand this error
+myAccountService.js:235 ❌ ViewModel 생성 실패, 더미 데이터 반환: Error: 사용자 정보 조회 실패
+    at Object.fetchUserInfo (myAccountRepository.js:15:15)
+    at async Promise.all (:5000/index 0)
+    at async Object.fetchAllAccountData (myAccountRepository.js:82:43)
+    at async Object.buildAccountViewModel (myAccountService.js:232:45)
+    at async Object.init (myAccountController.js:24:25)
+    at async renderMyAccount (renderMyAccount.js:29:5)

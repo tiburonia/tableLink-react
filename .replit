@@ -9,10 +9,10 @@ packages = ["static-web-server", "file"]
 [deployment]
 publicDir = "/"
 deploymentTarget = "static"
-build = ["sh", "-c", "npm run build"]
+run = ["sh", "-c", "npx live-server --port=5000 --host=0.0.0.0"]
 
 [workflows]
-runButton = "Full Stack (Separated)"
+runButton = "TableLink Server"
 
 [[workflows.workflow]]
 name = "TableLink Server"
@@ -35,87 +35,13 @@ args = "npm install"
 task = "shell.exec"
 args = "node src/server.js"
 
-[[workflows.workflow]]
-name = "Full Stack Dev"
-author = 41585131
-mode = "parallel"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node src/server.js"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-
-[[workflows.workflow]]
-name = "React Dev"
-author = 41585131
-mode = "parallel"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node src/server.js"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-
-[[workflows.workflow]]
-name = "Full Stack (Separated)"
-author = 41585131
-mode = "parallel"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd backend && npm install && node server.js"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npm install && npm run dev"
-
-[[workflows.workflow]]
-name = "React Only"
-author = 41585131
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd frontend && npm install && npm run dev"
-
 [[ports]]
 localPort = 80
 externalPort = 80
 
 [[ports]]
-localPort = 4173
-externalPort = 3001
-
-[[ports]]
 localPort = 5000
 externalPort = 5000
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
-
-[[ports]]
-localPort = 5173
-externalPort = 5173
-exposeLocalhost = true
-
-[[ports]]
-localPort = 5174
-externalPort = 3002
-
-[[ports]]
-localPort = 5175
-externalPort = 3003
-exposeLocalhost = true
-
-[[ports]]
-localPort = 5176
-externalPort = 4200
 
 [agent]
 expertMode = true
