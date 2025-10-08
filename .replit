@@ -8,44 +8,7 @@ packages = ["static-web-server", "file"]
 [deployment]
 publicDir = "/"
 deploymentTarget = "static"
-run = ["sh", "-c", "npx live-server --port=5000 --host=0.0.0.0"]
-
-[workflows]
-runButton = "TableLink Server"
-
-[[workflows.workflow]]
-name = "TableLink Server"
-author = 41585131
-mode = "sequential"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "pkill -f \"node.*server\" || true"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "sleep 1"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node src/server.js"
-
-[[workflows.workflow]]
-name = "TableLink Server"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm start"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
-
-[[ports]]
-localPort = 80
-externalPort = 80
+run = ["sh", "-c", "node src/server.js"]
 
 [[ports]]
 localPort = 5000
