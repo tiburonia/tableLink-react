@@ -45,7 +45,8 @@ process.on('uncaughtException', (error) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log('\n=== 🚀 TableLink 서버 시작 ===');
   console.log(`📍 포트: ${PORT}`);
-  console.log(`🌐 접속 URL: http://localhost:${PORT}`);
+  console.log(`🌐 로컬: http://localhost:${PORT}`);
+  console.log(`🌍 개발서버: https://[프로젝트ID].replit.dev (Webview 참고)`);
   console.log(`🔧 환경: ${process.env.NODE_ENV || 'development'}`);
   console.log(`📊 메모리: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
   console.log('🏗️ 시스템: POS/TLL/KRP 통합');
