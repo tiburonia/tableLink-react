@@ -1,9 +1,20 @@
+
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import LoginPage from './pages/LoginPage'
+import SignUpPage from './pages/SignUpPage'
+import MapPage from './pages/MapPage'
+import './App.css'
+
 function App() {
   return (
-    <div className="app">
-      <h1>TableLink React App</h1>
-      <p>처음부터 시작앙ㅇ앙하세요!</p>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/map" element={<MapPage />} />
+      </Routes>
+    </Router>
   )
 }
 
