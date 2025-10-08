@@ -15,6 +15,7 @@ export const homeTabView = {
         ${this.renderTableStatus()}
         ${this.renderFacilities(store)}
         ${this.renderMenu(store)}
+        ${this.renderLocationInfo(store)}
       </div>
       ${this.getStyles()}
     `;
@@ -260,6 +261,53 @@ export const homeTabView = {
           </h3>
         </div>
         <!-- menuHTML 모듈이 여기에 삽입됩니다 -->
+      </section>
+    `;
+  },
+
+  /**
+   * 위치정보 섹션 (네이버 지도 스타일)
+   */
+  renderLocationInfo(store) {
+    const address = store.address || '주소 정보 없음';
+    const lat = store.latitude || 37.5665;
+    const lng = store.longitude || 126.9780;
+
+    // 네이버 지도 Static Map API URL
+    const mapImageUrl = `https://naveropenapi.apigw.ntruss.com/map-static/v2/raster?w=570&h=200&center=${lng},${lat}&level=16&markers=type:d|size:mid|pos:${lng}%20${lat}&X-NCP-APIGW-API-KEY-ID=ejmti6owy5`;
+
+    return `
+      <section class="home-section location-info-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">📍</span>
+            위치정보
+          </h3>
+        </div>
+
+        <div class="location-map-container">
+          <div class="naver-map-wrapper">
+            <img src="${mapImageUrl}" alt="매장 위치" class="location-map-image" />
+            <div class="map-overlay">
+              <button class="map-expand-btn" onclick="window.open('https://map.naver.com/p/search/${encodeURIComponent(address)}', '_blank')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="location-address-section">
+          <div class="address-text">${address}</div>
+          <button class="address-copy-btn" onclick="navigator.clipboard.writeText('${address}').then(() => alert('주소가 복사되었습니다'))">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+            주소복사
+          </button>
+        </div>
       </section>
     `;
   },
@@ -827,6 +875,120 @@ export const homeTabView = {
           .facilities-count-badge {
             font-size: 11px;
             padding: 3px 10px;
+          }
+        }
+
+        /* 위치정보 섹션 스타일 */
+        .location-info-section {
+          background: white;
+          margin-bottom: 12px;
+          padding: 20px 16px;
+        }
+
+        .location-map-container {
+          margin-bottom: 16px;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .naver-map-wrapper {
+          position: relative;
+          width: 100%;
+          height: 200px;
+          background: #f8f9fa;
+        }
+
+        .location-map-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .map-overlay {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+        }
+
+        .map-expand-btn {
+          width: 36px;
+          height: 36px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-expand-btn:hover {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+          transform: scale(1.05);
+        }
+
+        .map-expand-btn svg {
+          color: #64748b;
+        }
+
+        .location-address-section {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px 16px;
+          background: #f8fafc;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+        }
+
+        .address-text {
+          flex: 1;
+          font-size: 14px;
+          color: #1e293b;
+          font-weight: 500;
+          line-height: 1.5;
+        }
+
+        .address-copy-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #475569;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .address-copy-btn:hover {
+          background: #f1f5f9;
+          border-color: #cbd5e1;
+          color: #1e293b;
+        }
+
+        .address-copy-btn svg {
+          color: #64748b;
+        }
+
+        @media (max-width: 480px) {
+          .location-address-section {
+            flex-direction: column;
+            align-items: flex-start;
+          }
+
+          .address-copy-btn {
+            width: 100%;
+            justify-content: center;
           }
         }
       </style>
