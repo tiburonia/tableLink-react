@@ -111,7 +111,7 @@ body {
 }
 
 .storeInfo {
-  padding: 20px 16px 16px 16px;
+  padding: 20px 16px 0px 16px;
 }
 
 .store-header-section {
@@ -232,13 +232,13 @@ body {
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
   border-radius: 20px;
   padding: 20px;
-  margin-bottom: 16px;
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.08),
     0 2px 8px rgba(0, 0, 0, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.8);
   overflow: hidden;
+  margin-bottom: 12px;
 }
 
 .card-gradient-bg {
@@ -800,12 +800,10 @@ body {
   display: flex;
   justify-content: space-between;
   padding: 0;
-  margin-bottom: 8px;
   gap: 0;
   position: sticky;
   top: 0;
   z-index: 5;
-  border-bottom: 1px solid #f1f5f9;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 

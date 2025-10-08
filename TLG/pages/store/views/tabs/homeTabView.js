@@ -11,7 +11,7 @@ export const homeTabView = {
   render(store) {
     return `
       <div class="home-tab-container">
-        ${this.renderWaitingTimes()}
+        <!-- 요일별 대기시간 통계 $ {this.renderWaitingTimes()} -->
         ${this.renderTableStatus()}
         ${this.renderFacilities(store)}
         ${this.renderMenu(store)}
@@ -288,9 +288,7 @@ export const homeTabView = {
 
         .home-section {
           background: white;
-          margin: 0 16px 16px 16px;
           padding: 24px 20px;
-          border-radius: 20px;
           box-shadow: 
             0 4px 16px rgba(0, 0, 0, 0.04),
             0 2px 8px rgba(0, 0, 0, 0.02);
@@ -298,6 +296,7 @@ export const homeTabView = {
           position: relative;
           overflow: hidden;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          margin: 0;
         }
 
         .home-section::before {
@@ -307,7 +306,6 @@ export const homeTabView = {
           left: 0;
           right: 0;
           height: 3px;
-          background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%);
           opacity: 0;
           transition: opacity 0.3s ease;
         }
@@ -746,11 +744,15 @@ export const homeTabView = {
         /* 테이블 상태 및 리뷰 섹션 */
         .table-status-section,
         .review-preview-section {
-          padding: 24px 20px;
+          padding: 0px;
           background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
           box-shadow: 
             0 4px 16px rgba(0, 0, 0, 0.04),
             0 2px 8px rgba(0, 0, 0, 0.02);
+        }
+
+        .table-status-section {
+          margin-top: 12px;
         }
 
         @media (max-width: 480px) {

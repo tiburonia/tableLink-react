@@ -285,7 +285,7 @@ export const storeAdditionalInfoHTML = {
           background: #ffffff;
           padding: 24px 20px;
           margin-top: 8px;
-          border-top: 8px solid #f8fafc;
+          border-top: 2px solid #f8fafc;
         }
 
         .notices-header {
