@@ -206,7 +206,39 @@ window.MapMarkerManager = {
    
 
     const content = `
-      <div id="${markerId}" class="native-store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ try { if(window.renderStore) await window.renderStore(${JSON.stringify(storeData).replace(/"/g, '&quot;')}); else console.error('renderStore not found'); } catch(e) { console.error('renderStore error:', e); } })()">
+      <div id="${markerId}" class="native-store-marker ${isOpen ? 'open' : 'closed'}" onclick="(async function(){ 
+        try { 
+          // 패널 확장 및 매장 카드 스크롤
+          const storePanel = document.getElementById('mapStorePanel');
+          const storeCard = document.querySelector('.storeCard[data-store-id=&quot;${storeData.id}&quot;]');
+          
+          if (storePanel) {
+            storePanel.classList.remove('collapsed');
+            storePanel.classList.add('expanded');
+            storePanel.style.height = '400px';
+            window.mapPanelFirstRender = false;
+            
+            // 매장 카드로 스크롤 (약간의 지연 후 실행)
+            if (storeCard) {
+              setTimeout(() => {
+                const container = document.getElementById('mapStoreListContainer');
+                if (container) {
+                  const cardTop = storeCard.offsetTop;
+                  container.scrollTo({ top: cardTop - 10, behavior: 'smooth' });
+                }
+              }, 100);
+            }
+          }
+          
+          if(window.renderStore) {
+            await window.renderStore(${JSON.stringify(storeData).replace(/"/g, '&quot;')});
+          } else {
+            console.error('renderStore not found');
+          }
+        } catch(e) { 
+          console.error('renderStore error:', e); 
+        } 
+      })()">
         <div class="marker-card">
           <div class="marker-icon">
             <span class="icon-emoji">${categoryIcon}</span>
