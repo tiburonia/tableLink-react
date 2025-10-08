@@ -2,7 +2,7 @@ function App() {
   return (
     <div className="app">
       <h1>TableLink React App</h1>
-      <p>처음부터 시작dd하세요!</p>
+      <p>처음부터 시작앙ㅇ앙하세요!</p>
     </div>
   )
 }
