@@ -12,10 +12,11 @@ export const homeTabView = {
     return `
       <div class="home-tab-container">
         <!-- 요일별 대기시간 통계 $ {this.renderWaitingTimes()} -->
+        ${this.renderLocationInfo(store)}
         ${this.renderTableStatus()}
         ${this.renderFacilities(store)}
         ${this.renderMenu(store)}
-        ${this.renderLocationInfo(store)}
+        
       </div>
       ${this.getStyles()}
     `;
@@ -153,7 +154,7 @@ export const homeTabView = {
   },
 
   /**
-   * 시설정보 섹션 - 네이티브 앱 스타일
+   * 시설정보 섹션 - 네이버 지도 스타일 (미니멀)
    */
   renderFacilities(store) {
     const amenitiesData = store.amenities || {};
@@ -161,28 +162,23 @@ export const homeTabView = {
     const amenityConfig = {
       wifi: { 
         icon: '📶',
-        name: 'WiFi',
-        color: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        name: '무선 인터넷'
       },
       parking: { 
         icon: '🅿️',
-        name: '주차',
-        color: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+        name: '주차 이용 가능'
       },
       pet_friendly: { 
         icon: '🐾',
-        name: '반려동물',
-        color: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+        name: '반려 화장실 구비'
       },
       power_outlet: { 
         icon: '🔌',
-        name: '콘센트',
-        color: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'
+        name: '단체석 구비'
       },
       smoking_area: { 
         icon: '🚬',
-        name: '흡연구역',
-        color: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
+        name: '흡연구역'
       }
     };
 
@@ -191,7 +187,6 @@ export const homeTabView = {
       .map(key => ({
         name: amenityConfig[key].name,
         icon: amenityConfig[key].icon,
-        color: amenityConfig[key].color,
         available: amenitiesData[key] === true
       }))
       .filter(a => a.available === true);
@@ -202,31 +197,19 @@ export const homeTabView = {
     }
 
     return `
-      <section class="home-section facilities-section-native">
-        <div class="section-header">
-          <h3 class="section-title">
-            <span class="section-icon">🏪</span>
-            편의시설
-          </h3>
-          <div class="facilities-count-badge">
-            ${amenitiesArray.length}개
-          </div>
+      <section class="home-section facilities-section-minimal">
+        <div class="section-header-minimal">
+          <h3 class="section-title-minimal">편의시설</h3>
         </div>
-        <div class="facilities-grid-native">
-          ${amenitiesArray.map((a, index) => `
-            <div class="facility-card-native" style="animation-delay: ${index * 0.1}s;">
-              <div class="facility-icon-wrapper" style="background: ${a.color};">
-                <span class="facility-icon-native">${a.icon}</span>
-              </div>
-              <span class="facility-name-native">${a.name}</span>
-              <div class="facility-check-badge">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <path d="M10 3L4.5 8.5L2 6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </div>
+        <div class="facilities-list-minimal">
+          ${amenitiesArray.map(a => `
+            <div class="facility-item-minimal">
+              <span class="facility-icon-minimal">${a.icon}</span>
+              <span class="facility-name-minimal">${a.name}</span>
             </div>
           `).join('')}
         </div>
+        <div class="facilities-footer-minimal">민생소비재포함</div>
       </section>
     `;
   },
@@ -585,129 +568,66 @@ export const homeTabView = {
           }
         }
 
-        /* 네이티브 앱 스타일 편의시설 */
-        .facilities-section-native {
+        /* 네이버 지도 스타일 편의시설 (미니멀) */
+        .facilities-section-minimal {
           background: white;
           margin-bottom: 12px;
           padding: 20px 16px;
+          border-bottom: 1px solid #f0f0f0;
         }
 
-        .facilities-section-native .section-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
+        .section-header-minimal {
           margin-bottom: 16px;
-          padding-bottom: 12px;
         }
 
-        .facilities-count-badge {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 4px 12px;
-          border-radius: 12px;
-          font-size: 12px;
+        .section-title-minimal {
+          margin: 0;
+          font-size: 17px;
           font-weight: 700;
-          box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+          color: #1a1a1a;
+          letter-spacing: -0.3px;
         }
 
-        .facilities-grid-native {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-          gap: 12px;
-        }
-
-        .facility-card-native {
-          position: relative;
+        .facilities-list-minimal {
           display: flex;
           flex-direction: column;
+          gap: 0;
+        }
+
+        .facility-item-minimal {
+          display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 16px 12px;
-          background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-          border-radius: 16px;
-          border: 1px solid #e2e8f0;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          animation: facilityFadeIn 0.5s ease-out forwards;
-          opacity: 0;
-          transform: translateY(10px);
+          gap: 12px;
+          padding: 14px 0;
+          border-bottom: 1px solid #f5f5f5;
         }
 
-        @keyframes facilityFadeIn {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+        .facility-item-minimal:last-child {
+          border-bottom: none;
         }
 
-        .facility-card-native:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-          border-color: transparent;
-        }
-
-        .facility-icon-wrapper {
-          width: 48px;
-          height: 48px;
-          border-radius: 14px;
+        .facility-icon-minimal {
+          font-size: 20px;
+          width: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-          position: relative;
-          overflow: hidden;
+          flex-shrink: 0;
         }
 
-        .facility-icon-wrapper::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 50%;
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%);
-          border-radius: 14px 14px 0 0;
+        .facility-name-minimal {
+          font-size: 15px;
+          color: #1a1a1a;
+          font-weight: 400;
+          letter-spacing: -0.2px;
         }
 
-        .facility-icon-native {
-          font-size: 24px;
-          filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-          position: relative;
-          z-index: 1;
-        }
-
-        .facility-name-native {
+        .facilities-footer-minimal {
+          margin-top: 12px;
+          padding-top: 12px;
           font-size: 13px;
-          font-weight: 600;
-          color: #1e293b;
-          text-align: center;
-          line-height: 1.2;
-          margin-top: 4px;
-        }
-
-        .facility-check-badge {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 20px;
-          height: 20px;
-          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-          animation: checkPulse 2s ease-in-out infinite;
-        }
-
-        @keyframes checkPulse {
-          0%, 100% {
-            transform: scale(1);
-            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
-          }
-          50% {
-            transform: scale(1.05);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.6);
-          }
+          color: #8b8b8b;
+          font-weight: 400;
         }
 
         /* 레거시 스타일 (하위 호환성) */
@@ -809,36 +729,21 @@ export const homeTabView = {
             height: 28px;
           }
 
-          .facilities-grid-native {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 10px;
+          .facility-item-minimal {
+            padding: 12px 0;
           }
 
-          .facility-card-native {
-            padding: 14px 10px;
+          .facility-icon-minimal {
+            font-size: 18px;
+            width: 22px;
           }
 
-          .facility-icon-wrapper {
-            width: 40px;
-            height: 40px;
+          .facility-name-minimal {
+            font-size: 14px;
           }
 
-          .facility-icon-native {
-            font-size: 20px;
-          }
-
-          .facility-name-native {
+          .facilities-footer-minimal {
             font-size: 12px;
-          }
-
-          .facility-check-badge {
-            width: 18px;
-            height: 18px;
-          }
-
-          /* 레거시 */
-          .facilities-grid {
-            grid-template-columns: repeat(2, 1fr);
           }
         }
 
@@ -863,18 +768,12 @@ export const homeTabView = {
             height: 26px;
           }
 
-          .facilities-grid-native {
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
+          .facility-item-minimal {
+            padding: 10px 0;
           }
 
-          .facility-card-native {
-            padding: 12px 8px;
-          }
-
-          .facilities-count-badge {
-            font-size: 11px;
-            padding: 3px 10px;
+          .section-title-minimal {
+            font-size: 16px;
           }
         }
 
