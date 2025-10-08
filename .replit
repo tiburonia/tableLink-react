@@ -12,7 +12,7 @@ deploymentTarget = "static"
 build = ["sh", "-c", "npm run build"]
 
 [workflows]
-runButton = "Full Stack (Separated)"
+runButton = "React Only"
 
 [[workflows.workflow]]
 name = "TableLink Server"
@@ -74,6 +74,15 @@ args = "cd backend && npm install && node server.js"
 task = "shell.exec"
 args = "cd frontend && npm install && npm run dev"
 
+[[workflows.workflow]]
+name = "React Only"
+author = 41585131
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd frontend && npm install && npm run dev"
+
 [[ports]]
 localPort = 80
 externalPort = 80
@@ -93,6 +102,7 @@ externalPort = 3000
 [[ports]]
 localPort = 5173
 externalPort = 5173
+exposeLocalhost = true
 
 [[ports]]
 localPort = 5174
@@ -101,6 +111,7 @@ externalPort = 3002
 [[ports]]
 localPort = 5175
 externalPort = 3003
+exposeLocalhost = true
 
 [[ports]]
 localPort = 5176
