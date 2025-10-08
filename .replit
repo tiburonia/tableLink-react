@@ -11,7 +11,7 @@ deploymentTarget = "static"
 run = ["sh", "-c", "npx live-server --port=5000 --host=0.0.0.0"]
 
 [workflows]
-runButton = "Project"
+runButton = "TableLink Server"
 
 [[workflows.workflow]]
 name = "TableLink Server"
