@@ -116,6 +116,19 @@ export const mapController = {
       this.updateLocationInfo();
     });
 
+    // 지도 클릭 이벤트 - 패널 접기
+    naver.maps.Event.addListener(map, 'click', (e) => {
+      const storePanel = document.getElementById('mapStorePanel');
+      
+      // 패널이 펼쳐진 상태(expanded)일 때만 접기
+      if (storePanel && storePanel.classList.contains('expanded')) {
+        storePanel.classList.remove('expanded');
+        storePanel.classList.add('collapsed');
+        storePanel.style.height = '120px';
+        console.log('📍 지도 클릭 - 패널 접기');
+      }
+    });
+
     console.log('✅ 지도 이벤트 설정 완료');
   },
 
