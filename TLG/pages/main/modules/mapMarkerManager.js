@@ -230,11 +230,7 @@ window.MapMarkerManager = {
             }
           }
           
-          if(window.renderStore) {
-            await window.renderStore(${JSON.stringify(storeData).replace(/"/g, '&quot;')});
-          } else {
-            console.error('renderStore not found');
-          }
+          
         } catch(e) { 
           console.error('renderStore error:', e); 
         } 
