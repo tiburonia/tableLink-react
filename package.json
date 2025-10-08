@@ -4,8 +4,8 @@
   "description": "TableLink - 매장 주문 및 예약 웹 애플리케이션",
   "main": "index.html",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
     "static": "live-server --port=5000 --host=0.0.0.0",
     "build": "echo 'No build process needed for static HTML'",
     "test": "echo 'No tests specified'"
