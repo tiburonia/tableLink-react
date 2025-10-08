@@ -14,5 +14,33 @@ run = ["sh", "-c", "node src/server.js"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 37395
+externalPort = 3000
+
 [agent]
 expertMode = true
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "TableLink Server"
+
+[[workflows.workflow]]
+name = "TableLink Server"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm start"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"

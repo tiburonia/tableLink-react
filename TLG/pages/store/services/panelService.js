@@ -34,10 +34,16 @@ export const panelService = {
    * 컨텐츠 최소 높이 계산
    */
   calculateContentMinHeight(elements, containerHeight) {
-    if (!elements.storeNavBar) return 400;
+    if (!elements.storeNavBar) return containerHeight || 400;
 
-    const navBarOffset = elements.storeNavBar.offsetTop;
-    return navBarOffset > 0 ? (containerHeight + navBarOffset) : 400;
+    const navBarHeight = elements.storeNavBar.offsetHeight || 0;
+    const navBarOffset = elements.storeNavBar.offsetTop || 0;
+    
+    // 컨테이너 높이에서 네비바가 차지하는 공간을 제외한 나머지 영역
+    const contentAreaHeight = containerHeight - navBarHeight - navBarOffset;
+    
+    // 최소 400px 보장
+    return Math.max(contentAreaHeight, 400);
   },
 
   /**

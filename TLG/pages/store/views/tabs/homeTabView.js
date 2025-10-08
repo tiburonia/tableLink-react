@@ -289,10 +289,6 @@ export const homeTabView = {
         .home-section {
           background: white;
           padding: 24px 20px;
-          box-shadow: 
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            0 2px 8px rgba(0, 0, 0, 0.02);
-          border: 1px solid rgba(0, 0, 0, 0.03);
           position: relative;
           overflow: hidden;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -314,17 +310,11 @@ export const homeTabView = {
           opacity: 1;
         }
 
-        .home-section:hover {
-          transform: translateY(-2px);
-          box-shadow: 
-            0 8px 24px rgba(0, 0, 0, 0.08),
-            0 4px 12px rgba(0, 0, 0, 0.04);
-        }
+       
 
         .section-header {
           margin-bottom: 20px;
           padding-bottom: 16px;
-          border-bottom: 2px solid #f1f5f9;
           position: relative;
         }
 
@@ -552,7 +542,6 @@ export const homeTabView = {
           background: white;
           margin-bottom: 12px;
           padding: 20px 16px;
-          border-radius: 16px;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
@@ -562,7 +551,6 @@ export const homeTabView = {
           align-items: center;
           margin-bottom: 16px;
           padding-bottom: 12px;
-          border-bottom: 2px solid #f1f3f5;
         }
 
         .facilities-count-badge {
@@ -745,10 +733,7 @@ export const homeTabView = {
         .table-status-section,
         .review-preview-section {
           padding: 0px;
-          background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
-          box-shadow: 
-            0 4px 16px rgba(0, 0, 0, 0.04),
-            0 2px 8px rgba(0, 0, 0, 0.02);
+         
         }
 
         .table-status-section {

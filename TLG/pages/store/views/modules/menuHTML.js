@@ -124,7 +124,6 @@ export const menuHTML = {
           font-weight: 700;
           color: #1e293b;
           padding-bottom: 8px;
-          border-bottom: 2px solid #e2e8f0;
         }
 
         .menu-items-grid {
