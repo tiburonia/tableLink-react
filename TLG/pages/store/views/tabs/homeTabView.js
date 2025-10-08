@@ -283,7 +283,7 @@ export const homeTabView = {
       <style>
         .home-tab-container {
           padding: 0;
-          background: linear-gradient(180deg, #F9FAFB 0%, #FFFFFF 100%);
+          background: white;
         }
 
         .home-section {
@@ -542,7 +542,6 @@ export const homeTabView = {
           background: white;
           margin-bottom: 12px;
           padding: 20px 16px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
         }
 
         .facilities-section-native .section-header {
