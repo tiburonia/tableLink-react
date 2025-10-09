@@ -31,6 +31,13 @@ body {
   font-weight: 600;
   color: #333;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.login-link img {
+  vertical-align: middle;
 }
 
 .settings-btn-icon {
