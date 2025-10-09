@@ -83,11 +83,22 @@ class UserRepository {
         LIMIT 1
       )
       SELECT 
+        ul.id,
+        ul.user_id,
+        ul.store_id,
+        ul.level_id,
+        ul.visit_count,
+        ul.total_spent,
+        ul.last_visit,
+        ul.created_at,
+        ul.updated_at,
+        ul.store_name,
+        ul.store_category,
         srl.level as level_name,
         srl.benefits,
         srl.min_orders,
         srl.min_spent
-      FROM store_regular_level srl
+      FROM user_level ul
       LEFT JOIN store_regular_levels srl ON ul.level_id = srl.id
     `, [userId]);
 
