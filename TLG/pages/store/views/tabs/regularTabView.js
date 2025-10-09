@@ -165,7 +165,15 @@ export const regularTabView = {
         </div>
 
         <div class="level-cards-container">
-          ${sortedPromotions.map((promo, index) => this.renderLevelCard(promo, index)).join('')}
+          ${sortedPromotions.length > 0 
+            ? sortedPromotions.map((promo, index) => this.renderLevelCard(promo, index)).join('')
+            : `
+              <div class="empty-level-state">
+                <div class="empty-level-icon">🏆</div>
+                <p class="empty-level-text">등록된 단골 레벨이 없습니다</p>
+              </div>
+            `
+          }
         </div>
       </div>
     `;
@@ -898,6 +906,31 @@ export const regularTabView = {
           font-size: 14px;
           color: #86868b;
           line-height: 1.5;
+          font-weight: 500;
+        }
+
+        /* 빈 상태 */
+        .empty-level-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 60px 20px;
+          background: white;
+          border-radius: 18px;
+          border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .empty-level-icon {
+          font-size: 48px;
+          margin-bottom: 12px;
+          opacity: 0.5;
+        }
+
+        .empty-level-text {
+          margin: 0;
+          font-size: 14px;
+          color: #86868b;
           font-weight: 500;
         }
 
