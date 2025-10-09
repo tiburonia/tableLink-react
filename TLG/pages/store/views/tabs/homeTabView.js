@@ -319,8 +319,8 @@ export const homeTabView = {
    * 프로모션 섹션 - 전체 쿠폰 및 할인 이벤트 표시
    */
   renderPromotionSection(store) {
-    // 실제 프로모션 데이터 또는 더미 데이터
-    const promotions = store.promotions || this.getDummyPromotions();
+    // 100% 더미데이터 사용
+    const promotions = this.getDummyPromotions();
     
     if (!promotions || promotions.length === 0) {
       return '';
