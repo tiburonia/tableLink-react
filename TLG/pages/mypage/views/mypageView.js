@@ -18,7 +18,7 @@ export const mypageView = {
         <span class="login-link" onclick="${isLoggedIn ? 'renderAccountSettings()' : 'renderLogin()'}">
           ${isLoggedIn ? displayName : '로그인해 주세요 >'}&nbsp&nbsp <img width="17" height="17" src="https://img.icons8.com/external-others-inmotus-design/17/external-Right-basic-web-ui-elements-others-inmotus-design-4.png" alt="external-Right-basic-web-ui-elements-others-inmotus-design-4"/>
         </span>
-        <button class="settings-btn-icon"><img width="30" height="30" src="https://img.icons8.com/ios-filled/30/settings.png" alt="settings"/></button>
+        
       </header>
       <div id="mypageContainer" style="overflow-y: auto; height: 660px;">
       <!-- 예약/이용예정 카드 -->

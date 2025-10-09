@@ -336,7 +336,6 @@ export const accountSettingsView = {
         background: #ffffff;
         border-radius: 16px;
         overflow: hidden;
-        border: 1px solid #f5f5f7;
       }
 
       .info-row {
@@ -349,9 +348,7 @@ export const accountSettingsView = {
         transition: background 0.2s;
       }
 
-      .info-row:last-child {
-        border-bottom: none;
-      }
+      
 
       .info-row:active {
         background: #f5f5f7;
