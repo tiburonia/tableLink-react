@@ -344,7 +344,6 @@ export const regularTabView = {
         .my-benefits-card {
           padding: 24px;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-          margin-bottom: 12px;
           animation: scaleIn 0.5s ease-out;
         }
 
