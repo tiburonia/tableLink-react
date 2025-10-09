@@ -12,6 +12,7 @@ export const homeTabView = {
     return `
       <div class="home-tab-container">
         <!-- 요일별 대기시간 통계 $ {this.renderWaitingTimes()} -->
+        ${this.renderReservationSection(store)}
         ${this.renderTableStatus()}
         ${this.renderMenu(store)}
         
@@ -136,6 +137,115 @@ export const homeTabView = {
           
           grid.style.opacity = '1';
         }, 150);
+      });
+    });
+  },
+
+  /**
+   * 예약 섹션
+   */
+  renderReservationSection(store) {
+    // 오늘부터 5일간의 날짜 생성
+    const today = new Date();
+    const availableDates = [];
+    
+    for (let i = 0; i < 5; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      
+      const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+      const month = date.getMonth() + 1;
+      const day = date.getDate();
+      const dayOfWeek = dayNames[date.getDay()];
+      
+      availableDates.push({
+        date: `${month}.${day}`,
+        dayOfWeek: `(${dayOfWeek})`,
+        fullDate: date.toISOString().split('T')[0],
+        isToday: i === 0
+      });
+    }
+
+    // 예약 섹션 렌더링 후 이벤트 리스너 설정
+    setTimeout(() => {
+      this.initReservationEvents(store);
+    }, 0);
+
+    return `
+      <section class="home-section reservation-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">📅</span>
+            예약
+          </h3>
+        </div>
+
+        <!-- 날짜/인원/시간 선택 -->
+        <div class="reservation-selector-container">
+          <button class="reservation-selector-btn" id="reservationSelectorBtn">
+            <span class="selector-icon">📅</span>
+            <span class="selector-text">날짜 · 인원 · 시간</span>
+            <span class="selector-arrow">›</span>
+          </button>
+        </div>
+
+        <!-- 예약 가능 날짜 -->
+        <div class="reservation-dates-container">
+          ${availableDates.map(dateInfo => `
+            <button class="reservation-date-card ${dateInfo.isToday ? 'today' : ''}" 
+                    data-date="${dateInfo.fullDate}">
+              <div class="date-label">
+                <span class="date-day">${dateInfo.isToday ? '오늘' : dateInfo.dayOfWeek.replace(/[()]/g, '')}</span>
+                <span class="date-number">${dateInfo.date}</span>
+              </div>
+              <div class="availability-status">예약 가능</div>
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- 예약 가능 날짜 찾기 버튼 -->
+        <button class="find-reservation-btn" id="findReservationBtn">
+          예약 가능 날짜 찾기
+        </button>
+      </section>
+    `;
+  },
+
+  /**
+   * 예약 이벤트 초기화
+   */
+  initReservationEvents(store) {
+    const selectorBtn = document.getElementById('reservationSelectorBtn');
+    const findBtn = document.getElementById('findReservationBtn');
+    const dateCards = document.querySelectorAll('.reservation-date-card');
+
+    if (selectorBtn) {
+      selectorBtn.addEventListener('click', () => {
+        console.log('📅 날짜/인원/시간 선택 모달 열기');
+        // TODO: 예약 상세 설정 모달 구현
+        alert('예약 설정 모달 (구현 예정)');
+      });
+    }
+
+    if (findBtn) {
+      findBtn.addEventListener('click', () => {
+        console.log('🔍 예약 가능 날짜 찾기');
+        // TODO: 예약 가능 날짜 검색 기능 구현
+        alert('예약 가능 날짜 검색 (구현 예정)');
+      });
+    }
+
+    dateCards.forEach(card => {
+      card.addEventListener('click', () => {
+        const selectedDate = card.dataset.date;
+        console.log('📅 선택된 날짜:', selectedDate);
+        
+        // 선택 상태 토글
+        dateCards.forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        
+        // TODO: 예약 시간 선택 단계로 이동
+        alert(`${selectedDate} 예약 시간 선택 (구현 예정)`);
       });
     });
   },
@@ -274,6 +384,160 @@ export const homeTabView = {
           border-radius: 10px;
           border: 1px solid #bfdbfe;
           filter: drop-shadow(0 2px 4px rgba(59, 130, 246, 0.1));
+        }
+
+        /* 예약 섹션 스타일 */
+        .reservation-section {
+          padding: 24px 20px;
+          background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
+        }
+
+        .reservation-selector-container {
+          margin: 16px 0 20px;
+        }
+
+        .reservation-selector-btn {
+          width: 100%;
+          padding: 16px 20px;
+          background: white;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .reservation-selector-btn:hover {
+          border-color: #667eea;
+          background: #f5f7ff;
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .selector-icon {
+          font-size: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          border-radius: 10px;
+        }
+
+        .selector-text {
+          flex: 1;
+          font-size: 15px;
+          font-weight: 600;
+          color: #1f2937;
+          text-align: left;
+        }
+
+        .selector-arrow {
+          font-size: 20px;
+          color: #9ca3af;
+          font-weight: 300;
+        }
+
+        .reservation-dates-container {
+          display: flex;
+          gap: 8px;
+          overflow-x: auto;
+          padding: 4px 0 16px;
+          scrollbar-width: none;
+        }
+
+        .reservation-dates-container::-webkit-scrollbar {
+          display: none;
+        }
+
+        .reservation-date-card {
+          flex-shrink: 0;
+          min-width: 85px;
+          padding: 14px 12px;
+          background: white;
+          border: 2px solid #e5e7eb;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .reservation-date-card:hover {
+          border-color: #c7d2fe;
+          background: #f5f7ff;
+          transform: translateY(-2px);
+        }
+
+        .reservation-date-card.selected {
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          border-color: #667eea;
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+          transform: translateY(-2px);
+        }
+
+        .reservation-date-card.selected .date-day,
+        .reservation-date-card.selected .date-number,
+        .reservation-date-card.selected .availability-status {
+          color: white;
+        }
+
+        .reservation-date-card.today {
+          border-color: #fbbf24;
+          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+
+        .date-label {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+        }
+
+        .date-day {
+          font-size: 12px;
+          font-weight: 600;
+          color: #6b7280;
+        }
+
+        .date-number {
+          font-size: 14px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+
+        .availability-status {
+          font-size: 11px;
+          font-weight: 500;
+          color: #10b981;
+          text-align: center;
+        }
+
+        .find-reservation-btn {
+          width: 100%;
+          padding: 14px 20px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .find-reservation-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .find-reservation-btn:active {
+          transform: translateY(0);
         }
 
         /* 요일별 대기시간 스타일 */
