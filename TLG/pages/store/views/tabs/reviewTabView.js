@@ -1,6 +1,5 @@
-
 /**
- * 리뷰 탭 뷰 - UI 렌더링
+ * 리뷰 탭 뷰 - UI 렌더링 (미니멀 디자인)
  */
 
 export const reviewTabView = {
@@ -30,10 +29,9 @@ export const reviewTabView = {
               </div>
               <div class="rating-meta">
                 <span class="total-reviews">${totalReviews}개의 리뷰</span>
-                <span class="review-quality">📝 실제 방문 후기</span>
               </div>
             </div>
-            
+
             <div class="rating-distribution">
               ${this.renderRatingBars(ratingDistribution, totalReviews)}
             </div>
@@ -43,11 +41,8 @@ export const reviewTabView = {
         <!-- 최근 리뷰 섹션 -->
         <div class="recent-reviews-section">
           <div class="section-header">
-            <h3 class="section-title">
-              <span class="title-icon">💭</span>
-              최근 리뷰
-            </h3>
-            <span class="review-badge">${recentReviews.length}개</span>
+            <h3 class="section-title">최근 리뷰</h3>
+            <span class="review-count">${recentReviews.length}개</span>
           </div>
 
           <div class="review-list">
@@ -57,10 +52,8 @@ export const reviewTabView = {
           <!-- 더보기 버튼 -->
           ${totalReviews > 3 ? `
             <button class="view-all-reviews-btn" data-action="show-all-reviews" data-store-id="${store.id}">
-              <span class="btn-icon">📋</span>
               <span class="btn-text">모든 리뷰 보기</span>
               <span class="btn-count">(${totalReviews - 3}개 더)</span>
-              <span class="btn-arrow">→</span>
             </button>
           ` : ''}
         </div>
@@ -68,6 +61,7 @@ export const reviewTabView = {
       ${this.getReviewTabStyles()}
     `;
   },
+
   /**
    * 평균 평점 계산
    */
@@ -99,12 +93,12 @@ export const reviewTabView = {
     for (let score = 5; score >= 1; score--) {
       const count = distribution[score] || 0;
       const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
-      
+
       html += `
         <div class="rating-bar-item">
-          <span class="bar-label">${score}★</span>
+          <span class="bar-label">${score}</span>
           <div class="bar-track">
-            <div class="bar-fill bar-fill-${score}" style="width: ${percentage}%"></div>
+            <div class="bar-fill" style="width: ${percentage}%"></div>
           </div>
           <span class="bar-percentage">${percentage}%</span>
         </div>
@@ -119,7 +113,7 @@ export const reviewTabView = {
   renderFullStars(count) {
     const filled = '★'.repeat(count);
     const empty = '☆'.repeat(5 - count);
-    return `<span class="stars-filled">${filled}</span><span class="stars-empty">${empty}</span>`;
+    return filled + empty;
   },
 
   /**
@@ -135,32 +129,14 @@ export const reviewTabView = {
       day: 'numeric'
     });
 
-    const avatarColors = [
-      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-      'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-      'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-      'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-      'linear-gradient(135deg, #30cfd0 0%, #330867 100%)'
-    ];
-    const avatarColor = avatarColors[index % avatarColors.length];
-
     return `
-      <div class="review-card" style="animation-delay: ${index * 0.1}s">
-        <div class="review-card-header">
+      <div class="review-card">
+        <div class="review-header">
           <div class="user-info">
-            <div class="user-avatar" style="background: ${avatarColor}">
-              ${userName.charAt(0).toUpperCase()}
-            </div>
+            <div class="user-avatar">${userName.charAt(0).toUpperCase()}</div>
             <div class="user-details">
               <div class="user-name">${userName}</div>
-              <div class="review-date">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-                  <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                </svg>
-                ${date}
-              </div>
+              <div class="review-date">${date}</div>
             </div>
           </div>
           <div class="review-rating">
@@ -170,15 +146,6 @@ export const reviewTabView = {
 
         <div class="review-content">
           <p class="review-text">${content}</p>
-        </div>
-
-        <div class="review-footer">
-          <button class="action-btn helpful-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>도움돼요</span>
-          </button>
         </div>
       </div>
     `;
@@ -193,11 +160,8 @@ export const reviewTabView = {
     const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
     return `
-      <div class="star-rating-display">
-        ${'<span class="star filled">★</span>'.repeat(fullStars)}
-        ${hasHalfStar ? '<span class="star half">★</span>' : ''}
-        ${'<span class="star empty">☆</span>'.repeat(emptyStars)}
-        <span class="rating-value">${rating.toFixed(1)}</span>
+      <div class="star-rating">
+        ${'★'.repeat(fullStars)}${hasHalfStar ? '★' : ''}${'☆'.repeat(emptyStars)}
       </div>
     `;
   },
@@ -209,28 +173,12 @@ export const reviewTabView = {
     return `
       <div class="review-tab-container">
         <div class="empty-review-state">
-          <div class="empty-illustration">
-            <svg width="140" height="140" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="10" stroke="url(#emptyGradient)" stroke-width="2"/>
-              <path d="M8 14s1.5 2 4 2 4-2 4-2M9 9h.01M15 9h.01" stroke="url(#emptyGradient)" stroke-width="2" stroke-linecap="round"/>
-              <defs>
-                <linearGradient id="emptyGradient" x1="2" y1="2" x2="22" y2="22">
-                  <stop offset="0%" stop-color="#cbd5e1"/>
-                  <stop offset="100%" stop-color="#94a3b8"/>
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
+          <div class="empty-icon">💬</div>
           <h3 class="empty-title">아직 리뷰가 없어요</h3>
           <p class="empty-description">
-            이 매장의 첫 번째 리뷰를 남겨주세요!<br/>
-            여러분의 소중한 의견이 다른 고객에게 큰 도움이 됩니다.
+            이 매장의 첫 번째 리뷰를 남겨주세요
           </p>
           <button class="write-review-btn" data-action="write-review" data-store-id="${store?.id || ''}">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
             첫 리뷰 작성하기
           </button>
         </div>
@@ -264,100 +212,72 @@ export const reviewTabView = {
         alert('리뷰 작성 기능은 주문 완료 후 이용 가능합니다.');
       });
     }
-
-    // 도움돼요 버튼들
-    document.querySelectorAll('.helpful-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const button = e.currentTarget;
-        button.classList.toggle('active');
-        
-        if (button.classList.contains('active')) {
-          button.querySelector('span').textContent = '도움이 됐어요';
-        } else {
-          button.querySelector('span').textContent = '도움돼요';
-        }
-      });
-    });
   },
 
   /**
-   * 스타일 정의
+   * 스타일 정의 (미니멀 디자인)
    */
   getReviewTabStyles() {
     return `
       <style>
         .review-tab-container {
-          padding: 24px 16px;
-          background: #f8fafc;
+          padding: 20px 16px;
+          background: #fafafa;
           min-height: 400px;
         }
 
         /* 리뷰 요약 섹션 */
         .review-summary-section {
-          margin-bottom: 24px;
+          margin-bottom: 20px;
         }
 
         .review-summary-card {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border-radius: 20px;
-          padding: 28px 24px;
-          color: white;
-          box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+          background: white;
+          border-radius: 12px;
+          padding: 24px;
+          border: 1px solid #e5e5e5;
         }
 
         .summary-rating-display {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          margin-bottom: 24px;
-          padding-bottom: 20px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+          margin-bottom: 20px;
+          padding-bottom: 16px;
+          border-bottom: 1px solid #f0f0f0;
         }
 
         .rating-score-large {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 4px;
         }
 
         .score-number {
-          font-size: 48px;
-          font-weight: 900;
+          font-size: 40px;
+          font-weight: 700;
           line-height: 1;
-          text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          color: #1a1a1a;
         }
 
         .score-stars {
-          font-size: 16px;
-          letter-spacing: 2px;
-        }
-
-        .score-stars .stars-filled {
-          color: #fbbf24;
-        }
-
-        .score-stars .stars-empty {
-          color: rgba(255, 255, 255, 0.3);
+          font-size: 14px;
+          letter-spacing: 1px;
+          color: #ffa500;
         }
 
         .rating-meta {
           display: flex;
           flex-direction: column;
           align-items: flex-end;
-          gap: 6px;
+          gap: 4px;
         }
 
         .total-reviews {
-          font-size: 16px;
-          font-weight: 700;
-          opacity: 0.95;
-        }
-
-        .review-quality {
-          font-size: 13px;
-          opacity: 0.8;
+          font-size: 15px;
+          font-weight: 600;
+          color: #666;
         }
 
         /* 평점 분포 바 */
@@ -370,253 +290,145 @@ export const reviewTabView = {
         .rating-bar-item {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 8px;
         }
 
         .bar-label {
           font-size: 13px;
-          font-weight: 600;
-          width: 30px;
-          opacity: 0.9;
+          font-weight: 500;
+          width: 16px;
+          color: #666;
         }
 
         .bar-track {
           flex: 1;
-          height: 6px;
-          background: rgba(255, 255, 255, 0.2);
+          height: 5px;
+          background: #f0f0f0;
           border-radius: 3px;
           overflow: hidden;
         }
 
         .bar-fill {
           height: 100%;
+          background: #333;
           border-radius: 3px;
           transition: width 0.5s ease;
         }
 
-        .bar-fill-5 { background: #10b981; }
-        .bar-fill-4 { background: #3b82f6; }
-        .bar-fill-3 { background: #f59e0b; }
-        .bar-fill-2 { background: #ef4444; }
-        .bar-fill-1 { background: #991b1b; }
-
         .bar-percentage {
           font-size: 12px;
-          font-weight: 600;
-          width: 40px;
+          font-weight: 500;
+          width: 36px;
           text-align: right;
-          opacity: 0.9;
+          color: #666;
         }
 
         /* 최근 리뷰 섹션 */
         .recent-reviews-section {
           background: white;
-          border-radius: 20px;
-          padding: 24px 20px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+          border-radius: 12px;
+          padding: 20px 16px;
+          border: 1px solid #e5e5e5;
         }
 
         .section-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 20px;
+          margin-bottom: 16px;
         }
 
         .section-title {
-          display: flex;
-          align-items: center;
-          gap: 10px;
           margin: 0;
-          font-size: 18px;
-          font-weight: 800;
-          color: #1e293b;
-        }
-
-        .title-icon {
-          font-size: 22px;
-        }
-
-        .review-badge {
-          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-          color: #475569;
-          padding: 6px 14px;
-          border-radius: 12px;
-          font-size: 13px;
+          font-size: 17px;
           font-weight: 700;
+          color: #1a1a1a;
+        }
+
+        .review-count {
+          font-size: 13px;
+          font-weight: 600;
+          color: #999;
         }
 
         /* 리뷰 리스트 */
         .review-list {
           display: flex;
           flex-direction: column;
-          gap: 16px;
-          margin-bottom: 20px;
+          gap: 12px;
+          margin-bottom: 16px;
         }
 
         .review-card {
-          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-          border-radius: 16px;
-          padding: 20px;
-          border: 1px solid #e2e8f0;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          animation: slideUp 0.5s ease-out forwards;
+          background: #fafafa;
+          border-radius: 10px;
+          padding: 16px;
+          border: 1px solid #f0f0f0;
         }
 
-        @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .review-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-          border-color: #cbd5e1;
-        }
-
-        .review-card-header {
+        .review-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .user-info {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 10px;
           flex: 1;
         }
 
         .user-avatar {
-          width: 48px;
-          height: 48px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
+          background: #e5e5e5;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-size: 20px;
-          font-weight: 800;
-          color: white;
-          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+          font-size: 16px;
+          font-weight: 600;
+          color: #666;
           flex-shrink: 0;
         }
 
         .user-details {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 2px;
         }
 
         .user-name {
-          font-size: 16px;
-          font-weight: 700;
-          color: #1e293b;
+          font-size: 15px;
+          font-weight: 600;
+          color: #1a1a1a;
         }
 
         .review-date {
-          display: flex;
-          align-items: center;
-          gap: 4px;
           font-size: 12px;
-          color: #64748b;
-          font-weight: 500;
-        }
-
-        .review-date svg {
-          stroke: #94a3b8;
+          color: #999;
         }
 
         .review-rating {
           flex-shrink: 0;
         }
 
-        .star-rating-display {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-          padding: 8px 12px;
-          border-radius: 12px;
-        }
-
-        .star-rating-display .star {
+        .star-rating {
           font-size: 14px;
-          line-height: 1;
-        }
-
-        .star-rating-display .star.filled {
-          color: #f59e0b;
-        }
-
-        .star-rating-display .star.half {
-          color: #f59e0b;
-          opacity: 0.6;
-        }
-
-        .star-rating-display .star.empty {
-          color: #cbd5e1;
-        }
-
-        .star-rating-display .rating-value {
-          font-size: 13px;
-          font-weight: 700;
-          color: #92400e;
-          margin-left: 4px;
+          color: #ffa500;
         }
 
         .review-content {
-          margin-bottom: 16px;
+          margin-top: 8px;
         }
 
         .review-text {
           margin: 0;
-          font-size: 15px;
-          line-height: 1.6;
-          color: #475569;
-          word-break: keep-all;
-        }
-
-        .review-footer {
-          padding-top: 12px;
-          border-top: 1px solid #f1f5f9;
-        }
-
-        .action-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          background: #f8fafc;
-          border: 1px solid #e2e8f0;
-          border-radius: 10px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #64748b;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .action-btn:hover {
-          background: #eff6ff;
-          border-color: #3b82f6;
-          color: #3b82f6;
-        }
-
-        .action-btn.active {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          border-color: #3b82f6;
-          color: white;
-        }
-
-        .action-btn svg {
-          stroke: currentColor;
+          font-size: 14px;
+          line-height: 1.5;
+          color: #333;
         }
 
         /* 모든 리뷰 보기 버튼 */
@@ -625,145 +437,116 @@ export const reviewTabView = {
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 16px 24px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          border: none;
-          border-radius: 14px;
-          font-size: 15px;
-          font-weight: 700;
+          gap: 6px;
+          padding: 14px;
+          background: #fafafa;
+          color: #333;
+          border: 1px solid #e5e5e5;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+          transition: all 0.2s ease;
         }
 
         .view-all-reviews-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+          background: #f0f0f0;
         }
 
         .view-all-reviews-btn:active {
-          transform: translateY(0);
-        }
-
-        .btn-icon {
-          font-size: 18px;
+          transform: scale(0.98);
         }
 
         .btn-count {
-          opacity: 0.9;
-        }
-
-        .btn-arrow {
-          font-size: 18px;
-          transition: transform 0.3s ease;
-        }
-
-        .view-all-reviews-btn:hover .btn-arrow {
-          transform: translateX(4px);
+          color: #999;
         }
 
         /* 빈 상태 */
         .empty-review-state {
-          padding: 80px 20px;
+          padding: 60px 20px;
           text-align: center;
           background: white;
-          border-radius: 20px;
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+          border-radius: 12px;
+          border: 1px solid #e5e5e5;
         }
 
-        .empty-illustration {
-          margin-bottom: 28px;
-          display: flex;
-          justify-content: center;
-          animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-12px);
-          }
+        .empty-icon {
+          font-size: 48px;
+          margin-bottom: 16px;
+          opacity: 0.4;
         }
 
         .empty-title {
-          margin: 0 0 12px 0;
-          font-size: 24px;
-          font-weight: 800;
-          color: #1e293b;
-          letter-spacing: -0.5px;
+          margin: 0 0 8px 0;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1a1a1a;
         }
 
         .empty-description {
-          margin: 0 0 28px 0;
-          font-size: 15px;
-          color: #64748b;
-          line-height: 1.6;
+          margin: 0 0 24px 0;
+          font-size: 14px;
+          color: #666;
+          line-height: 1.5;
         }
 
         .write-review-btn {
           display: inline-flex;
           align-items: center;
-          gap: 8px;
-          padding: 14px 28px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          gap: 6px;
+          padding: 12px 24px;
+          background: #333;
           color: white;
           border: none;
-          border-radius: 12px;
-          font-size: 15px;
-          font-weight: 700;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+          transition: all 0.2s ease;
         }
 
         .write-review-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+          background: #1a1a1a;
         }
 
-        .write-review-btn svg {
-          stroke: currentColor;
+        .write-review-btn:active {
+          transform: scale(0.98);
         }
 
         /* 반응형 */
         @media (max-width: 480px) {
           .review-tab-container {
-            padding: 20px 12px;
+            padding: 16px 12px;
           }
 
           .review-summary-card {
-            padding: 24px 20px;
-          }
-
-          .score-number {
-            font-size: 40px;
-          }
-
-          .recent-reviews-section {
             padding: 20px 16px;
           }
 
+          .score-number {
+            font-size: 36px;
+          }
+
+          .recent-reviews-section {
+            padding: 16px 12px;
+          }
+
           .review-card {
-            padding: 16px;
+            padding: 14px;
           }
 
           .user-avatar {
-            width: 44px;
-            height: 44px;
-            font-size: 18px;
+            width: 32px;
+            height: 32px;
+            font-size: 14px;
           }
 
           .empty-review-state {
-            padding: 60px 20px;
+            padding: 48px 16px;
           }
 
-          .empty-illustration svg {
-            width: 120px;
-            height: 120px;
+          .empty-icon {
+            font-size: 40px;
           }
         }
       </style>
