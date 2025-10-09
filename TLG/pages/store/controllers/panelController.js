@@ -49,16 +49,10 @@ export const panelController = {
   adjustLayout() {
     if (!this.elements) return;
 
-    const panelHeight = panelService.calculatePanelHeight(this.elements);
-    
-    // 패널 컨테이너 높이 설정
-    panelView.updatePanelHeight(this.elements.storePanelContainer, panelHeight);
-    
-    // 컨텐츠 최소 높이 설정
-    if (this.elements.storeNavBar && this.elements.storeContent) {
-      const containerHeight = this.elements.storePanelContainer.clientHeight;
-      const minHeight = panelService.calculateContentMinHeight(this.elements, containerHeight);
-      panelView.updateContentMinHeight(this.elements.storeContent, minHeight);
+    // CSS로 높이가 이미 설정되어 있으므로 동적 계산 제거
+    // 스크롤 설정만 강제 적용
+    if (this.elements.storePanelContainer) {
+      panelView.applyInitialScrollSettings(this.elements.storePanelContainer);
     }
   },
 

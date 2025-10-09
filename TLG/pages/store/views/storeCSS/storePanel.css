@@ -13,12 +13,13 @@
 }
 
 #storePanel.collapsed {
+  top: 200px;
   height: calc(100vh - 270px);
 }
 
 #storePanel.expanded {
   top: 75px;
-  height: calc(100vh - 75px);
+  height: calc(100vh - 145px); /* 75px(top) + 70px(bottomBar) */
 }
 
 #panelHandle {
@@ -39,7 +40,8 @@
 
 #storePanelContainer {
   position: relative;
-  height: calc(100% - 24px);
+  height: calc(100% - 24px); /* handle 높이만 제외 */
+  max-height: calc(100vh - 145px - 24px); /* 패널 최대 높이 제한 */
   overflow-y: auto !important;
   overflow-x: hidden;
   box-sizing: border-box;
