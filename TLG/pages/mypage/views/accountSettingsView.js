@@ -158,6 +158,7 @@ export const accountSettingsView = {
             </div>
           </div>
         </div>
+        <span class="detail-info">계정 자세히 보기</span>
       </section>
     `;
   },
@@ -342,13 +343,26 @@ export const accountSettingsView = {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 20px;
-        border-bottom: 1px solid #f5f5f7;
+        padding: 16px 0;
+        margin: 0 20px;
         cursor: pointer;
         transition: background 0.2s;
+        position: relative;
       }
 
-      
+      .info-row::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: -20px;
+        width: calc(100% + 40px);
+        height: 1px;
+        background: #edf2fa;
+      }
+
+      .info-row:last-child::after {
+        display: none;
+      }
 
       .info-row:active {
         background: #f5f5f7;
@@ -417,6 +431,15 @@ export const accountSettingsView = {
       .text-button:active {
         background: #f5f5f7;
         transform: scale(0.95);
+      }
+
+      .detail-info {
+        font-weight: 400;
+        color: #86868b;
+        float: right;
+        font-size: 11px;
+        padding: 15px 30px 0px 30px;
+      
       }
 
       /* 반응형 */

@@ -93,6 +93,22 @@ html, body {
   
 }
 
+.bottom-nav-bar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 430px;
+  background-color: #fff;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 8px 0 12px 0;
+  border-top: 1px solid #eee;
+  box-shadow: none;
+  z-index: 1000;
+}
 
 /* ==============================
    앱 화면 영역 (#main)

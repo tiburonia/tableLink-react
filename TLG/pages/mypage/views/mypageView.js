@@ -39,11 +39,11 @@ export const mypageView = {
             <span class="arrow-icon">›</span>
           </li>
           <li onclick="alert('준비중입니다')">
-            <span>테이블링 간편결제 관리</span>
+            <span>테이블링크 간편결제 관리</span>
             <span class="arrow-icon">›</span>
           </li>
           <li onclick="renderAllPoints()">
-            <span>테이블링페이 머니 관리</span>
+            <span>테이블링크 페이 머니 관리</span>
             <span class="arrow-icon">›</span>
           </li>
         </ul>
@@ -58,7 +58,7 @@ export const mypageView = {
             <span class="arrow-icon">›</span>
           </li>
           <li onclick="renderAllFavorites()">
-            <span>원픽 리뷰</span>
+            <span>내 단골가게</span>
             <span class="arrow-icon">›</span>
           </li>
           <li onclick="renderAllOrderHTML(userInfo)">
