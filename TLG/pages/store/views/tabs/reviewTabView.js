@@ -68,7 +68,6 @@ export const reviewTabView = {
       ${this.getReviewTabStyles()}
     `;
   },
-
   /**
    * 평균 평점 계산
    */
@@ -462,7 +461,6 @@ export const reviewTabView = {
           border: 1px solid #e2e8f0;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           animation: slideUp 0.5s ease-out forwards;
-          opacity: 0;
         }
 
         @keyframes slideUp {
