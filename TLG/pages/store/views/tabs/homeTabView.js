@@ -13,6 +13,7 @@ export const homeTabView = {
       <div class="home-tab-container">
         <!-- 요일별 대기시간 통계 $ {this.renderWaitingTimes()} -->
         ${this.renderReservationSection(store)}
+        ${this.renderAmenities(store)}
         ${this.renderTableStatus()}
         ${this.renderMenu(store)}
         
@@ -248,6 +249,77 @@ export const homeTabView = {
         alert(`${selectedDate} 예약 시간 선택 (구현 예정)`);
       });
     });
+  },
+
+  /**
+   * 편의시설 섹션
+   */
+  renderAmenities(store) {
+    const amenitiesData = store.amenities || {};
+
+    // 편의시설 아이콘 매핑
+    const amenityConfig = {
+      parking: { 
+        icon: '🅿️',
+        name: '주차'
+      },
+      wifi: { 
+        icon: '📶',
+        name: '콜키지 프리'
+      },
+      power_outlet: { 
+        icon: '🍷',
+        name: '콜키지'
+      },
+      pet_friendly: { 
+        icon: '👥',
+        name: '단체'
+      },
+      delivery: { 
+        icon: '🚗',
+        name: '대관'
+      },
+      disabled_facilities: { 
+        icon: '♿',
+        name: '장애인 편의시설'
+      },
+      large_group: { 
+        icon: '📖',
+        name: '대기공간'
+      }
+    };
+
+    // available이 true인 항목만 필터링
+    const availableAmenities = Object.keys(amenityConfig)
+      .filter(key => amenitiesData[key] === true)
+      .map(key => ({
+        icon: amenityConfig[key].icon,
+        name: amenityConfig[key].name
+      }));
+
+    // 편의시설이 없으면 섹션 숨김
+    if (availableAmenities.length === 0) {
+      return '';
+    }
+
+    return `
+      <section class="home-section amenities-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">🏪</span>
+            편의시설
+          </h3>
+        </div>
+        <div class="amenities-grid">
+          ${availableAmenities.map(amenity => `
+            <div class="amenity-card">
+              <div class="amenity-icon">${amenity.icon}</div>
+              <div class="amenity-name">${amenity.name}</div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `;
   },
 
   /**
@@ -721,6 +793,94 @@ export const homeTabView = {
             min-width: 42px;
             padding: 8px 10px;
             font-size: 14px;
+          }
+        }
+
+        /* 편의시설 섹션 스타일 */
+        .amenities-section {
+          padding: 24px 20px;
+          background: white;
+        }
+
+        .amenities-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-top: 16px;
+        }
+
+        .amenity-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          padding: 16px 8px;
+          background: #f8fafc;
+          border-radius: 12px;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .amenity-card:hover {
+          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+        }
+
+        .amenity-icon {
+          font-size: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 48px;
+          height: 48px;
+          background: white;
+          border-radius: 12px;
+          border: 2px solid #e5e7eb;
+        }
+
+        .amenity-name {
+          font-size: 12px;
+          font-weight: 600;
+          color: #1f2937;
+          text-align: center;
+          line-height: 1.3;
+        }
+
+        @media (max-width: 480px) {
+          .amenities-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+          }
+
+          .amenity-icon {
+            font-size: 24px;
+            width: 44px;
+            height: 44px;
+          }
+
+          .amenity-name {
+            font-size: 11px;
+          }
+        }
+
+        @media (max-width: 360px) {
+          .amenities-grid {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+          }
+
+          .amenity-card {
+            padding: 12px 6px;
+          }
+
+          .amenity-icon {
+            font-size: 22px;
+            width: 40px;
+            height: 40px;
+          }
+
+          .amenity-name {
+            font-size: 10px;
           }
         }
 
