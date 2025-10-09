@@ -231,24 +231,12 @@ export const storeTabController = {
       // regularTabView 모듈 동적 로드
       const { regularTabView } = await import('../views/tabs/regularTabView.js');
 
-      // 프로모션 데이터 가져오기
-      const promotions = await storeTabService.getPromotions(store.id);
+      // 사용자 정보 가져오기 (store에 포함되어 있거나 AuthManager에서 가져옴)
+      const user = store.user || null;
 
-      // 단골혜택 탭 HTML 렌더링
-      const regularHTML = regularTabView.render(store, promotions);
+      // 단골혜택 탭 HTML 렌더링 (user 정보 전달)
+      const regularHTML = regularTabView.render(store, user);
       container.innerHTML = regularHTML;
-
-      // promotionCardHTML 모듈 로드 및 삽입
-      const { promotionCardHTML } = await import('../views/modules/promotionCardHTML.js');
-      const promotionSection = document.getElementById('promotionSection');
-      if (promotionSection) {
-        promotionSection.innerHTML = promotionCardHTML.renderPromotionCardHTML(store);
-
-        // 프로모션 데이터 업데이트
-        if (window.storeView && typeof window.storeView.updatePromotionUI === 'function') {
-          window.storeView.updatePromotionUI(promotions);
-        }
-      }
 
       console.log('✅ 단골혜택 탭 렌더링 완료');
     } catch (error) {
