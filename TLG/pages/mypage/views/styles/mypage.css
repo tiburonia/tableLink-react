@@ -27,8 +27,8 @@ body {
 }
 
 .login-link {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 20px;
+  font-weight: 1000;
   color: #333;
   cursor: pointer;
   display: flex;

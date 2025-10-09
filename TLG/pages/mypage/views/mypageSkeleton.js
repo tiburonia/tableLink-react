@@ -56,8 +56,8 @@ const mypageSkeleton = {
           <span class="nav-label">내주변</span>
         </button>
         <button class="nav-item active">
-          <span class="nav-icon"><img width="30" height="30" src="https://img.icons8.com/ios-glyphs/30/user--v1.png" alt="user--v1"/></span>
-          <span class="nav-label">내정보</span>
+          <span class="nav-icon"><img width="30" height="30" src="https://img.icons8.com/ios-filled/30/more.png" alt="more"/></span>
+          <span class="nav-label">더보기</span>
         </button>
       </nav>
       </div>
