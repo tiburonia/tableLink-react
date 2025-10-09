@@ -62,44 +62,29 @@ class UserRepository {
    */
   async getUserStoreInfo(userId) {
     const result = await pool.query(`
-      WITH user_level AS (
-        SELECT 
-          src.id,
-          src.user_id,
-          src.store_id,
-          src.level_id,
-          src.visit_count,
-          src.total_spent,
-          src.last_visit,
-          src.created_at,
-          src.updated_at,
-          s.name as store_name,
-          si.category as store_category
-        FROM store_regular_customers src
-        LEFT JOIN stores s ON src.store_id = s.id
-        LEFT JOIN store_info si ON s.id = si.store_id
-        WHERE src.user_id = $1
-        ORDER BY src.created_at DESC
-        LIMIT 1
-      )
       SELECT 
-        ul.id,
-        ul.user_id,
-        ul.store_id,
-        ul.level_id,
-        ul.visit_count,
-        ul.total_spent,
-        ul.last_visit,
-        ul.created_at,
-        ul.updated_at,
-        ul.store_name,
-        ul.store_category,
+        src.id,
+        src.user_id,
+        src.store_id,
+        src.level_id,
+        src.visit_count,
+        src.total_spent,
+        src.last_visit,
+        src.created_at,
+        src.updated_at,
+        s.name as store_name,
+        si.category as store_category,
         srl.level as level_name,
         srl.benefits,
         srl.min_orders,
         srl.min_spent
-      FROM user_level ul
-      LEFT JOIN store_regular_levels srl ON ul.level_id = srl.id
+      FROM store_regular_customers src
+      LEFT JOIN stores s ON src.store_id = s.id
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_regular_levels srl ON src.level_id = srl.id
+      WHERE src.user_id = $1
+      ORDER BY src.created_at DESC
+      LIMIT 1
     `, [userId]);
 
     return result.rows.length > 0 ? result.rows[0] : null;
