@@ -12,6 +12,7 @@ export const storeInfoTabView = {
       <div class="store-info-tab-container">
         ${this.renderBasicInfo(store)}
         ${this.renderDetailInfo(additionalInfo)}
+        ${this.renderAmenities(store)}
         ${this.renderOperatingHours(additionalInfo?.operatingHours)}
         ${this.renderFacilitiesInfo(additionalInfo?.facilities)}
         ${this.renderPaymentInfo(additionalInfo?.payment)}
@@ -75,6 +76,70 @@ export const storeInfoTabView = {
           </h3>
         </div>
         <p class="store-description">${additionalInfo.description || '매장 소개가 준비중입니다.'}</p>
+      </section>
+    `;
+  },
+
+  /**
+   * 편의시설 섹션 렌더링 (네이버 지도 스타일)
+   */
+  renderAmenities(store) {
+    const amenitiesData = store.amenities || {};
+
+    const amenityConfig = {
+      wifi: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/ios-filled/24/wifi--v1.png" alt="wifi--v1"/>',
+        name: '무선 인터넷'
+      },
+      parking: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/ios-filled/24/parking.png" alt="parking"/>',
+        name: '주차 이용 가능'
+      },
+      pet_friendly: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/ios-filled/24/cat-footprint.png" alt="cat-footprint"/>',
+        name: '반려 화장실 구비'
+      },
+      power_outlet: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/sf-black-filled/24/electrical.png" alt="electrical"/>',
+        name: '콘센트 구비'
+      },
+      smoking_area: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/forma-bold-filled/24/cigar.png" alt="cigar"/>',
+        name: '흡연구역'
+      }
+    };
+
+    // 객체를 배열로 변환하고 available이 true인 항목만 필터링
+    const amenitiesArray = Object.keys(amenityConfig)
+      .map(key => ({
+        name: amenityConfig[key].name,
+        icon: amenityConfig[key].icon,
+        available: amenitiesData[key] === true
+      }))
+      .filter(a => a.available === true);
+
+    // 편의시설이 없는 경우 섹션 숨김
+    if (amenitiesArray.length === 0) {
+      return '';
+    }
+
+    return `
+      <section class="info-section facilities-section-minimal">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">🏪</span>
+            편의시설
+          </h3>
+        </div>
+        <div class="facilities-list-minimal">
+          ${amenitiesArray.map(a => `
+            <div class="facility-item-minimal">
+              <span class="facility-icon-minimal">${a.icon}</span>
+              <span class="facility-name-minimal">${a.name}</span>
+            </div>
+          `).join('')}
+        </div>
+        <div class="facilities-footer-minimal">민생소비재포함</div>
       </section>
     `;
   },
@@ -352,7 +417,55 @@ export const storeInfoTabView = {
           color: #1e293b;
         }
 
-        /* 편의시설 */
+        /* 네이버 지도 스타일 편의시설 */
+        .facilities-section-minimal {
+          background: white;
+          padding: 20px 16px;
+        }
+
+        .facilities-list-minimal {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+        }
+
+        .facility-item-minimal {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 0;
+          border-bottom: 1px solid #f5f5f5;
+        }
+
+        .facility-item-minimal:last-child {
+          border-bottom: none;
+        }
+
+        .facility-icon-minimal {
+          font-size: 20px;
+          width: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .facility-name-minimal {
+          font-size: 15px;
+          color: #1a1a1a;
+          font-weight: 400;
+          letter-spacing: -0.2px;
+        }
+
+        .facilities-footer-minimal {
+          margin-top: 12px;
+          padding-top: 12px;
+          font-size: 13px;
+          color: #8b8b8b;
+          font-weight: 400;
+        }
+
+        /* 레거시 편의시설 스타일 */
         .facilities-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
