@@ -1,4 +1,3 @@
-
 const userRepository = require('../repositories/userRepository');
 
 /**
@@ -78,12 +77,36 @@ class UserService {
   }
 
   /**
-   * 사용자 매장 정보 조회
+   * 사용자 매장 정보 조회 (가장 최근 방문한 매장)
    */
   async getUserStoreInfo(userId) {
-   const  await userRepository.getUserStoreInfo(userId);
-  
-    
+    const storeInfo = await userRepository.getUserStoreInfo(userId);
+
+    if (!storeInfo) {
+      return {
+        hasStoreInfo: false,
+        message: '방문한 매장이 없습니다'
+      };
+    }
+
+    return {
+      hasStoreInfo: true,
+      storeInfo: {
+        id: storeInfo.id,
+        userId: storeInfo.user_id,
+        storeId: storeInfo.store_id,
+        storeName: storeInfo.store_name,
+        storeCategory: storeInfo.store_category,
+        levelId: storeInfo.level_id,
+        levelName: storeInfo.level_name,
+        benefits: storeInfo.benefits,
+        visitCount: storeInfo.visit_count,
+        totalSpent: storeInfo.total_spent,
+        lastVisit: storeInfo.last_visit,
+        createdAt: storeInfo.created_at,
+        updatedAt: storeInfo.updated_at
+      }
+    };
   }
 
   /**

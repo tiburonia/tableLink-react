@@ -58,13 +58,34 @@ class UserRepository {
   }
 
   /**
-   * 사용자 매장 정보 조회
+   * 사용자 매장 정보 조회 (가장 최근 방문한 매장)
    */
   async getUserStoreInfo(userId) {
     const result = await pool.query(`
-    SELECT 
-    
-    `)
+      SELECT 
+        src.id,
+        src.user_id,
+        src.store_id,
+        src.level_id,
+        src.visit_count,
+        src.total_spent,
+        src.last_visit,
+        src.created_at,
+        src.updated_at,
+        s.name as store_name,
+        si.category as store_category,
+        srl.level as level_name,
+        srl.benefits
+      FROM store_regular_customers src
+      LEFT JOIN stores s ON src.store_id = s.id
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_regular_levels srl ON src.level_id = srl.id
+      WHERE src.user_id = $1
+      ORDER BY src.created_at DESC
+      LIMIT 1
+    `, [userId]);
+
+    return result.rows.length > 0 ? result.rows[0] : null;
   }
 
   /**
