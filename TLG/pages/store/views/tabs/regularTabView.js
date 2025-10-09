@@ -12,7 +12,6 @@ export const regularTabView = {
       <div class="regular-tab-container">
         ${this.renderMyBenefitsCard(store, user)}
         ${this.renderLoyaltyLevelSection(store)}
-        ${this.renderTopUsersSection(store)}
       </div>
       ${this.getStyles()}
     `;
@@ -214,67 +213,7 @@ export const regularTabView = {
     `;
   },
 
-  /**
-   * 상위 사용자 랭킹 섹션 렌더링
-   */
-  renderTopUsersSection(store) {
-    const topUsers = [
-      { rank: 1, name: '김민수', orders: 45, spent: 550000, level: '플래티넘' },
-      { rank: 2, name: '이영희', orders: 38, spent: 480000, level: '플래티넘' },
-      { rank: 3, name: '박지훈', orders: 32, spent: 420000, level: '골드' },
-      { rank: 4, name: '최서연', orders: 28, spent: 380000, level: '골드' },
-      { rank: 5, name: '정우진', orders: 24, spent: 320000, level: '골드' },
-      { rank: 6, name: '강혜진', orders: 19, spent: 260000, level: '실버' },
-      { rank: 7, name: '윤지우', orders: 16, spent: 220000, level: '실버' },
-      { rank: 8, name: '임수빈', orders: 12, spent: 180000, level: '실버' },
-    ];
-
-    return `
-      <div class="section-wrapper">
-        <div class="section-header-native">
-          <h3 class="section-title-native">
-            <span class="section-icon-native">🏆</span>
-            이달의 단골 Top 8
-          </h3>
-          <p class="section-subtitle-native">${store.name}을 가장 많이 이용한 고객님들입니다</p>
-        </div>
-
-        <div class="ranking-list">
-          ${topUsers.map(user => this.renderTopUserCard(user)).join('')}
-        </div>
-      </div>
-    `;
-  },
-
-  /**
-   * 상위 사용자 카드 렌더링
-   */
-  renderTopUserCard(user) {
-    const medalIcon = user.rank <= 3 ? ['🥇', '🥈', '🥉'][user.rank - 1] : user.rank;
-    const levelIcon = this.getLevelIcon(user.level);
-    const isTopThree = user.rank <= 3;
-
-    return `
-      <div class="ranking-card ${isTopThree ? 'top-rank' : ''}">
-        <div class="rank-badge ${isTopThree ? 'medal' : ''}">
-          ${medalIcon}
-        </div>
-        <div class="ranking-info">
-          <div class="user-name-row">
-            <span class="user-name">${user.name}</span>
-            <span class="user-level-icon">${levelIcon}</span>
-          </div>
-          <div class="user-stats-row">
-            <span class="stat">주문 ${user.orders}회</span>
-            <span class="stat-dot">·</span>
-            <span class="stat">${user.spent.toLocaleString()}원</span>
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  /**
+  /*
    * 혜택 상세보기 모달
    */
   showBenefitDetail(levelName, benefits) {
@@ -399,12 +338,10 @@ export const regularTabView = {
 
         /* 내 혜택 카드 */
         .my-benefits-wrapper {
-          padding: 16px;
           padding-bottom: 8px;
         }
 
         .my-benefits-card {
-          border-radius: 24px;
           padding: 24px;
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
           margin-bottom: 12px;
@@ -522,7 +459,6 @@ export const regularTabView = {
         /* 진행상황 카드 */
         .progress-card {
           background: white;
-          border-radius: 20px;
           padding: 20px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
@@ -620,7 +556,6 @@ export const regularTabView = {
 
         /* 섹션 */
         .section-wrapper {
-          padding: 16px;
           padding-top: 8px;
         }
 
@@ -659,13 +594,11 @@ export const regularTabView = {
 
         .level-card-native {
           background: white;
-          border-radius: 18px;
           padding: 20px;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
           border: 1px solid rgba(0, 0, 0, 0.06);
           transition: all 0.3s;
           animation: slideUp 0.5s ease-out forwards;
-          opacity: 0;
         }
 
         .level-card-native:active {
@@ -732,86 +665,7 @@ export const regularTabView = {
           color: #34c759;
         }
 
-        /* 랭킹 카드 */
-        .ranking-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-
-        .ranking-card {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          padding: 16px;
-          background: white;
-          border-radius: 16px;
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-          transition: all 0.2s;
-        }
-
-        .ranking-card:active {
-          transform: scale(0.98);
-        }
-
-        .ranking-card.top-rank {
-          background: linear-gradient(135deg, #fff9e6 0%, #fff3cc 100%);
-          border-color: #ffd60a;
-        }
-
-        .rank-badge {
-          width: 44px;
-          height: 44px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f5f5f7;
-          border-radius: 12px;
-          font-size: 15px;
-          font-weight: 800;
-          color: #1d1d1f;
-          flex-shrink: 0;
-        }
-
-        .rank-badge.medal {
-          background: transparent;
-          font-size: 28px;
-        }
-
-        .ranking-info {
-          flex: 1;
-        }
-
-        .user-name-row {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 4px;
-        }
-
-        .user-name {
-          font-size: 16px;
-          font-weight: 700;
-          color: #1d1d1f;
-        }
-
-        .user-level-icon {
-          font-size: 18px;
-        }
-
-        .user-stats-row {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 13px;
-          color: #86868b;
-          font-weight: 600;
-        }
-
-        .stat-dot {
-          color: #d1d1d6;
-        }
+       
 
         /* 모달 */
         .modal-overlay {
