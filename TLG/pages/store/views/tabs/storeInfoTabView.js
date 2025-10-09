@@ -168,19 +168,23 @@ export const storeInfoTabView = {
    * 위치 정보 렌더링
    */
   renderLocationInfo(store) {
-    const address = store.address || '주소 정보 없음';
-    const lat = store.latitude || 37.5665;
-    const lng = store.longitude || 126.9780;
+    const address = store.address?.replace(/'/g, "\\'") || '주소 정보 없음';
+    const lat = store.lat || 37.5665;
+    const lng = store.lng || 126.9780;
 
-    // 네이버 지도 Static Map API URL
-    const mapImageUrl = `https://naveropenapi.apigw.ntruss.com/map-static/v2/raster?w=570&h=200&center=${lng},${lat}&level=16&markers=type:d|size:mid|pos:${lng}%20${lat}&X-NCP-APIGW-API-KEY-ID=ejmti6owy5`;
+    // ✅ 네이버 Static Map - Referer 인증용 endpoint 사용
+    const mapImageUrl = 
+      `https://maps.apigw.ntruss.com/map-static/v2/raster-cors`
+      + `?w=570&h=200&center=${lng},${lat}&level=16`
+      + `&markers=type:d|size:mid|color:red|pos:${lng}%20${lat}`
+      + `&scale=2&maptype=basic&lang=ko`
+      + `&X-NCP-APIGW-API-KEY-ID=ejmti6owy5`;
 
     return `
       <section class="home-section location-info-section">
         <div class="section-header">
           <h3 class="section-title">
-            <span class="section-icon">📍</span>
-            위치정보
+            <span class="section-icon">📍</span> 위치정보
           </h3>
         </div>
 
@@ -188,7 +192,8 @@ export const storeInfoTabView = {
           <div class="naver-map-wrapper">
             <img src="${mapImageUrl}" alt="매장 위치" class="location-map-image" />
             <div class="map-overlay">
-              <button class="map-expand-btn" onclick="window.open('https://map.naver.com/p/search/${encodeURIComponent(address)}', '_blank')">
+              <button class="map-expand-btn"
+                onclick="window.open('https://map.naver.com/p/search/${encodeURIComponent(address)}','_blank')">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
                 </svg>
@@ -199,7 +204,8 @@ export const storeInfoTabView = {
 
         <div class="location-address-section">
           <div class="address-text">${address}</div>
-          <button class="address-copy-btn" onclick="navigator.clipboard.writeText('${address}').then(() => alert('주소가 복사되었습니다'))">
+          <button class="address-copy-btn"
+            onclick="navigator.clipboard.writeText('${address}').then(() => alert('주소가 복사되었습니다'))">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
@@ -209,7 +215,9 @@ export const storeInfoTabView = {
         </div>
       </section>
     `;
-  },
+  }
+,
+
 
   /**
    * 결제 아이콘 가져오기
