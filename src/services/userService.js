@@ -96,7 +96,7 @@ class UserService {
       return {
         hasStoreInfo: false,
         isDefault: true,
-        defaultLevel: {
+        Level: {
           id: defaultLevel.id,
           storeId: defaultLevel.store_id,
           levelName: defaultLevel.level,
@@ -109,15 +109,15 @@ class UserService {
 
     return {
       hasStoreInfo: true,
-      storeInfo: {
+      Level: {
         id: storeInfo.id,
-        userId: storeInfo.user_id,
         storeId: storeInfo.store_id,
-        storeName: storeInfo.store_name,
-        storeCategory: storeInfo.store_category,
-        levelId: storeInfo.level_id,
-        levelName: storeInfo.level_name,
+        levelName: storeInfo.level,
+        minOrders: storeInfo.min_orders,
+        minSpent: storeInfo.min_spent,
         benefits: storeInfo.benefits,
+
+        // 추가 정보
         visitCount: storeInfo.visit_count,
         totalSpent: storeInfo.total_spent,
         lastVisit: storeInfo.last_visit,

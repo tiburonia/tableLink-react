@@ -22,7 +22,7 @@ class StoreController {
       res.json({
         success: true,
         store: store,
-        userId: userId || null,
+        user: user || null,
       });
     } catch (error) {
       next(error);

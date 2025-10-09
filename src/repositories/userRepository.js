@@ -74,7 +74,7 @@ class UserRepository {
         src.updated_at,
         s.name as store_name,
         si.category as store_category,
-        srl.level as level_name,
+        srl.level,
         srl.benefits,
         srl.min_orders,
         srl.min_spent
