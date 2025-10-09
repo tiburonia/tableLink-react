@@ -89,15 +89,25 @@ class UserRepository {
   }
 
   /**
-   * 사용자 매장 정보 조회 > store_regular_levels 테이블에서 조회
+   * 사용자 매장 정보 조회 > store_regular_levels 테이블에서 조회 (가장 낮은 레벨)
    */
   async getDefaultUserStoreInfo(storeId) {
     const result = await pool.query(`
-    
-    `)
-  }
+      SELECT 
+        id,
+        store_id,
+        level,
+        min_orders,
+        min_spent,
+        benefits
+      FROM store_regular_levels
+      WHERE store_id = $1
+      ORDER BY min_orders ASC, min_spent ASC
+      LIMIT 1
+    `, [storeId]);
 
-  
+    return result.rows.length > 0 ? result.rows[0] : null;
+  }
 
   /**
    * 즐겨찾기 매장 조회

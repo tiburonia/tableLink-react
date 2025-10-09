@@ -77,13 +77,34 @@ class UserService {
   }
 
   /**
-   * 사용자 매장 정보 조회 (가장 최근 방문한 매장)
+   * 사용자 매장 정보 조회 (가장 최근 방문한 매장 또는 기본 레벨)
    */
   async getUserStoreInfo(storeId, userId) {
     const storeInfo = await userRepository.getUserStoreInfo(userId);
 
     if (!storeInfo) {
-      const defaultStoreInfo = await userRepository.getDefaultUserStoreInfo(storeId);
+      // 사용자 매장 정보가 없을 경우 기본 레벨 조회
+      const defaultLevel = await userRepository.getDefaultUserStoreInfo(storeId);
+      
+      if (!defaultLevel) {
+        return {
+          hasStoreInfo: false,
+          message: '매장 레벨 정보를 찾을 수 없습니다'
+        };
+      }
+
+      return {
+        hasStoreInfo: false,
+        isDefault: true,
+        defaultLevel: {
+          id: defaultLevel.id,
+          storeId: defaultLevel.store_id,
+          levelName: defaultLevel.level,
+          minOrders: defaultLevel.min_orders,
+          minSpent: defaultLevel.min_spent,
+          benefits: defaultLevel.benefits
+        }
+      };
     }
 
     return {
