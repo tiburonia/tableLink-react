@@ -1,10 +1,3 @@
-// 매장 뷰 - UI 렌더링 전담 (직접 모듈 import)
-import { tableStatusHTML } from "./modules/tableStatusHTML.js";
-import { reviewPreviewHTML } from "./modules/reviewPreviewHTML.js";
-import { promotionCardHTML } from "./modules/promotionCardHTML.js";
-import { topUsersHTML } from "./modules/topUsersHTML.js";
-import { loyaltyLevelHTML } from "./modules/loyaltyLevelHTML.js";
-import { menuHTML } from "./modules/menuHTML.js";
 
 // CSS 파일 import
 const storeCSSLink = document.createElement("link");
