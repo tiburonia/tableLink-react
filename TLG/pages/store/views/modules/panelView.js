@@ -44,7 +44,7 @@ export const panelView = {
   expandPanel(panel) {
     panelRepository.togglePanelClass(panel, 'collapsed', false);
     panelRepository.togglePanelClass(panel, 'expanded', true);
-    panelRepository.setPanelPosition(panel, 75);
+    panelRepository.setPanelPositionWithBottom(panel, 75, 80); // top: 75px, bottom: 80px
     
     // 헤더 스타일 변경
     const header = document.querySelector('.store-fixed-header');
@@ -64,7 +64,7 @@ export const panelView = {
   collapsePanel(panel) {
     panelRepository.togglePanelClass(panel, 'expanded', false);
     panelRepository.togglePanelClass(panel, 'collapsed', true);
-    panelRepository.setPanelPosition(panel, 200);
+    panelRepository.setPanelPositionWithBottom(panel, 200, 80); // top: 200px, bottom: 80px
     
     // 헤더 스타일 초기화
     const header = document.querySelector('.store-fixed-header');

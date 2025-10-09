@@ -1,4 +1,3 @@
-
 /* 매장 상세 패널 스타일 */
 #storePanel {
   position: fixed;
@@ -10,16 +9,15 @@
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.08);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 9;
+  /* top, bottom은 JS로 동적 제어 */
 }
 
 #storePanel.collapsed {
-  top: 200px;
-  height: calc(100vh - 270px);
+  /* JS로 top, bottom 동적 설정 */
 }
 
 #storePanel.expanded {
-  top: 75px;
-  height: calc(100vh - 145px); /* 75px(top) + 70px(bottomBar) */
+  /* JS로 top, bottom 동적 설정 */
 }
 
 #panelHandle {

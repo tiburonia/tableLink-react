@@ -41,11 +41,21 @@ export const panelRepository = {
   },
 
   /**
-   * 패널 위치 설정
+   * 패널 위치 설정 (top만)
    */
   setPanelPosition(panel, top) {
     if (panel) {
       panel.style.top = `${top}px`;
+    }
+  },
+
+  /**
+   * 패널 위치 설정 (top + bottom)
+   */
+  setPanelPositionWithBottom(panel, top, bottom) {
+    if (panel) {
+      panel.style.top = `${top}px`;
+      panel.style.bottom = `${bottom}px`;
     }
   },
 
