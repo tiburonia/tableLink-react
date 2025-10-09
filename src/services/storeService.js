@@ -1,4 +1,3 @@
-
 const storeRepository = require('../repositories/storeRepository');
 const tableRepository = require('../repositories/tableRepository');
 const reviewRepository = require('../repositories/reviewRepository');
@@ -28,7 +27,7 @@ class StoreService {
     const storeResult = await storeRepository.getStoreById(numericStoreId);
     const store = storeResult[0]; // 배열의 첫 번째 요소 사용
 
-    
+
     //매장 메뉴 조회
     const menu = await storeRepository.getStoreMenu(numericStoreId)
 
@@ -43,17 +42,17 @@ class StoreService {
 
     //매장 편의시설 조회 
     const amenities = await storeRepository.getStoreAmenities(numericStoreId)
-    
-    
+
+
     if (!store) {
       throw new Error('매장을 찾을 수 없습니다');
     }
-  
+
 
     const storeBasicInfo = {
       // 기본 매장 정보를 루트 레벨에 펼침
       ...(store || {}),
-      
+
       // 추가 데이터
       menu: menu || [],                    // 메뉴 목록
       tables: table || [],                 // 테이블 정보
@@ -67,28 +66,28 @@ class StoreService {
         smoking_area: amenities.smoking_area
       } : {},        
 
-      
+
       // 메타 정보
       menuCount: menu ? menu.length : 0,
       tableCount: table ? table.length : 0,
       reviewCount: review ? review.length : 0,
       promotionCount: promotion ? promotion.length : 0,
-      
-      
-      
+
+
+
       // 테이블 상태 요약
       tableStatusSummary: table ? {
         available: table.filter(t => t.status === 'AVAILABLE').length,
         occupied: table.filter(t => t.status === 'OCCUPIED').length,
         total: table.length
       } : { available: 0, occupied: 0, total: 0 },
-      
-      
+
+
     }; 
 
     console.log(`✅ 매장 ${storeId} 기본 정보 조회 완료: ${store.name}`);
     console.log(`📊 포함된 데이터: 메뉴 ${storeBasicInfo.menuCount}개, 테이블 ${storeBasicInfo.tableCount}개, 리뷰 ${storeBasicInfo.reviewCount}개, 프로모션 ${storeBasicInfo.promotionCount}개`);
-    
+
     return storeBasicInfo;
   }
 
@@ -160,7 +159,7 @@ class StoreService {
     }
 
     const rating = await storeRepository.getStoreRating(numericStoreId);
-    
+
     return {
       ratingAverage: rating.ratingAverage || 0.0,
       reviewCount: rating.reviewCount || 0
@@ -177,7 +176,7 @@ class StoreService {
     }
 
     const promotions = await storeRepository.getStorePromotions(numericStoreId);
-    
+
     return promotions;
   }
 
@@ -191,7 +190,7 @@ class StoreService {
     }
 
     const users = await storeRepository.getStoreTopUsers(numericStoreId);
-    
+
     return users;
   }
 
