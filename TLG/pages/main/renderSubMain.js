@@ -10,6 +10,12 @@ async function renderSubMain() {
   try {
     console.log('🏠 서브메인 화면 렌더링 시작');
 
+    // 마이페이지 렌더링 작업 중단
+    if (window.mypageController && window.mypageController.currentRenderingTask) {
+      console.log('⏹️ 서브메인 렌더링으로 인한 마이페이지 작업 중단');
+      window.mypageController.currentRenderingTask.cancelled = true;
+    }
+
     // 사용자 정보 확인
     if (!window.userInfo || !window.userInfo.id) {
       console.error('❌ 사용자 정보가 없습니다');

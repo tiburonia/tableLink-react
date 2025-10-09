@@ -6,12 +6,26 @@
 import { mypageEventHandler } from '../views/mypageEventHandler.js';
 
 export const mypageController = {
+  // 현재 렌더링 작업을 추적하는 플래그
+  currentRenderingTask: null,
+
   /**
    * 마이페이지 렌더링
    */
   async renderMyPage() {
     try {
       console.log('🏠 마이페이지 컨트롤러 실행');
+
+      // 이전 렌더링 작업 중단
+      if (this.currentRenderingTask) {
+        console.log('⏹️ 이전 마이페이지 렌더링 작업 중단');
+        this.currentRenderingTask.cancelled = true;
+      }
+
+      // 새로운 렌더링 작업 생성
+      const taskId = Date.now();
+      this.currentRenderingTask = { id: taskId, cancelled: false };
+      const currentTask = this.currentRenderingTask;
 
       const main = document.getElementById('main');
       if (!main) {
@@ -25,9 +39,21 @@ export const mypageController = {
         console.log('💀 스켈레톤 렌더링 완료');
       }
 
+      // 작업 중단 확인
+      if (currentTask.cancelled) {
+        console.log('⏹️ 마이페이지 렌더링 중단됨 (스켈레톤 후)');
+        return;
+      }
+
       // 2. 나머지 모듈 로드 (스켈레톤 표시 후)
       const { mypageView } = await import('../views/mypageView.js');
       const { mypageService } = await import('../services/mypageService.js');
+
+      // 작업 중단 확인
+      if (currentTask.cancelled) {
+        console.log('⏹️ 마이페이지 렌더링 중단됨 (모듈 로드 후)');
+        return;
+      }
 
       // 사용자 정보 확인
       if (!window.userInfo || !window.userInfo.id) {
@@ -41,7 +67,13 @@ export const mypageController = {
       // 1. 데이터 로드 (Service Layer) - window.userInfo.id는 users.id (PK)
       const userPk = window.userInfo.userId;
       console.log('👤 사용자 PK로 마이페이지 데이터 로드:', userPk);
-      const data = await mypageService.loadMypageData(userPk); // hasReview 포함
+      const data = await mypageService.loadMypageData(userPk);
+
+      // 작업 중단 확인
+      if (currentTask.cancelled) {
+        console.log('⏹️ 마이페이지 렌더링 중단됨 (데이터 로드 후)');
+        return;
+      } // hasReview 포함
 
       // 2. 스타일 주입
       mypageView.injectStyles();
@@ -52,10 +84,21 @@ export const mypageController = {
       // 4. 이벤트 핸들러 초기화 (View Layer로 위임)
       mypageEventHandler.initialize();
 
+      // 작업 완료 후 정리
+      if (this.currentRenderingTask && this.currentRenderingTask.id === taskId) {
+        this.currentRenderingTask = null;
+      }
+
       console.log('✅ 마이페이지 렌더링 완료');
 
     } catch (error) {
       console.error('❌ 마이페이지 렌더링 실패:', error);
+      
+      // 에러 발생 시에도 작업 정리
+      if (this.currentRenderingTask && this.currentRenderingTask.id === taskId) {
+        this.currentRenderingTask = null;
+      }
+      
       this.showErrorState();
     }
   },

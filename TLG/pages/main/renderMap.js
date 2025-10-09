@@ -7,6 +7,12 @@ import { mapController } from './controllers/mapController.js';
 async function renderMap() {
   console.log('🗺️ 지도 페이지 진입 - 레이어드 아키텍처 버전');
 
+  // 마이페이지 렌더링 작업 중단
+  if (window.mypageController && window.mypageController.currentRenderingTask) {
+    console.log('⏹️ 지도 렌더링으로 인한 마이페이지 작업 중단');
+    window.mypageController.currentRenderingTask.cancelled = true;
+  }
+
   try {
     // 컨트롤러를 통한 지도 초기화
     await mapController.initializeMap();

@@ -12,6 +12,12 @@ async function TLL(preselectedStore = null) {
   try {
     console.log('🚀 TLL 시작');
 
+    // 마이페이지 렌더링 작업 중단
+    if (window.mypageController && window.mypageController.currentRenderingTask) {
+      console.log('⏹️ TLL 시작으로 인한 마이페이지 작업 중단');
+      window.mypageController.currentRenderingTask.cancelled = true;
+    }
+
     // 미리 선택된 매장 확인
     const store = preselectedStore || 
                   window.preselectedStoreForTLL || 

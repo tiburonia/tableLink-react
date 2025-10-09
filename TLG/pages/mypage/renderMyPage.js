@@ -12,6 +12,10 @@ async function renderMyPage() {
 
     // 동적 import로 컨트롤러 로드
     const { mypageController } = await import('./controllers/mypageController.js');
+    
+    // 전역에서 접근 가능하도록 등록 (다른 페이지에서 중단 가능)
+    window.mypageController = mypageController;
+    
     await mypageController.renderMyPage();
 
   } catch (error) {
