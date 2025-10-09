@@ -15,7 +15,7 @@ export const mypageView = {
     return `
       <!-- 헤더 -->
       <header class="mypage-top-header">
-        <span class="login-link" onclick="${isLoggedIn ? '' : 'renderLogin()'}">
+        <span class="login-link" onclick="${isLoggedIn ? 'renderAccountSettings()' : 'renderLogin()'}">
           ${isLoggedIn ? displayName : '로그인해 주세요 >'}
         </span>
         <button class="settings-btn-icon">⚙️</button>
