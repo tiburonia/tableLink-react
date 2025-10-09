@@ -26,6 +26,9 @@ export const regularTabView = {
     const benefits = userLevel.benefits || { points: 1, discount: 0 };
     const levelIcon = this.getLevelIcon(levelName);
     const levelColor = this.getLevelColor(levelName);
+    
+    // 상위 고객 퍼센트 계산 (더미 데이터)
+    const topPercentage = this.calculateTopPercentage(levelName);
 
     return `
       <div class="my-benefits-wrapper">
@@ -38,6 +41,12 @@ export const regularTabView = {
               <div class="level-info-main">
                 <p class="current-level-label">현재 등급</p>
                 <h2 class="current-level-name">${levelName}</h2>
+                <div class="top-customer-badge">
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                    <path d="M6 1L7.5 4.5L11 5L8.5 7.5L9 11L6 9L3 11L3.5 7.5L1 5L4.5 4.5L6 1Z" fill="currentColor"/>
+                  </svg>
+                  <span>상위 ${topPercentage}% 고객</span>
+                </div>
               </div>
             </div>
 
@@ -259,6 +268,20 @@ export const regularTabView = {
   },
 
   /**
+   * 레벨별 상위 고객 퍼센트 계산 (더미 데이터)
+   */
+  calculateTopPercentage(levelName) {
+    const percentageMap = {
+      '다이아': 1,
+      '플래티넘': 5,
+      '골드': 15,
+      '실버': 30,
+      '브론즈': 50
+    };
+    return percentageMap[levelName] || 50;
+  },
+
+  /**
    * 레벨별 아이콘 반환
    */
   getLevelIcon(levelName) {
@@ -391,6 +414,26 @@ export const regularTabView = {
           font-weight: 800;
           color: white;
           letter-spacing: -0.5px;
+        }
+
+        .top-customer-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: rgba(255, 255, 255, 0.25);
+          backdrop-filter: blur(10px);
+          padding: 6px 12px;
+          border-radius: 12px;
+          margin-top: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .top-customer-badge svg {
+          color: #ffd700;
+          filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
         }
 
         .benefits-stats-grid {
