@@ -1,6 +1,6 @@
 
 /**
- * 단골혜택 탭 뷰 - UI 렌더링
+ * 단골혜택 탭 뷰 - UI 렌더링 (네이티브 앱 스타일)
  */
 
 export const regularTabView = {
@@ -29,51 +29,47 @@ export const regularTabView = {
     const levelColor = this.getLevelColor(levelName);
 
     return `
-      <div class="my-benefits-card">
-        <div class="benefits-header" style="background: ${levelColor}">
-          <div class="benefits-header-content">
-            <div class="level-badge-large">
-              <span class="level-icon-large">${levelIcon}</span>
+      <div class="my-benefits-wrapper">
+        <div class="my-benefits-card" style="background: ${levelColor}">
+          <div class="benefits-card-inner">
+            <div class="level-badge-container">
+              <div class="level-badge-large">
+                <span class="level-icon-large">${levelIcon}</span>
+              </div>
+              <div class="level-info-main">
+                <p class="current-level-label">현재 등급</p>
+                <h2 class="current-level-name">${levelName}</h2>
+              </div>
             </div>
-            <div class="level-info-header">
-              <p class="current-level-label">현재 등급</p>
-              <h2 class="current-level-name">${levelName}</h2>
-            </div>
-          </div>
-        </div>
 
-        <div class="benefits-body">
-          <div class="section-title-with-action">
-            <h3 class="benefits-section-title">
-              <span class="section-icon">🎁</span>
-              내 혜택
-            </h3>
-            <button class="detail-btn" onclick="regularTabView.showBenefitDetail('${levelName}', ${JSON.stringify(benefits).replace(/"/g, '&quot;')})">
-              자세히 보기
-              <span class="arrow-icon">→</span>
+            <div class="benefits-stats-grid">
+              <div class="stat-card">
+                <div class="stat-icon">⭐</div>
+                <div class="stat-content">
+                  <p class="stat-label">포인트 적립</p>
+                  <p class="stat-value">${benefits.points}%</p>
+                </div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-content">
+                  <p class="stat-label">할인 혜택</p>
+                  <p class="stat-value">${benefits.discount}%</p>
+                </div>
+              </div>
+            </div>
+
+            <button class="detail-button" onclick="regularTabView.showBenefitDetail('${levelName}', ${JSON.stringify(benefits).replace(/"/g, '&quot;')})">
+              <span>혜택 자세히 보기</span>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </button>
           </div>
-
-          <div class="benefits-grid">
-            <div class="benefit-item">
-              <div class="benefit-icon">⭐</div>
-              <div class="benefit-content">
-                <p class="benefit-label">포인트 적립률</p>
-                <p class="benefit-value">${benefits.points}%</p>
-              </div>
-            </div>
-
-            <div class="benefit-item">
-              <div class="benefit-icon">💰</div>
-              <div class="benefit-content">
-                <p class="benefit-label">할인 혜택</p>
-                <p class="benefit-value">${benefits.discount}%</p>
-              </div>
-            </div>
-          </div>
-
-          ${this.renderProgressToNextLevel(store, user)}
         </div>
+
+        ${this.renderProgressToNextLevel(store, user)}
       </div>
     `;
   },
@@ -86,61 +82,60 @@ export const regularTabView = {
     const currentLevelName = userLevel.levelName || '브론즈';
     const promotions = store.promotions || [];
     
-    // 등급 순서 정의
     const levelOrder = ['브론즈', '실버', '골드', '플래티넘'];
     const currentIndex = levelOrder.indexOf(currentLevelName);
     
-    // 이미 최고 등급인 경우
     if (currentIndex === levelOrder.length - 1) {
       return `
-        <div class="next-level-progress">
-          <div class="max-level-badge">
-            <span class="max-level-icon">👑</span>
-            <p class="max-level-text">최고 등급 달성!</p>
+        <div class="progress-card max-level-card">
+          <div class="max-level-content">
+            <div class="max-level-icon">👑</div>
+            <div class="max-level-text">
+              <h3>최고 등급 달성!</h3>
+              <p>플래티넘 등급의 모든 혜택을 누리고 계십니다</p>
+            </div>
           </div>
         </div>
       `;
     }
 
-    // 다음 등급 찾기
     const nextLevelName = levelOrder[currentIndex + 1];
     const nextLevel = promotions.find(p => p.level === nextLevelName);
     
     if (!nextLevel) return '';
 
-    // 더미 데이터로 진행률 계산 (실제로는 서버에서 받아야 함)
-    const currentOrders = 3; // 더미
-    const currentSpent = 35000; // 더미
+    const currentOrders = 3;
+    const currentSpent = 35000;
     const ordersProgress = Math.min((currentOrders / nextLevel.min_orders) * 100, 100);
     const spentProgress = Math.min((currentSpent / nextLevel.min_spent) * 100, 100);
 
     return `
-      <div class="next-level-progress">
+      <div class="progress-card">
         <div class="progress-header">
-          <p class="progress-title">
+          <div class="progress-title">
             <span class="next-level-icon">${this.getLevelIcon(nextLevelName)}</span>
-            ${nextLevelName} 등급까지
-          </p>
+            <span>${nextLevelName} 등급까지</span>
+          </div>
         </div>
 
         <div class="progress-items">
           <div class="progress-item">
             <div class="progress-label">
               <span class="label-text">주문 횟수</span>
-              <span class="label-value">${currentOrders} / ${nextLevel.min_orders}회</span>
+              <span class="label-value">${currentOrders}/${nextLevel.min_orders}회</span>
             </div>
-            <div class="progress-bar-container">
-              <div class="progress-bar" style="width: ${ordersProgress}%"></div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width: ${ordersProgress}%"></div>
             </div>
           </div>
 
           <div class="progress-item">
             <div class="progress-label">
               <span class="label-text">누적 금액</span>
-              <span class="label-value">${currentSpent.toLocaleString()} / ${nextLevel.min_spent.toLocaleString()}원</span>
+              <span class="label-value">${currentSpent.toLocaleString()}/${nextLevel.min_spent.toLocaleString()}원</span>
             </div>
-            <div class="progress-bar-container">
-              <div class="progress-bar" style="width: ${spentProgress}%"></div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width: ${spentProgress}%"></div>
             </div>
           </div>
         </div>
@@ -154,25 +149,25 @@ export const regularTabView = {
   renderLoyaltyLevelSection(store) {
     const promotions = store.promotions || [];
     
-    // 등급 순서대로 정렬
     const levelOrder = ['브론즈', '실버', '골드', '플래티넘'];
     const sortedPromotions = promotions.sort((a, b) => 
       levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level)
     );
 
     return `
-      <section class="regular-section loyalty-section">
-        <div class="section-header">
-          <h3 class="section-title">
-            <span class="section-icon">📊</span>
-            단골 등급 안내
+      <div class="section-wrapper">
+        <div class="section-header-native">
+          <h3 class="section-title-native">
+            <span class="section-icon-native">📊</span>
+            등급 안내
           </h3>
-          <p class="section-description">주문 횟수와 누적 금액에 따라 등급이 올라갑니다</p>
+          <p class="section-subtitle-native">주문 횟수와 누적 금액에 따라 등급이 올라갑니다</p>
         </div>
-        <div class="loyalty-levels-container">
+
+        <div class="level-cards-container">
           ${sortedPromotions.map((promo, index) => this.renderLevelCard(promo, index)).join('')}
         </div>
-      </section>
+      </div>
     `;
   },
 
@@ -185,27 +180,34 @@ export const regularTabView = {
     const benefits = this.getLevelBenefits(promo.level);
 
     return `
-      <div class="loyalty-level-card" style="animation-delay: ${index * 0.1}s">
-        <div class="level-badge" style="background: ${color}">
-          <span class="level-icon">${icon}</span>
-        </div>
-        <div class="level-info">
-          <h4 class="level-name">${promo.level}</h4>
-          <p class="level-requirement">
-            주문 ${promo.min_orders}회 이상 · ${promo.min_spent.toLocaleString()}원 이상
-          </p>
-          <div class="level-benefits">
-            ${benefits.map(benefit => `
-              <div class="benefit-tag">✓ ${benefit}</div>
-            `).join('')}
+      <div class="level-card-native" style="animation-delay: ${index * 0.08}s">
+        <div class="level-card-header">
+          <div class="level-icon-badge" style="background: ${color}">
+            ${icon}
           </div>
+          <div class="level-card-info">
+            <h4 class="level-card-title">${promo.level}</h4>
+            <p class="level-card-requirement">
+              ${promo.min_orders}회 이상 · ${promo.min_spent.toLocaleString()}원 이상
+            </p>
+          </div>
+        </div>
+        <div class="level-card-benefits">
+          ${benefits.map(benefit => `
+            <div class="benefit-chip">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <path d="M2 6L5 9L10 3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <span>${benefit}</span>
+            </div>
+          `).join('')}
         </div>
       </div>
     `;
   },
 
   /**
-   * 상위 사용자 랭킹 섹션 렌더링 (더미 데이터)
+   * 상위 사용자 랭킹 섹션 렌더링
    */
   renderTopUsersSection(store) {
     const topUsers = [
@@ -220,19 +222,19 @@ export const regularTabView = {
     ];
 
     return `
-      <section class="regular-section top-users-section">
-        <div class="section-header">
-          <h3 class="section-title">
-            <span class="section-icon">🏆</span>
+      <div class="section-wrapper">
+        <div class="section-header-native">
+          <h3 class="section-title-native">
+            <span class="section-icon-native">🏆</span>
             이달의 단골 Top 8
           </h3>
-          <p class="section-description">${store.name}을 가장 많이 이용한 고객님들입니다</p>
+          <p class="section-subtitle-native">${store.name}을 가장 많이 이용한 고객님들입니다</p>
         </div>
 
-        <div class="top-users-list">
+        <div class="ranking-list">
           ${topUsers.map(user => this.renderTopUserCard(user)).join('')}
         </div>
-      </section>
+      </div>
     `;
   },
 
@@ -240,26 +242,24 @@ export const regularTabView = {
    * 상위 사용자 카드 렌더링
    */
   renderTopUserCard(user) {
-    const medalIcon = user.rank <= 3 ? ['🥇', '🥈', '🥉'][user.rank - 1] : `${user.rank}위`;
+    const medalIcon = user.rank <= 3 ? ['🥇', '🥈', '🥉'][user.rank - 1] : user.rank;
     const levelIcon = this.getLevelIcon(user.level);
     const isTopThree = user.rank <= 3;
 
     return `
-      <div class="top-user-card ${isTopThree ? 'top-three' : ''}">
-        <div class="user-rank ${isTopThree ? 'medal-rank' : ''}">
+      <div class="ranking-card ${isTopThree ? 'top-rank' : ''}">
+        <div class="rank-badge ${isTopThree ? 'medal' : ''}">
           ${medalIcon}
         </div>
-        <div class="user-info">
-          <div class="user-name-level">
+        <div class="ranking-info">
+          <div class="user-name-row">
             <span class="user-name">${user.name}</span>
-            <span class="user-level-badge" title="${user.level}">
-              ${levelIcon}
-            </span>
+            <span class="user-level-icon">${levelIcon}</span>
           </div>
-          <div class="user-stats">
-            <span class="stat-item">주문 ${user.orders}회</span>
-            <span class="stat-divider">·</span>
-            <span class="stat-item">${user.spent.toLocaleString()}원</span>
+          <div class="user-stats-row">
+            <span class="stat">주문 ${user.orders}회</span>
+            <span class="stat-dot">·</span>
+            <span class="stat">${user.spent.toLocaleString()}원</span>
           </div>
         </div>
       </div>
@@ -267,36 +267,40 @@ export const regularTabView = {
   },
 
   /**
-   * 혜택 상세보기 모달 (이벤트 핸들러)
+   * 혜택 상세보기 모달
    */
   showBenefitDetail(levelName, benefits) {
     const detailHTML = `
-      <div class="benefit-detail-modal" onclick="this.remove()">
-        <div class="modal-content" onclick="event.stopPropagation()">
-          <div class="modal-header">
+      <div class="modal-overlay" onclick="this.remove()">
+        <div class="modal-container" onclick="event.stopPropagation()">
+          <div class="modal-header-native">
             <h3>${levelName} 등급 혜택</h3>
-            <button class="close-btn" onclick="this.closest('.benefit-detail-modal').remove()">✕</button>
+            <button class="modal-close-btn" onclick="this.closest('.modal-overlay').remove()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
           </div>
-          <div class="modal-body">
-            <div class="detail-benefit-item">
-              <div class="detail-icon">⭐</div>
-              <div>
-                <p class="detail-title">포인트 적립</p>
-                <p class="detail-desc">결제 금액의 ${benefits.points}%를 포인트로 적립해드립니다</p>
+          <div class="modal-body-native">
+            <div class="benefit-detail-card">
+              <div class="benefit-detail-icon">⭐</div>
+              <div class="benefit-detail-content">
+                <h4>포인트 적립</h4>
+                <p>결제 금액의 ${benefits.points}%를 포인트로 적립해드립니다</p>
               </div>
             </div>
-            <div class="detail-benefit-item">
-              <div class="detail-icon">💰</div>
-              <div>
-                <p class="detail-title">할인 혜택</p>
-                <p class="detail-desc">모든 메뉴 ${benefits.discount}% 할인 혜택을 받으실 수 있습니다</p>
+            <div class="benefit-detail-card">
+              <div class="benefit-detail-icon">💰</div>
+              <div class="benefit-detail-content">
+                <h4>할인 혜택</h4>
+                <p>모든 메뉴 ${benefits.discount}% 할인 혜택을 받으실 수 있습니다</p>
               </div>
             </div>
-            <div class="detail-benefit-item">
-              <div class="detail-icon">🎉</div>
-              <div>
-                <p class="detail-title">특별 이벤트</p>
-                <p class="detail-desc">단골 고객 전용 이벤트에 우선 참여 가능합니다</p>
+            <div class="benefit-detail-card">
+              <div class="benefit-detail-icon">🎉</div>
+              <div class="benefit-detail-content">
+                <h4>특별 이벤트</h4>
+                <p>단골 고객 전용 이벤트에 우선 참여 가능합니다</p>
               </div>
             </div>
           </div>
@@ -325,10 +329,10 @@ export const regularTabView = {
    */
   getLevelColor(levelName) {
     const colors = {
-      '브론즈': 'linear-gradient(135deg, #cd7f32 0%, #a0522d 100%)',
+      '브론즈': 'linear-gradient(135deg, #cd7f32 0%, #b87333 100%)',
       '실버': 'linear-gradient(135deg, #c0c0c0 0%, #a8a8a8 100%)',
       '골드': 'linear-gradient(135deg, #ffd700 0%, #ffb700 100%)',
-      '플래티넘': 'linear-gradient(135deg, #e5e4e2 0%, #b0b0b0 100%)'
+      '플래티넘': 'linear-gradient(135deg, #e5e4e2 0%, #c0c0c0 100%)'
     };
     return colors[levelName] || 'linear-gradient(135deg, #64748b 0%, #475569 100%)';
   },
@@ -347,15 +351,15 @@ export const regularTabView = {
   },
 
   /**
-   * 스타일 정의
+   * 스타일 정의 (네이티브 앱 스타일)
    */
   getStyles() {
     return `
       <style>
-        @keyframes slideInUp {
+        @keyframes slideUp {
           from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(30px);
           }
           to {
             opacity: 1;
@@ -368,190 +372,180 @@ export const regularTabView = {
           to { opacity: 1; }
         }
 
+        @keyframes scaleIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
         .regular-tab-container {
           padding: 0;
-          background: #f8f9fa;
+          background: #f5f5f7;
           min-height: 100vh;
         }
 
         /* 내 혜택 카드 */
+        .my-benefits-wrapper {
+          padding: 16px;
+          padding-bottom: 8px;
+        }
+
         .my-benefits-card {
+          border-radius: 24px;
+          padding: 24px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
           margin-bottom: 12px;
-          background: white;
-          border-radius: 0;
-          overflow: hidden;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          animation: scaleIn 0.5s ease-out;
         }
 
-        .benefits-header {
-          padding: 24px 16px;
-          color: white;
+        .benefits-card-inner {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
         }
 
-        .benefits-header-content {
+        .level-badge-container {
           display: flex;
           align-items: center;
           gap: 16px;
         }
 
         .level-badge-large {
-          width: 64px;
-          height: 64px;
-          background: rgba(255, 255, 255, 0.2);
+          width: 72px;
+          height: 72px;
+          background: rgba(255, 255, 255, 0.25);
           backdrop-filter: blur(10px);
-          border-radius: 50%;
+          border-radius: 20px;
           display: flex;
           align-items: center;
           justify-content: center;
+          font-size: 40px;
           flex-shrink: 0;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
-        .level-icon-large {
-          font-size: 36px;
-        }
-
-        .level-info-header {
+        .level-info-main {
           flex: 1;
         }
 
         .current-level-label {
-          margin: 0 0 4px 0;
-          font-size: 13px;
-          color: rgba(255, 255, 255, 0.8);
-          font-weight: 500;
+          margin: 0 0 6px 0;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.85);
+          font-weight: 600;
+          letter-spacing: 0.5px;
         }
 
         .current-level-name {
           margin: 0;
-          font-size: 28px;
-          font-weight: 700;
+          font-size: 32px;
+          font-weight: 800;
           color: white;
+          letter-spacing: -0.5px;
         }
 
-        .benefits-body {
-          padding: 20px 16px;
-        }
-
-        .section-title-with-action {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-
-        .benefits-section-title {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 700;
-          color: #1e293b;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .detail-btn {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          background: none;
-          border: none;
-          color: #3b82f6;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          padding: 4px 8px;
-          border-radius: 6px;
-          transition: all 0.2s;
-        }
-
-        .detail-btn:hover {
-          background: #eff6ff;
-        }
-
-        .arrow-icon {
-          font-size: 14px;
-          transition: transform 0.2s;
-        }
-
-        .detail-btn:hover .arrow-icon {
-          transform: translateX(4px);
-        }
-
-        .benefits-grid {
+        .benefits-stats-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 12px;
-          margin-bottom: 20px;
         }
 
-        .benefit-item {
+        .stat-card {
           display: flex;
           align-items: center;
           gap: 12px;
           padding: 16px;
-          background: #f8fafc;
-          border-radius: 12px;
-          border: 1px solid #e2e8f0;
+          background: rgba(255, 255, 255, 0.2);
+          backdrop-filter: blur(10px);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
-        .benefit-icon {
-          font-size: 24px;
+        .stat-icon {
+          font-size: 28px;
           flex-shrink: 0;
         }
 
-        .benefit-content {
+        .stat-content {
           flex: 1;
         }
 
-        .benefit-label {
+        .stat-label {
           margin: 0 0 4px 0;
-          font-size: 12px;
-          color: #64748b;
-          font-weight: 500;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.8);
+          font-weight: 600;
         }
 
-        .benefit-value {
+        .stat-value {
           margin: 0;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
+          font-size: 22px;
+          font-weight: 800;
+          color: white;
         }
 
-        /* 다음 레벨 진행상황 */
-        .next-level-progress {
-          padding: 16px;
-          background: #f1f5f9;
-          border-radius: 12px;
+        .detail-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 14px 20px;
+          background: rgba(255, 255, 255, 0.25);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 14px;
+          color: white;
+          font-size: 15px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+
+        .detail-button:active {
+          transform: scale(0.97);
+          background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 진행상황 카드 */
+        .progress-card {
+          background: white;
+          border-radius: 20px;
+          padding: 20px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .progress-header {
-          margin-bottom: 12px;
+          margin-bottom: 16px;
         }
 
         .progress-title {
-          margin: 0;
-          font-size: 14px;
-          font-weight: 700;
-          color: #475569;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
+          font-size: 16px;
+          font-weight: 700;
+          color: #1d1d1f;
         }
 
         .next-level-icon {
-          font-size: 16px;
+          font-size: 20px;
         }
 
         .progress-items {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 16px;
         }
 
         .progress-item {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         .progress-label {
@@ -561,247 +555,258 @@ export const regularTabView = {
         }
 
         .label-text {
-          font-size: 13px;
-          color: #64748b;
-          font-weight: 500;
-        }
-
-        .label-value {
-          font-size: 13px;
-          color: #1e293b;
+          font-size: 14px;
+          color: #86868b;
           font-weight: 600;
         }
 
-        .progress-bar-container {
-          height: 8px;
-          background: #e2e8f0;
-          border-radius: 4px;
+        .label-value {
+          font-size: 14px;
+          color: #1d1d1f;
+          font-weight: 700;
+        }
+
+        .progress-track {
+          height: 10px;
+          background: #f5f5f7;
+          border-radius: 5px;
           overflow: hidden;
         }
 
-        .progress-bar {
+        .progress-fill {
           height: 100%;
-          background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
-          border-radius: 4px;
-          transition: width 0.6s ease-out;
+          background: linear-gradient(90deg, #007aff 0%, #0051d5 100%);
+          border-radius: 5px;
+          transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .max-level-badge {
+        .max-level-card {
+          background: linear-gradient(135deg, #ffd60a 0%, #ffc107 100%);
+          border: none;
+        }
+
+        .max-level-content {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 16px;
-          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-          border-radius: 12px;
-          color: white;
+          gap: 16px;
         }
 
         .max-level-icon {
-          font-size: 24px;
+          font-size: 48px;
+          flex-shrink: 0;
         }
 
-        .max-level-text {
+        .max-level-text h3 {
+          margin: 0 0 4px 0;
+          font-size: 18px;
+          font-weight: 800;
+          color: #1d1d1f;
+        }
+
+        .max-level-text p {
           margin: 0;
-          font-size: 16px;
-          font-weight: 700;
+          font-size: 14px;
+          color: rgba(29, 29, 31, 0.8);
+          font-weight: 600;
         }
 
         /* 섹션 */
-        .regular-section {
-          background: white;
-          margin-bottom: 12px;
-          padding: 20px 16px;
+        .section-wrapper {
+          padding: 16px;
+          padding-top: 8px;
         }
 
-        .section-header {
+        .section-header-native {
           margin-bottom: 16px;
         }
 
-        .section-title {
-          margin: 0 0 4px 0;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
+        .section-title-native {
+          margin: 0 0 6px 0;
+          font-size: 22px;
+          font-weight: 800;
+          color: #1d1d1f;
           display: flex;
           align-items: center;
           gap: 8px;
+          letter-spacing: -0.3px;
         }
 
-        .section-icon {
-          font-size: 20px;
+        .section-icon-native {
+          font-size: 24px;
         }
 
-        .section-description {
+        .section-subtitle-native {
           margin: 0;
-          font-size: 13px;
-          color: #64748b;
+          font-size: 14px;
+          color: #86868b;
+          font-weight: 500;
         }
 
-        /* 단골 레벨 카드 */
-        .loyalty-levels-container {
+        /* 레벨 카드 */
+        .level-cards-container {
           display: flex;
           flex-direction: column;
           gap: 12px;
         }
 
-        .loyalty-level-card {
-          display: flex;
-          align-items: flex-start;
-          gap: 16px;
-          padding: 16px;
+        .level-card-native {
           background: white;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-          border: 1px solid #e2e8f0;
+          border-radius: 18px;
+          padding: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          border: 1px solid rgba(0, 0, 0, 0.06);
           transition: all 0.3s;
-          animation: slideInUp 0.5s ease-out forwards;
+          animation: slideUp 0.5s ease-out forwards;
           opacity: 0;
         }
 
-        .loyalty-level-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        .level-card-native:active {
+          transform: scale(0.98);
         }
 
-        .level-badge {
-          width: 60px;
-          height: 60px;
-          border-radius: 50%;
+        .level-card-header {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 14px;
+        }
+
+        .level-icon-badge {
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
           display: flex;
           align-items: center;
           justify-content: center;
+          font-size: 28px;
           flex-shrink: 0;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
-        .level-icon {
-          font-size: 32px;
-        }
-
-        .level-info {
+        .level-card-info {
           flex: 1;
         }
 
-        .level-name {
+        .level-card-title {
           margin: 0 0 4px 0;
           font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
+          font-weight: 800;
+          color: #1d1d1f;
+          letter-spacing: -0.2px;
         }
 
-        .level-requirement {
-          margin: 0 0 12px 0;
+        .level-card-requirement {
+          margin: 0;
           font-size: 13px;
-          color: #64748b;
-          font-weight: 500;
+          color: #86868b;
+          font-weight: 600;
         }
 
-        .level-benefits {
+        .level-card-benefits {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
-        }
-
-        .benefit-tag {
-          padding: 4px 10px;
-          background: #f1f5f9;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          color: #475569;
-        }
-
-        /* 상위 사용자 섹션 */
-        .top-users-list {
-          display: flex;
-          flex-direction: column;
           gap: 8px;
         }
 
-        .top-user-card {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          background: white;
-          border-radius: 10px;
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s;
-        }
-
-        .top-user-card:hover {
-          background: #f8fafc;
-          border-color: #cbd5e1;
-        }
-
-        .top-user-card.top-three {
-          background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-          border-color: #fbbf24;
-        }
-
-        .top-user-card.top-three:hover {
-          background: linear-gradient(135deg, #fde68a 0%, #fcd34d 100%);
-        }
-
-        .user-rank {
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: #f1f5f9;
-          border-radius: 50%;
-          font-size: 14px;
-          font-weight: 700;
-          color: #475569;
-          flex-shrink: 0;
-        }
-
-        .user-rank.medal-rank {
-          background: transparent;
-          font-size: 24px;
-        }
-
-        .user-info {
-          flex: 1;
-        }
-
-        .user-name-level {
+        .benefit-chip {
           display: flex;
           align-items: center;
           gap: 6px;
+          padding: 6px 12px;
+          background: #f5f5f7;
+          border-radius: 10px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #1d1d1f;
+        }
+
+        .benefit-chip svg {
+          color: #34c759;
+        }
+
+        /* 랭킹 카드 */
+        .ranking-list {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+        }
+
+        .ranking-card {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 16px;
+          background: white;
+          border-radius: 16px;
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+          transition: all 0.2s;
+        }
+
+        .ranking-card:active {
+          transform: scale(0.98);
+        }
+
+        .ranking-card.top-rank {
+          background: linear-gradient(135deg, #fff9e6 0%, #fff3cc 100%);
+          border-color: #ffd60a;
+        }
+
+        .rank-badge {
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f5f5f7;
+          border-radius: 12px;
+          font-size: 15px;
+          font-weight: 800;
+          color: #1d1d1f;
+          flex-shrink: 0;
+        }
+
+        .rank-badge.medal {
+          background: transparent;
+          font-size: 28px;
+        }
+
+        .ranking-info {
+          flex: 1;
+        }
+
+        .user-name-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
           margin-bottom: 4px;
         }
 
         .user-name {
-          font-size: 15px;
-          font-weight: 700;
-          color: #1e293b;
-        }
-
-        .user-level-badge {
           font-size: 16px;
+          font-weight: 700;
+          color: #1d1d1f;
         }
 
-        .user-stats {
+        .user-level-icon {
+          font-size: 18px;
+        }
+
+        .user-stats-row {
           display: flex;
           align-items: center;
           gap: 6px;
-          font-size: 12px;
-          color: #64748b;
+          font-size: 13px;
+          color: #86868b;
+          font-weight: 600;
         }
 
-        .stat-item {
-          font-weight: 500;
-        }
-
-        .stat-divider {
-          color: #cbd5e1;
+        .stat-dot {
+          color: #d1d1d6;
         }
 
         /* 모달 */
-        .benefit-detail-modal {
+        .modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
@@ -816,39 +821,39 @@ export const regularTabView = {
           padding: 20px;
         }
 
-        .modal-content {
+        .modal-container {
           background: white;
-          border-radius: 16px;
+          border-radius: 24px;
           max-width: 500px;
           width: 100%;
           max-height: 80vh;
           overflow: auto;
-          animation: slideInUp 0.3s ease-out;
+          animation: scaleIn 0.3s ease-out;
         }
 
-        .modal-header {
+        .modal-header-native {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 20px;
-          border-bottom: 1px solid #e2e8f0;
+          padding: 24px 24px 16px 24px;
+          border-bottom: 1px solid #f5f5f7;
         }
 
-        .modal-header h3 {
+        .modal-header-native h3 {
           margin: 0;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1e293b;
+          font-size: 20px;
+          font-weight: 800;
+          color: #1d1d1f;
+          letter-spacing: -0.3px;
         }
 
-        .close-btn {
-          width: 32px;
-          height: 32px;
+        .modal-close-btn {
+          width: 36px;
+          height: 36px;
           border: none;
-          background: #f1f5f9;
+          background: #f5f5f7;
           border-radius: 50%;
-          font-size: 18px;
-          color: #64748b;
+          color: #86868b;
           cursor: pointer;
           display: flex;
           align-items: center;
@@ -856,86 +861,84 @@ export const regularTabView = {
           transition: all 0.2s;
         }
 
-        .close-btn:hover {
-          background: #e2e8f0;
-          color: #1e293b;
+        .modal-close-btn:active {
+          transform: scale(0.9);
+          background: #e5e5e7;
         }
 
-        .modal-body {
-          padding: 20px;
-        }
-
-        .detail-benefit-item {
+        .modal-body-native {
+          padding: 20px 24px 24px 24px;
           display: flex;
+          flex-direction: column;
           gap: 12px;
-          padding: 16px;
-          background: #f8fafc;
-          border-radius: 12px;
-          margin-bottom: 12px;
         }
 
-        .detail-benefit-item:last-child {
-          margin-bottom: 0;
+        .benefit-detail-card {
+          display: flex;
+          gap: 14px;
+          padding: 18px;
+          background: #f5f5f7;
+          border-radius: 16px;
         }
 
-        .detail-icon {
-          font-size: 24px;
+        .benefit-detail-icon {
+          font-size: 28px;
           flex-shrink: 0;
         }
 
-        .detail-title {
+        .benefit-detail-content h4 {
           margin: 0 0 6px 0;
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 700;
-          color: #1e293b;
+          color: #1d1d1f;
         }
 
-        .detail-desc {
+        .benefit-detail-content p {
           margin: 0;
-          font-size: 13px;
-          color: #64748b;
+          font-size: 14px;
+          color: #86868b;
           line-height: 1.5;
+          font-weight: 500;
         }
 
         /* 반응형 */
         @media (max-width: 480px) {
-          .benefits-header {
-            padding: 20px 12px;
-          }
-
-          .level-badge-large {
-            width: 56px;
-            height: 56px;
-          }
-
-          .level-icon-large {
-            font-size: 32px;
-          }
-
-          .current-level-name {
-            font-size: 24px;
-          }
-
-          .benefits-body {
-            padding: 16px 12px;
-          }
-
-          .benefits-grid {
-            grid-template-columns: 1fr;
-          }
-
-          .loyalty-level-card {
+          .my-benefits-wrapper {
             padding: 12px;
           }
 
-          .level-badge {
-            width: 50px;
-            height: 50px;
+          .my-benefits-card {
+            padding: 20px;
+            border-radius: 20px;
           }
 
-          .level-icon {
+          .level-badge-large {
+            width: 64px;
+            height: 64px;
+            font-size: 36px;
+          }
+
+          .current-level-name {
             font-size: 28px;
           }
+
+          .section-wrapper {
+            padding: 12px;
+          }
+
+          .section-title-native {
+            font-size: 20px;
+          }
+        }
+
+        /* iOS 스타일 스크롤 */
+        .modal-container {
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* 터치 피드백 최적화 */
+        * {
+          -webkit-tap-highlight-color: transparent;
         }
       </style>
     `;
@@ -945,4 +948,4 @@ export const regularTabView = {
 // 전역 등록
 window.regularTabView = regularTabView;
 
-console.log('✅ regularTabView 모듈 로드 완료');
+console.log('✅ regularTabView 모듈 로드 완료 (네이티브 앱 스타일)');
