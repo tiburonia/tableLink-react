@@ -78,6 +78,15 @@ class UserService {
   }
 
   /**
+   * 사용자 매장 정보 조회
+   */
+  async getUserStoreInfo(userId) {
+   const  await userRepository.getUserStoreInfo(userId);
+  
+    
+  }
+
+  /**
    * 즐겨찾기 매장 조회
    */
   async getFavoriteStores(userId) {

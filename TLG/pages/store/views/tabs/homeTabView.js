@@ -13,7 +13,9 @@ export const homeTabView = {
       <div class="home-tab-container">
         <!-- 요일별 대기시간 통계 $ {this.renderWaitingTimes()} -->
         ${this.renderReservationSection(store)}
-        ${this.renderAmenities(store)}
+        ${this.renderAmenities(store)} <!-- 편의시설 섹션 삭제 예정 -->
+        <!-- 프로모션 관련 섹션 예정-->
+        <div style="box-shadow:0 1px 3px rgba(0, 0, 0, 0.08); background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); ">프로모션 관련 섹션 예정</div>
         ${this.renderTableStatus()}
         ${this.renderMenu(store)}
         
@@ -259,33 +261,25 @@ export const homeTabView = {
 
     // 편의시설 아이콘 매핑
     const amenityConfig = {
-      parking: { 
-        icon: '🅿️',
-        name: '주차'
-      },
       wifi: { 
-        icon: '📶',
-        name: '콜키지 프리'
+        icon: '<img width="24" height="24" src="https://img.icons8.com/ios-filled/24/wifi--v1.png" alt="wifi--v1"/>',
+        name: '무선 인터넷'
       },
-      power_outlet: { 
-        icon: '🍷',
-        name: '콜키지'
+      parking: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/ios-filled/24/parking.png" alt="parking"/>',
+        name: '주차 이용 가능'
       },
       pet_friendly: { 
-        icon: '👥',
-        name: '단체'
+        icon: '<img width="24" height="24" src="https://img.icons8.com/ios-filled/24/cat-footprint.png" alt="cat-footprint"/>',
+        name: '반려 화장실 구비'
       },
-      delivery: { 
-        icon: '🚗',
-        name: '대관'
+      power_outlet: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/sf-black-filled/24/electrical.png" alt="electrical"/>',
+        name: '콘센트 구비'
       },
-      disabled_facilities: { 
-        icon: '♿',
-        name: '장애인 편의시설'
-      },
-      large_group: { 
-        icon: '📖',
-        name: '대기공간'
+      smoking_area: { 
+        icon: '<img width="24" height="24" src="https://img.icons8.com/forma-bold-filled/24/cigar.png" alt="cigar"/>',
+        name: '흡연구역'
       }
     };
 
@@ -815,16 +809,11 @@ export const homeTabView = {
           align-items: center;
           gap: 8px;
           padding: 16px 8px;
-          background: #f8fafc;
           border-radius: 12px;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .amenity-card:hover {
-          background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
-        }
+       
 
         .amenity-icon {
           font-size: 28px;

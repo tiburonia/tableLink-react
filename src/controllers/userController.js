@@ -102,6 +102,7 @@ class UserController {
     }
   }
 
+  
   /**
    * 즐겨찾기 매장 조회
    */

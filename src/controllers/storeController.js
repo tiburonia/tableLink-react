@@ -1,4 +1,5 @@
 const storeService = require("../services/storeService");
+const userService = require("../services/userService")
 
 /**
  * 매장 컨트롤러 - HTTP 요청/응답 처리
@@ -16,6 +17,7 @@ class StoreController {
       // 현재는 기본 매장 정보만 반환
       //userId없을경우 오류 발생.
       const store = await storeService.getStoreInfo(storeId, userId);
+      const user = await userService.getUserStoreInfo(userId)
 
       res.json({
         success: true,
