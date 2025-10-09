@@ -17,7 +17,7 @@ class StoreController {
       // 현재는 기본 매장 정보만 반환
       //userId없을경우 오류 발생.
       const store = await storeService.getStoreInfo(storeId, userId);
-      const user = await userService.getUserStoreInfo(userId)
+      const user = await userService.getUserStoreInfo(storeId, userId)
 
       res.json({
         success: true,

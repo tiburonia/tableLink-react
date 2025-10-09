@@ -89,6 +89,17 @@ class UserRepository {
   }
 
   /**
+   * 사용자 매장 정보 조회 > store_regular_levels 테이블에서 조회
+   */
+  async getDefaultUserStoreInfo(storeId) {
+    const result = await pool.query(`
+    
+    `)
+  }
+
+  
+
+  /**
    * 즐겨찾기 매장 조회
    */
   async getFavoriteStores(userId) {

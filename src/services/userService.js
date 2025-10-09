@@ -79,14 +79,11 @@ class UserService {
   /**
    * 사용자 매장 정보 조회 (가장 최근 방문한 매장)
    */
-  async getUserStoreInfo(userId) {
+  async getUserStoreInfo(storeId, userId) {
     const storeInfo = await userRepository.getUserStoreInfo(userId);
 
     if (!storeInfo) {
-      return {
-        hasStoreInfo: false,
-        message: '방문한 매장이 없습니다'
-      };
+      const defaultStoreInfo = await userRepository.getDefaultUserStoreInfo(storeId);
     }
 
     return {
