@@ -83,12 +83,11 @@ class UserRepository {
         LIMIT 1
       )
       SELECT 
-        ul.*,
         srl.level as level_name,
         srl.benefits,
         srl.min_orders,
         srl.min_spent
-      FROM user_level ul
+      FROM store_regular_level srl
       LEFT JOIN store_regular_levels srl ON ul.level_id = srl.id
     `, [userId]);
 
