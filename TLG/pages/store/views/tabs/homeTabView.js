@@ -316,13 +316,13 @@ export const homeTabView = {
   },
 
   /**
-   * 프로모션 섹션
+   * 프로모션 섹션 - 전체 쿠폰 및 할인 이벤트 표시
    */
   renderPromotionSection(store) {
-    // 프로모션 데이터 (쿠폰 + 할인 이벤트)
-    const promotions = store.promotions || [];
+    // 실제 프로모션 데이터 또는 더미 데이터
+    const promotions = store.promotions || this.getDummyPromotions();
     
-    if (promotions.length === 0) {
+    if (!promotions || promotions.length === 0) {
       return '';
     }
 
@@ -342,28 +342,34 @@ export const homeTabView = {
             <span class="section-icon">🎁</span>
             혜택 & 프로모션
           </h3>
-          <button class="view-all-promotions-btn" id="viewAllPromotionsBtn">
-            전체보기
-          </button>
         </div>
 
-        <!-- 진행중인 쿠폰 -->
+        <!-- 발급 가능한 쿠폰 -->
         ${coupons.length > 0 ? `
           <div class="promotion-category">
             <div class="category-header">
               <span class="category-icon">🎫</span>
-              <h4 class="category-title">발급 가능한 쿠폰</h4>
+              <h4 class="category-title">발급 가능한 쿠폰 (${coupons.length})</h4>
             </div>
             <div class="coupons-container">
-              ${coupons.slice(0, 3).map(coupon => `
+              ${coupons.map(coupon => `
                 <div class="coupon-card" data-promo-id="${coupon.id}">
-                  <div class="coupon-badge">${coupon.discountRate}</div>
+                  <div class="coupon-visual">
+                    <div class="coupon-badge">${coupon.discountRate}</div>
+                    <div class="coupon-deco"></div>
+                  </div>
                   <div class="coupon-info">
                     <div class="coupon-name">${coupon.name}</div>
                     <div class="coupon-desc">${coupon.description}</div>
-                    <div class="coupon-condition">최소 주문 ${coupon.minOrderAmount}</div>
+                    <div class="coupon-conditions">
+                      <span class="condition-item">📌 ${coupon.minOrderAmount} 이상</span>
+                      ${coupon.maxDiscount ? `<span class="condition-item">🔖 최대 ${coupon.maxDiscount}</span>` : ''}
+                    </div>
+                    <div class="coupon-period">
+                      ${this.formatDate(coupon.startDate)} ~ ${this.formatDate(coupon.endDate)}
+                    </div>
                   </div>
-                  <button class="coupon-download-btn">
+                  <button class="coupon-download-btn" data-coupon-id="${coupon.id}">
                     <span>받기</span>
                   </button>
                 </div>
@@ -377,33 +383,34 @@ export const homeTabView = {
           <div class="promotion-category">
             <div class="category-header">
               <span class="category-icon">💰</span>
-              <h4 class="category-title">할인 이벤트</h4>
+              <h4 class="category-title">할인 이벤트 (${discounts.length})</h4>
             </div>
             <div class="discounts-container">
-              ${discounts.slice(0, 3).map(discount => `
+              ${discounts.map(discount => `
                 <div class="discount-card" data-promo-id="${discount.id}">
-                  <div class="discount-header">
+                  <div class="discount-visual">
                     <div class="discount-badge">${discount.discountRate}</div>
-                    <div class="discount-period">
-                      ${new Date(discount.startDate).toLocaleDateString()} ~ ${new Date(discount.endDate).toLocaleDateString()}
-                    </div>
+                    <div class="discount-tag">${discount.tag || 'HOT'}</div>
                   </div>
-                  <div class="discount-name">${discount.name}</div>
-                  <div class="discount-desc">${discount.description}</div>
-                  <div class="discount-details">
-                    <span class="detail-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="12" cy="7" r="4"></circle>
-                      </svg>
-                      ${discount.minOrderAmount}
-                    </span>
-                    <span class="detail-item">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M2 12h20"></path>
-                      </svg>
-                      최대 ${discount.maxDiscount}
-                    </span>
+                  <div class="discount-info">
+                    <div class="discount-name">${discount.name}</div>
+                    <div class="discount-desc">${discount.description}</div>
+                    <div class="discount-conditions">
+                      ${discount.conditions ? discount.conditions.map(cond => `
+                        <span class="condition-badge">• ${cond}</span>
+                      `).join('') : ''}
+                    </div>
+                    <div class="discount-meta">
+                      <span class="meta-item">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                          <line x1="16" y1="2" x2="16" y2="6"></line>
+                          <line x1="8" y1="2" x2="8" y2="6"></line>
+                          <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        ${this.formatDate(discount.startDate)} ~ ${this.formatDate(discount.endDate)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               `).join('')}
@@ -415,40 +422,131 @@ export const homeTabView = {
   },
 
   /**
+   * 더미 프로모션 데이터 생성
+   */
+  getDummyPromotions() {
+    return [
+      {
+        id: 'coupon_1',
+        type: '쿠폰',
+        name: '신규 고객 웰컴 쿠폰',
+        description: '첫 주문 시 사용 가능한 특별 할인',
+        discountRate: '15%',
+        minOrderAmount: '10,000원',
+        maxDiscount: '5,000원',
+        startDate: '2025-01-01',
+        endDate: '2025-12-31'
+      },
+      {
+        id: 'coupon_2',
+        type: '쿠폰',
+        name: '점심 특가 쿠폰',
+        description: '평일 점심시간 한정 쿠폰',
+        discountRate: '3,000원',
+        minOrderAmount: '15,000원',
+        maxDiscount: null,
+        startDate: '2025-01-01',
+        endDate: '2025-06-30'
+      },
+      {
+        id: 'coupon_3',
+        type: '쿠폰',
+        name: '재방문 감사 쿠폰',
+        description: '두 번째 방문 고객 전용',
+        discountRate: '10%',
+        minOrderAmount: '20,000원',
+        maxDiscount: '8,000원',
+        startDate: '2025-01-01',
+        endDate: '2025-12-31'
+      },
+      {
+        id: 'discount_1',
+        type: '할인',
+        name: '첫 주문 할인',
+        description: '처음 방문하시는 고객님께 특별한 혜택을 드립니다',
+        discountRate: '20%',
+        tag: 'NEW',
+        conditions: ['첫 주문에 한함', '모든 메뉴 적용'],
+        startDate: '2025-01-01',
+        endDate: '2025-12-31'
+      },
+      {
+        id: 'discount_2',
+        type: '할인',
+        name: '3만원 이상 주문 할인',
+        description: '3만원 이상 주문 시 자동 할인',
+        discountRate: '5,000원',
+        tag: 'HOT',
+        conditions: ['30,000원 이상 주문', '배달/포장 모두 가능'],
+        startDate: '2025-01-01',
+        endDate: '2025-06-30'
+      },
+      {
+        id: 'discount_3',
+        type: '할인',
+        name: '주말 특별 할인',
+        description: '주말 방문 고객 한정 할인',
+        discountRate: '12%',
+        tag: 'WEEKEND',
+        conditions: ['토·일요일 한정', '매장 방문 전용'],
+        startDate: '2025-01-01',
+        endDate: '2025-12-31'
+      }
+    ];
+  },
+
+  /**
+   * 날짜 포맷 함수
+   */
+  formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}.${month}.${day}`;
+  },
+
+  /**
    * 프로모션 이벤트 초기화
    */
   initPromotionEvents(store) {
-    const viewAllBtn = document.getElementById('viewAllPromotionsBtn');
     const couponCards = document.querySelectorAll('.coupon-card');
     const discountCards = document.querySelectorAll('.discount-card');
-
-    // 전체보기 버튼
-    if (viewAllBtn) {
-      viewAllBtn.addEventListener('click', () => {
-        console.log('🎁 프로모션 전체보기');
-        if (typeof renderPromotionDetail === 'function') {
-          renderPromotionDetail(store);
-        } else {
-          alert('프로모션 상세 페이지를 준비중입니다.');
-        }
-      });
-    }
+    const downloadBtns = document.querySelectorAll('.coupon-download-btn');
 
     // 쿠폰 다운로드 버튼
-    couponCards.forEach(card => {
-      const downloadBtn = card.querySelector('.coupon-download-btn');
-      if (downloadBtn) {
-        downloadBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const promoId = card.dataset.promoId;
-          console.log('🎫 쿠폰 다운로드:', promoId);
+    downloadBtns.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const couponId = btn.dataset.couponId;
+        console.log('🎫 쿠폰 다운로드:', couponId);
+        
+        // 쿠폰 발급 애니메이션
+        btn.classList.add('downloading');
+        
+        // TODO: 실제 쿠폰 다운로드 API 호출
+        setTimeout(() => {
+          btn.innerHTML = '<span>✓ 발급완료</span>';
+          btn.classList.remove('downloading');
+          btn.classList.add('downloaded');
+          btn.disabled = true;
           
-          // TODO: 실제 쿠폰 다운로드 API 호출
-          downloadBtn.innerHTML = '<span>✓ 발급완료</span>';
-          downloadBtn.classList.add('downloaded');
-          downloadBtn.disabled = true;
-        });
-      }
+          // 성공 알림
+          this.showCouponDownloadSuccess();
+        }, 800);
+      });
+    });
+
+    // 쿠폰 카드 클릭 (상세 정보)
+    couponCards.forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.coupon-download-btn')) return;
+        
+        const promoId = card.dataset.promoId;
+        console.log('🎫 쿠폰 상세 정보:', promoId);
+        // TODO: 쿠폰 상세 모달
+      });
     });
 
     // 할인 카드 클릭
@@ -457,9 +555,30 @@ export const homeTabView = {
         const promoId = card.dataset.promoId;
         console.log('💰 할인 이벤트 상세:', promoId);
         // TODO: 할인 이벤트 상세 모달
-        alert('할인 이벤트 상세 정보 (구현 예정)');
       });
     });
+  },
+
+  /**
+   * 쿠폰 다운로드 성공 알림
+   */
+  showCouponDownloadSuccess() {
+    const toast = document.createElement('div');
+    toast.className = 'coupon-success-toast';
+    toast.innerHTML = `
+      <span class="toast-icon">✓</span>
+      <span class="toast-text">쿠폰이 발급되었습니다</span>
+    `;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add('show');
+    }, 10);
+
+    setTimeout(() => {
+      toast.classList.remove('show');
+      setTimeout(() => toast.remove(), 300);
+    }, 2000);
   },
 
   /**
@@ -942,26 +1061,8 @@ export const homeTabView = {
           background: white;
         }
 
-        .view-all-promotions-btn {
-          background: transparent;
-          border: 1px solid #e5e7eb;
-          color: #6b7280;
-          padding: 6px 14px;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-
-        .view-all-promotions-btn:hover {
-          background: #f3f4f6;
-          border-color: #d1d5db;
-          color: #374151;
-        }
-
         .promotion-category {
-          margin-bottom: 24px;
+          margin-bottom: 28px;
         }
 
         .promotion-category:last-child {
@@ -972,15 +1073,15 @@ export const homeTabView = {
           display: flex;
           align-items: center;
           gap: 8px;
-          margin-bottom: 12px;
+          margin-bottom: 16px;
         }
 
         .category-icon {
-          font-size: 18px;
+          font-size: 20px;
         }
 
         .category-title {
-          font-size: 15px;
+          font-size: 16px;
           font-weight: 700;
           color: #1f2937;
           margin: 0;
@@ -990,160 +1091,312 @@ export const homeTabView = {
         .coupons-container {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         .coupon-card {
           display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 14px;
+          align-items: stretch;
+          gap: 0;
           background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-          border: 2px dashed #f59e0b;
-          border-radius: 12px;
-          transition: all 0.3s ease;
+          border-radius: 16px;
+          overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           cursor: pointer;
+          box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
         }
 
         .coupon-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+          transform: translateY(-3px);
+          box-shadow: 0 6px 20px rgba(245, 158, 11, 0.25);
+        }
+
+        .coupon-visual {
+          position: relative;
+          min-width: 90px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          padding: 16px 12px;
+        }
+
+        .coupon-visual::after {
+          content: '';
+          position: absolute;
+          right: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 16px;
+          height: 16px;
+          background: white;
+          border-radius: 50%;
         }
 
         .coupon-badge {
-          min-width: 60px;
-          padding: 10px 12px;
-          background: white;
-          border-radius: 8px;
-          font-size: 16px;
+          font-size: 22px;
           font-weight: 800;
-          color: #f59e0b;
+          color: white;
           text-align: center;
-          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          line-height: 1;
+          margin-bottom: 4px;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .coupon-deco {
+          font-size: 10px;
+          color: rgba(255, 255, 255, 0.6);
+          font-weight: 600;
+          text-transform: uppercase;
         }
 
         .coupon-info {
           flex: 1;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
         }
 
         .coupon-name {
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 700;
           color: #78350f;
-          margin-bottom: 4px;
+          line-height: 1.3;
         }
 
         .coupon-desc {
           font-size: 12px;
           color: #92400e;
-          margin-bottom: 4px;
-          opacity: 0.9;
+          opacity: 0.85;
+          line-height: 1.4;
         }
 
-        .coupon-condition {
+        .coupon-conditions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 4px;
+        }
+
+        .condition-item {
           font-size: 11px;
           color: #b45309;
+          background: rgba(255, 255, 255, 0.5);
+          padding: 3px 8px;
+          border-radius: 6px;
           font-weight: 600;
         }
 
+        .coupon-period {
+          font-size: 10px;
+          color: #92400e;
+          opacity: 0.7;
+          margin-top: 2px;
+        }
+
         .coupon-download-btn {
-          min-width: 60px;
-          padding: 8px 16px;
-          background: white;
-          border: 2px solid #f59e0b;
-          border-radius: 8px;
-          color: #f59e0b;
-          font-size: 13px;
+          min-width: 70px;
+          padding: 0 16px;
+          background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+          border: none;
+          color: white;
+          font-size: 14px;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.3s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .coupon-download-btn:hover {
-          background: #f59e0b;
-          color: white;
+          background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+        }
+
+        .coupon-download-btn.downloading {
+          background: #94a3b8;
+          pointer-events: none;
         }
 
         .coupon-download-btn.downloaded {
-          background: #10b981;
-          border-color: #10b981;
-          color: white;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          pointer-events: none;
         }
 
         /* 할인 카드 */
         .discounts-container {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         .discount-card {
-          padding: 16px;
+          display: flex;
+          gap: 0;
           background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-          border: 2px solid #0ea5e9;
-          border-radius: 12px;
+          border-radius: 16px;
+          overflow: hidden;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 2px 8px rgba(14, 165, 233, 0.15);
         }
 
         .discount-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(14, 165, 233, 0.2);
+          transform: translateY(-3px);
+          box-shadow: 0 6px 20px rgba(14, 165, 233, 0.25);
         }
 
-        .discount-header {
+        .discount-visual {
+          position: relative;
+          min-width: 80px;
           display: flex;
-          justify-content: space-between;
+          flex-direction: column;
           align-items: center;
-          margin-bottom: 8px;
+          justify-content: center;
+          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+          padding: 16px 12px;
+        }
+
+        .discount-visual::after {
+          content: '';
+          position: absolute;
+          right: -8px;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 16px;
+          height: 16px;
+          background: white;
+          border-radius: 50%;
         }
 
         .discount-badge {
-          padding: 6px 12px;
-          background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-          color: white;
-          border-radius: 8px;
-          font-size: 14px;
+          font-size: 20px;
           font-weight: 800;
+          color: white;
+          text-align: center;
+          line-height: 1;
+          margin-bottom: 6px;
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .discount-period {
-          font-size: 11px;
-          color: #075985;
-          font-weight: 600;
+        .discount-tag {
+          font-size: 10px;
+          color: white;
+          background: rgba(255, 255, 255, 0.25);
+          padding: 3px 8px;
+          border-radius: 6px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .discount-info {
+          flex: 1;
+          padding: 14px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
         }
 
         .discount-name {
           font-size: 15px;
           font-weight: 700;
           color: #075985;
-          margin-bottom: 6px;
+          line-height: 1.3;
         }
 
         .discount-desc {
           font-size: 12px;
           color: #0c4a6e;
-          margin-bottom: 10px;
-          opacity: 0.9;
+          opacity: 0.85;
+          line-height: 1.4;
         }
 
-        .discount-details {
+        .discount-conditions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 6px;
+          margin-top: 4px;
+        }
+
+        .condition-badge {
+          font-size: 11px;
+          color: #0369a1;
+          background: rgba(255, 255, 255, 0.6);
+          padding: 3px 8px;
+          border-radius: 6px;
+          font-weight: 600;
+        }
+
+        .discount-meta {
           display: flex;
           gap: 12px;
-          flex-wrap: wrap;
+          margin-top: 4px;
         }
 
-        .detail-item {
+        .meta-item {
           display: flex;
           align-items: center;
           gap: 4px;
-          font-size: 12px;
+          font-size: 11px;
           color: #0369a1;
           font-weight: 600;
         }
 
-        .detail-item svg {
-          opacity: 0.7;
+        .meta-item svg {
+          opacity: 0.6;
+        }
+
+        /* 쿠폰 성공 토스트 */
+        .coupon-success-toast {
+          position: fixed;
+          top: 80px;
+          left: 50%;
+          transform: translateX(-50%) translateY(-20px);
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: white;
+          padding: 12px 24px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+          opacity: 0;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 10000;
+        }
+
+        .coupon-success-toast.show {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-icon {
+          font-size: 18px;
+          font-weight: 700;
+        }
+
+        @media (max-width: 480px) {
+          .coupon-visual {
+            min-width: 75px;
+            padding: 12px 10px;
+          }
+
+          .coupon-badge {
+            font-size: 18px;
+          }
+
+          .discount-visual {
+            min-width: 70px;
+            padding: 12px 10px;
+          }
+
+          .discount-badge {
+            font-size: 18px;
+          }
         }
 
         /* 편의시설 섹션 스타일 */
