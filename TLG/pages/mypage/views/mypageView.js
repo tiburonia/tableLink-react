@@ -16,7 +16,7 @@ export const mypageView = {
       <!-- 헤더 -->
       <header class="mypage-top-header">
         <span class="login-link" onclick="${isLoggedIn ? 'renderAccountSettings()' : 'renderLogin()'}">
-          ${isLoggedIn ? displayName : '로그인해 주세요 >'}
+          ${isLoggedIn ? displayName : '로그인해 주세요 >'}&nbsp&nbsp <img width="17" height="17" src="https://img.icons8.com/external-others-inmotus-design/17/external-Right-basic-web-ui-elements-others-inmotus-design-4.png" alt="external-Right-basic-web-ui-elements-others-inmotus-design-4"/>
         </span>
         <button class="settings-btn-icon">⚙️</button>
       </header>

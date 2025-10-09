@@ -90,10 +90,7 @@ export const accountSettingsView = {
           </button>
           
           <button class="sns-button apple ${connections.apple ? 'connected' : ''}" id="appleBtn" data-sns="apple">
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-              <circle cx="16" cy="16" r="16" fill="#000000"/>
-              <path d="M16.5 11.5C15.83 11.5 14.9 12.08 14.1 12.08C13.24 12.08 12.43 11.53 11.68 11.53C10.14 11.53 8.5 12.69 8.5 15.39C8.5 16.96 9.05 18.61 9.85 20.05C10.52 21.24 11.09 22.22 11.97 22.22C12.67 22.22 13.13 21.72 14.04 21.72C14.97 21.72 15.34 22.21 16.18 22.21C17.06 22.21 17.67 21.13 18.34 19.94C19.09 18.58 19.38 17.25 19.4 17.18C19.38 17.17 17.65 16.5 17.65 14.53C17.65 12.89 18.99 12.09 19.06 12.04C18.24 10.85 16.97 10.73 16.5 10.71V11.5ZM18.72 10.28C19.32 9.56 19.74 8.56 19.74 7.56C19.74 7.41 19.73 7.26 19.7 7.14C18.73 7.18 17.55 7.79 16.87 8.56C16.31 9.18 15.8 10.17 15.8 11.19C15.8 11.35 15.83 11.51 15.84 11.56C15.91 11.57 16.03 11.59 16.15 11.59C17.01 11.59 18.14 11.01 18.72 10.28Z" fill="white"/>
-            </svg>
+            <img style="display: block;-webkit-user-select: none;margin: auto;cursor: zoom-out;background-color: hsl(0, 0%, 90%);transition: background-color 300ms;" src="https://w7.pngwing.com/pngs/619/38/png-transparent-computer-icons-apple-logo-monochrome-black.png" width="32" height="32">
             <span>애플</span>
           </button>
         </div>
@@ -261,6 +258,7 @@ export const accountSettingsView = {
 
       /* 섹션 */
       .settings-section {
+        padding: 0;
         margin-bottom: 32px;
       }
 
