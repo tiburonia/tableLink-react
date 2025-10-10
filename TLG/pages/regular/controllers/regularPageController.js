@@ -15,16 +15,22 @@ export const regularPageController = {
     console.log('🏪 단골매장 페이지 초기화 시작');
 
     try {
-      // 사용자 정보 가져오기
-      const userInfo = window.cacheManager?.getUserInfo();
-      if (!userInfo) {
+      // 사용자 정보 가져오기 (AuthManager 사용)
+      const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : window.userInfo;
+      
+      if (!userInfo || !userInfo.userId) {
         console.warn('⚠️ 로그인 필요');
         alert('로그인이 필요합니다.');
+        if (typeof window.renderLogin === 'function') {
+          window.renderLogin();
+        }
         return;
       }
 
-      // 데이터 로딩
-      const result = await regularPageService.getRegularStoresData(userInfo.id);
+      console.log('✅ 사용자 정보 확인:', userInfo.name, '(PK:', userInfo.userId, ')');
+
+      // 데이터 로딩 (PK 사용)
+      const result = await regularPageService.getRegularStoresData(userInfo.userId);
 
       if (!result.success) {
         throw new Error(result.error || '데이터 로딩 실패');
