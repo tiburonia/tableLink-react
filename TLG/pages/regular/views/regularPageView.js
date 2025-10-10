@@ -1,7 +1,7 @@
 
 /**
- * 단골매장 페이지 View
- * UI 렌더링
+ * 단골매장 페이지 View (v2 - 리디자인)
+ * UI 렌더링 - 감정적 몰입감 + 개인화 강화
  */
 
 export const regularPageView = {
@@ -14,9 +14,8 @@ export const regularPageView = {
     return `
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
-        ${this.renderSummarySection(summary)}
-        ${this.renderBenefitSection(summary)}
-        <!-- 단골매장 소식 영역 -->
+        ${this.renderHeroCard(summary)}
+        ${this.renderRecentVisited(stores)}
         ${this.renderStoresList(stores)}
         ${this.renderFooterCTA()}
         ${this.renderBottomNav()}
@@ -26,62 +25,59 @@ export const regularPageView = {
   },
 
   /**
-   * 헤더 영역
+   * 헤더 영역 - 심플하게 개선
    */
   renderHeader(summary) {
     return `
       <header class="regular-header">
-        <div class="header-top">
-          <div class="header-left">
-            <h1 class="page-title">❤️ 단골매장</h1>
-          </div>
-          <div class="header-right">
-            <button class="icon-btn" id="sortBtn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <path d="M3 6h18M7 12h10M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </button>
-            <button class="icon-btn" id="searchBtn">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                <circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/>
-                <path d="m21 21-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <div class="header-content">
+          <h1 class="page-title">❤️ 단골매장</h1>
+          <div class="header-actions">
+            <button class="icon-btn" id="searchBtn" aria-label="검색">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="m21 21-4.35-4.35"/>
               </svg>
             </button>
           </div>
         </div>
-        <p class="header-subtitle">총 단골 ${summary?.totalStores || 0}곳 | 최근 방문 ${summary?.lastVisit || '-'}</p>
+        <p class="header-subtitle">총 단골 ${summary?.totalStores || 0}곳 · 최근 방문 ${summary?.lastVisit || '-'}</p>
       </header>
     `;
   },
 
   /**
-   * 요약 배너
+   * Hero Card - 등급/포인트 감정적 강화
    */
-  renderSummarySection(summary) {
+  renderHeroCard(summary) {
+    const levelName = summary?.topLevelName || '신규고객';
+    const levelEmoji = this.getLevelEmoji(summary?.topLevel);
+    const levelColor = this.getHeroGradient(summary?.topLevel);
+    const totalPoints = summary?.totalPoints || 0;
+    const totalCoupons = summary?.totalCoupons || 0;
+
     return `
-      <section class="summary-section">
-        <div class="summary-card">
-          <div class="summary-item">
-            <div class="summary-icon">👑</div>
-            <div class="summary-content">
-              <p class="summary-label">내 단골 등급</p>
-              <p class="summary-value">${summary?.topLevelName || '-'}</p>
+      <section class="hero-section">
+        <div class="hero-card" style="background: ${levelColor}">
+          <div class="hero-content">
+            <div class="hero-badge">
+              <span class="hero-emoji">${levelEmoji}</span>
+              <span class="hero-level">${levelName}</span>
             </div>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <div class="summary-icon">💰</div>
-            <div class="summary-content">
-              <p class="summary-label">누적 포인트</p>
-              <p class="summary-value">${(summary?.totalPoints || 0).toLocaleString()}P</p>
+            <h2 class="hero-title">준혁님은 현재 <strong>${levelName}</strong> 등급이에요!</h2>
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <span class="stat-icon">💰</span>
+                <span class="stat-text">누적 포인트: <strong>${totalPoints.toLocaleString()}P</strong></span>
+              </div>
+              <div class="hero-stat">
+                <span class="stat-icon">🎟️</span>
+                <span class="stat-text">보유 쿠폰: <strong>${totalCoupons}장</strong></span>
+              </div>
             </div>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-item">
-            <div class="summary-icon">🎟️</div>
-            <div class="summary-content">
-              <p class="summary-label">보유 쿠폰</p>
-              <p class="summary-value">${summary?.totalCoupons || 0}장</p>
+            <div class="hero-actions">
+              <button class="hero-btn outline" onclick="viewPointHistory()">포인트 내역</button>
+              <button class="hero-btn filled" onclick="viewAllCoupons()">쿠폰함</button>
             </div>
           </div>
         </div>
@@ -90,95 +86,61 @@ export const regularPageView = {
   },
 
   /**
-   * 매장 리스트
+   * 최근 방문 매장 섹션 (NEW)
    */
-  renderStoresList(stores) {
-    if (!stores || stores.length === 0) {
-      return `
-        <section class="stores-section">
-          <div class="empty-state">
-            <div class="empty-icon">🏪</div>
-            <h3>단골 매장이 없어요</h3>
-            <p>자주 가는 매장을 단골로 등록해보세요!</p>
-          </div>
-        </section>
-      `;
-    }
+  renderRecentVisited(stores) {
+    if (!stores || stores.length === 0) return '';
+
+    const recentStores = stores.slice(0, 3);
 
     return `
-      <section class="stores-section">
-        <h2 class="section-title">내 단골 매장</h2>
-        <div class="stores-list">
-          ${stores.map(store => this.renderStoreCard(store)).join('')}
+      <section class="recent-section">
+        <div class="section-header-compact">
+          <h2 class="section-title">📍 최근 방문한 매장</h2>
+        </div>
+        <div class="recent-list">
+          ${recentStores.map(store => this.renderRecentCard(store)).join('')}
         </div>
       </section>
     `;
   },
 
   /**
-   * 매장 카드
+   * 최근 방문 카드
    */
-  renderStoreCard(store) {
+  renderRecentCard(store) {
     const levelColor = window.regularPageService?.getLevelColor(store.level) || '#64748b';
     const levelIcon = window.regularPageService?.getLevelIcon(store.level) || '🏅';
 
     return `
-      <div class="store-card" onclick="goToStore(${store.storeId})">
-        <div class="store-header">
-          <div class="store-info">
-            <h3 class="store-name">${store.storeName}</h3>
-            <div class="store-meta">
-              <span class="store-category">${store.category}</span>
-              <span class="store-level-badge" style="background: ${levelColor}">
-                ${levelIcon} ${store.levelName}
-              </span>
-            </div>
+      <div class="recent-card" onclick="goToStore(${store.storeId})">
+        <div class="recent-thumbnail">
+          <div class="thumbnail-placeholder" style="background: linear-gradient(135deg, ${levelColor}50, ${levelColor}30)">
+            <span class="thumbnail-icon">${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}</span>
           </div>
         </div>
-
-        <div class="store-body">
-          <div class="store-details">
-            <p class="store-address">📍 ${store.address} · ${store.distance}</p>
-            <p class="store-visit">🕒 마지막 주문: ${store.lastVisit}</p>
+        <div class="recent-info">
+          <div class="recent-header">
+            <h3 class="recent-name">${store.storeName}</h3>
+            <span class="recent-badge" style="background: ${levelColor}">${levelIcon} ${store.levelName}</span>
           </div>
-
-          <div class="store-benefits">
-            <div class="benefit-item">
-              <span class="benefit-icon">💰</span>
-              <span class="benefit-text">${store.points.toLocaleString()}P</span>
-            </div>
-            <div class="benefit-item">
-              <span class="benefit-icon">🎟️</span>
-              <span class="benefit-text">쿠폰 ${store.coupons}장</span>
-            </div>
-            ${store.hasUnwrittenReview ? `
-              <div class="benefit-item review-reminder">
-                <span class="benefit-icon">✍️</span>
-                <span class="benefit-text">리뷰 작성하기</span>
-              </div>
-            ` : ''}
-          </div>
-
-          ${store.recentReview ? `
-            <div class="recent-review">
-              <span class="review-icon">💬</span>
-              <p class="review-text">"${store.recentReview}"</p>
-            </div>
-          ` : ''}
-
-          <div class="store-actions">
-            <button class="action-btn primary" onclick="event.stopPropagation(); orderFromStore(${store.storeId})">
-              주문하기
+          <p class="recent-meta">${store.lastVisit} 방문 · 포인트 ${store.points.toLocaleString()}P</p>
+          <div class="recent-actions">
+            <button class="recent-btn primary" onclick="event.stopPropagation(); orderFromStore(${store.storeId})">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+              </svg>
+              다시 주문
             </button>
             ${store.hasUnwrittenReview ? `
-              <button class="action-btn secondary" onclick="event.stopPropagation(); writeReview(${store.storeId})">
+              <button class="recent-btn secondary" onclick="event.stopPropagation(); writeReview(${store.storeId})">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
                 리뷰 남기기
               </button>
-            ` : `
-              <button class="action-btn secondary" onclick="event.stopPropagation(); viewCoupons(${store.storeId})">
-                쿠폰보기
-              </button>
-            `}
+            ` : ''}
           </div>
         </div>
       </div>
@@ -186,28 +148,106 @@ export const regularPageView = {
   },
 
   /**
-   * 혜택 요약 섹션
+   * 매장 리스트 - 카드 강화
    */
-  renderBenefitSection(summary) {
+  renderStoresList(stores) {
+    if (!stores || stores.length === 0) {
+      return this.renderEmptyState();
+    }
+
     return `
-      <section class="benefit-section">
-        <h2 class="section-title">내 혜택 한눈에</h2>
-        <div class="benefit-grid">
-          <div class="benefit-card" onclick="viewPointHistory()">
-            <div class="benefit-card-icon">💳</div>
-            <h3>포인트 내역</h3>
-            <p>매장별 적립/사용 확인</p>
+      <section class="stores-section">
+        <div class="section-header-compact">
+          <h2 class="section-title">내 단골 매장</h2>
+          <button class="filter-btn" id="filterBtn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="4" y1="21" x2="4" y2="14"/>
+              <line x1="4" y1="10" x2="4" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12" y2="3"/>
+              <line x1="20" y1="21" x2="20" y2="16"/>
+              <line x1="20" y1="12" x2="20" y2="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="stores-grid">
+          ${stores.map(store => this.renderEnhancedStoreCard(store)).join('')}
+        </div>
+      </section>
+    `;
+  },
+
+  /**
+   * 강화된 매장 카드
+   */
+  renderEnhancedStoreCard(store) {
+    const levelColor = window.regularPageService?.getLevelColor(store.level) || '#64748b';
+    const levelIcon = window.regularPageService?.getLevelIcon(store.level) || '🏅';
+
+    return `
+      <div class="store-card-v2" onclick="goToStore(${store.storeId})">
+        <div class="store-card-header">
+          <div class="store-thumbnail-v2" style="background: linear-gradient(135deg, ${levelColor}40, ${levelColor}20)">
+            <span class="store-icon-v2">${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}</span>
           </div>
-          <div class="benefit-card" onclick="viewAllCoupons()">
-            <div class="benefit-card-icon">🎟️</div>
-            <h3>보유 쿠폰</h3>
-            <p>${summary?.totalCoupons || 0}장 사용 가능</p>
+          <div class="store-badge-v2" style="background: ${levelColor}">
+            ${levelIcon} ${store.levelName}
           </div>
-          <div class="benefit-card" onclick="viewUnwrittenReviews()">
-            <div class="benefit-card-icon">✍️</div>
-            <h3>미작성 리뷰</h3>
-            <p>${summary?.unwrittenReviews || 0}곳 리뷰 쓰고 쿠폰받기</p>
+        </div>
+        
+        <div class="store-card-body">
+          <h3 class="store-name-v2">${store.storeName}</h3>
+          <p class="store-category-v2">${store.category}</p>
+          
+          <div class="store-stats-v2">
+            <div class="stat-item-v2">
+              <span class="stat-label-v2">포인트</span>
+              <span class="stat-value-v2">${store.points.toLocaleString()}P</span>
+            </div>
+            <div class="stat-divider-v2"></div>
+            <div class="stat-item-v2">
+              <span class="stat-label-v2">쿠폰</span>
+              <span class="stat-value-v2">${store.coupons}장</span>
+            </div>
           </div>
+
+          <div class="store-meta-v2">
+            <span class="meta-text">🕒 ${store.lastVisit}</span>
+            <span class="meta-text">📍 ${store.distance}</span>
+          </div>
+
+          ${store.hasUnwrittenReview ? `
+            <div class="review-alert">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+              리뷰 작성하고 쿠폰 받기
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  },
+
+  /**
+   * Empty State
+   */
+  renderEmptyState() {
+    return `
+      <section class="stores-section">
+        <div class="empty-state-v2">
+          <div class="empty-icon-v2">🏪</div>
+          <h3 class="empty-title-v2">단골 매장이 없어요</h3>
+          <p class="empty-text-v2">자주 가는 매장을 단골로 등록하고<br>특별한 혜택을 받아보세요!</p>
+          <button class="empty-btn" onclick="renderMap()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            매장 찾아보기
+          </button>
         </div>
       </section>
     `;
@@ -218,11 +258,19 @@ export const regularPageView = {
    */
   renderFooterCTA() {
     return `
-      <footer class="footer-cta">
-        <button class="cta-btn outline" onclick="viewAllRegularStores()">
+      <footer class="footer-cta-v2">
+        <button class="cta-btn-v2 outline" onclick="viewAllRegularStores()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
           모든 단골 보기
         </button>
-        <button class="cta-btn filled" onclick="goToCoupons()">
+        <button class="cta-btn-v2 filled" onclick="goToCoupons()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
           내 쿠폰함 바로가기
         </button>
       </footer>
@@ -237,31 +285,31 @@ export const regularPageView = {
       <nav class="bottom-nav-bar">
         <button onclick="renderSubMain()" class="nav-item">
           <span class="nav-icon">
-            <img width="26" height="26" src="https://img.icons8.com/external-solid-adri-ansyah/26/external-home-essentials-ui-solid-adri-ansyah.png" alt="home"/>
+            <img width="24" height="24" src="https://img.icons8.com/external-solid-adri-ansyah/24/external-home-essentials-ui-solid-adri-ansyah.png" alt="home"/>
           </span>
           <span class="nav-label">홈</span>
         </button>
         <button onclick="TLL()" class="nav-item">
           <span class="nav-icon">
-            <img width="30" height="30" src="https://img.icons8.com/external-tanah-basah-glyph-tanah-basah/30/external-qr-metaverse-tanah-basah-glyph-tanah-basah.png" alt="qr"/>
+            <img width="26" height="26" src="https://img.icons8.com/external-tanah-basah-glyph-tanah-basah/26/external-qr-metaverse-tanah-basah-glyph-tanah-basah.png" alt="qr"/>
           </span>
           <span class="nav-label">QR 주문</span>
         </button>
         <button onclick="renderMap()" class="nav-item">
           <span class="nav-icon">
-            <img width="26" height="26" src="https://img.icons8.com/ios-filled/26/marker.png" alt="map"/>
+            <img width="24" height="24" src="https://img.icons8.com/ios-filled/24/marker.png" alt="map"/>
           </span>
           <span class="nav-label">내주변</span>
         </button>
         <button class="nav-item active">
           <span class="nav-icon">
-            <img width="30" height="30" src="https://img.icons8.com/pastel-glyph/30/shop--v2.png" alt="regular"/>
+            <img width="26" height="26" src="https://img.icons8.com/pastel-glyph/26/shop--v2.png" alt="regular"/>
           </span>
           <span class="nav-label">단골매장</span>
         </button>
         <button onclick="renderMyPage()" class="nav-item">
           <span class="nav-icon">
-            <img width="30" height="30" src="https://img.icons8.com/ios-filled/30/more.png" alt="more"/>
+            <img width="26" height="26" src="https://img.icons8.com/ios-filled/26/more.png" alt="more"/>
           </span>
           <span class="nav-label">더보기</span>
         </button>
@@ -270,33 +318,63 @@ export const regularPageView = {
   },
 
   /**
+   * 등급별 이모지
+   */
+  getLevelEmoji(level) {
+    const emojis = {
+      'PLATINUM': '💎',
+      'GOLD': '👑',
+      'SILVER': '⭐',
+      'BRONZE': '🥉'
+    };
+    return emojis[level] || '🏅';
+  },
+
+  /**
+   * Hero 카드 그라데이션
+   */
+  getHeroGradient(level) {
+    const gradients = {
+      'PLATINUM': 'linear-gradient(135deg, #e5e4e2 0%, #f8f9fa 100%)',
+      'GOLD': 'linear-gradient(135deg, #ffd700 0%, #fff5e7 100%)',
+      'SILVER': 'linear-gradient(135deg, #c0c0c0 0%, #f1f3f5 100%)',
+      'BRONZE': 'linear-gradient(135deg, #cd7f32 0%, #fff5eb 100%)'
+    };
+    return gradients[level] || 'linear-gradient(135deg, #f8f9fa 0%, #fff 100%)';
+  },
+
+  /**
    * 스타일
    */
   getStyles() {
     return `
       <style>
+        * {
+          box-sizing: border-box;
+        }
+
         .regular-page-container {
           position: fixed;
           top: 0;
           left: 0;
           width: 100%;
           height: 775px;
-          background: linear-gradient(135deg, #fff5eb 0%, #fef3e2 100%);
+          background: #fafafa;
           overflow-y: auto;
-          padding-bottom: 140px;
+          padding-bottom: 160px;
         }
 
-        /* 헤더 */
+        /* ===== 헤더 ===== */
         .regular-header {
           background: white;
-          padding: 60px 20px 20px 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          padding: 60px 20px 16px 20px;
           position: sticky;
           top: 0;
           z-index: 100;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
-        .header-top {
+        .header-content {
           display: flex;
           justify-content: space-between;
           align-items: center;
@@ -305,20 +383,21 @@ export const regularPageView = {
 
         .page-title {
           margin: 0;
-          font-size: 28px;
+          font-size: 24px;
           font-weight: 800;
           color: #1f2937;
+          letter-spacing: -0.02em;
         }
 
-        .header-right {
+        .header-actions {
           display: flex;
           gap: 8px;
         }
 
         .icon-btn {
-          width: 40px;
-          height: 40px;
-          border-radius: 12px;
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
           border: none;
           background: #f3f4f6;
           color: #6b7280;
@@ -336,304 +415,493 @@ export const regularPageView = {
 
         .header-subtitle {
           margin: 0;
-          font-size: 14px;
+          font-size: 13px;
           color: #9ca3af;
           font-weight: 500;
         }
 
-        /* 요약 섹션 */
-        .summary-section {
-          padding: 20px;
+        /* ===== Hero Card ===== */
+        .hero-section {
+          padding: 20px 20px 16px 20px;
         }
 
-        .summary-card {
-          background: white;
-          border-radius: 20px;
-          padding: 20px;
-          display: flex;
-          justify-content: space-between;
+        .hero-card {
+          border-radius: 24px;
+          padding: 28px 24px;
+          box-shadow: 0 8px 24px rgba(255, 138, 0, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .hero-badge {
+          display: inline-flex;
           align-items: center;
-          box-shadow: 0 4px 16px rgba(255, 138, 0, 0.1);
+          gap: 8px;
+          background: rgba(255, 255, 255, 0.9);
+          padding: 8px 16px;
+          border-radius: 20px;
+          margin-bottom: 16px;
         }
 
-        .summary-item {
-          flex: 1;
-          text-align: center;
-        }
-
-        .summary-icon {
-          font-size: 32px;
-          margin-bottom: 8px;
-        }
-
-        .summary-label {
-          margin: 0 0 4px 0;
-          font-size: 12px;
-          color: #9ca3af;
-          font-weight: 600;
-        }
-
-        .summary-value {
-          margin: 0;
-          font-size: 18px;
-          font-weight: 800;
-          color: #FF8A00;
-        }
-
-        .summary-divider {
-          width: 1px;
-          height: 40px;
-          background: #e5e7eb;
-        }
-
-        /* 매장 리스트 */
-        .stores-section {
-          padding: 0 20px 20px 20px;
-        }
-
-        .section-title {
-          margin: 0 0 16px 0;
+        .hero-emoji {
           font-size: 20px;
+        }
+
+        .hero-level {
+          font-size: 14px;
           font-weight: 700;
           color: #1f2937;
         }
 
-        .stores-list {
+        .hero-title {
+          margin: 0 0 20px 0;
+          font-size: 18px;
+          font-weight: 600;
+          color: #374151;
+          line-height: 1.4;
+        }
+
+        .hero-title strong {
+          color: #FF8A00;
+          font-weight: 800;
+        }
+
+        .hero-stats {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 12px;
+          margin-bottom: 20px;
         }
 
-        .store-card {
-          background: white;
-          border-radius: 16px;
-          padding: 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        .hero-stat {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .stat-icon {
+          font-size: 18px;
+        }
+
+        .stat-text {
+          font-size: 14px;
+          color: #4b5563;
+          font-weight: 500;
+        }
+
+        .stat-text strong {
+          color: #1f2937;
+          font-weight: 700;
+        }
+
+        .hero-actions {
+          display: flex;
+          gap: 10px;
+        }
+
+        .hero-btn {
+          flex: 1;
+          padding: 12px 20px;
+          border-radius: 12px;
+          font-size: 14px;
+          font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
+          border: none;
         }
 
-        .store-card:active {
-          transform: scale(0.98);
+        .hero-btn.outline {
+          background: white;
+          color: #FF8A00;
+          border: 2px solid #FF8A00;
         }
 
-        .store-header {
+        .hero-btn.outline:active {
+          background: #fff5eb;
+        }
+
+        .hero-btn.filled {
+          background: #FF8A00;
+          color: white;
+        }
+
+        .hero-btn.filled:active {
+          background: #e67a00;
+        }
+
+        /* ===== 최근 방문 섹션 ===== */
+        .recent-section {
+          padding: 16px 20px;
+        }
+
+        .section-header-compact {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
           margin-bottom: 16px;
         }
 
-        .store-name {
+        .section-title {
+          margin: 0;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+
+        .filter-btn {
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          border: none;
+          background: #f3f4f6;
+          color: #6b7280;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+
+        .filter-btn:active {
+          background: #e5e7eb;
+        }
+
+        .recent-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .recent-card {
+          background: white;
+          border-radius: 16px;
+          padding: 16px;
+          display: flex;
+          gap: 14px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .recent-card:active {
+          transform: scale(0.98);
+        }
+
+        .recent-thumbnail {
+          flex-shrink: 0;
+        }
+
+        .thumbnail-placeholder {
+          width: 64px;
+          height: 64px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .thumbnail-icon {
+          font-size: 28px;
+        }
+
+        .recent-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .recent-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+        }
+
+        .recent-name {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+
+        .recent-badge {
+          padding: 4px 10px;
+          border-radius: 8px;
+          font-size: 11px;
+          color: white;
+          font-weight: 700;
+          white-space: nowrap;
+        }
+
+        .recent-meta {
+          margin: 0;
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .recent-actions {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
+        }
+
+        .recent-btn {
+          padding: 8px 14px;
+          border-radius: 8px;
+          border: none;
+          font-size: 12px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.2s;
+        }
+
+        .recent-btn.primary {
+          background: #FF8A00;
+          color: white;
+        }
+
+        .recent-btn.primary:active {
+          background: #e67a00;
+        }
+
+        .recent-btn.secondary {
+          background: #f3f4f6;
+          color: #6b7280;
+        }
+
+        .recent-btn.secondary:active {
+          background: #e5e7eb;
+        }
+
+        /* ===== 매장 그리드 ===== */
+        .stores-section {
+          padding: 16px 20px;
+        }
+
+        .stores-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .store-card-v2 {
+          background: white;
+          border-radius: 16px;
+          padding: 16px;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .store-card-v2:active {
+          transform: scale(0.97);
+        }
+
+        .store-card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .store-thumbnail-v2 {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .store-icon-v2 {
+          font-size: 24px;
+        }
+
+        .store-badge-v2 {
+          padding: 4px 8px;
+          border-radius: 8px;
+          font-size: 10px;
+          color: white;
+          font-weight: 700;
+        }
+
+        .store-card-body {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .store-name-v2 {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1f2937;
+          line-height: 1.3;
+        }
+
+        .store-category-v2 {
+          margin: 0;
+          font-size: 12px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .store-stats-v2 {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 0;
+        }
+
+        .stat-item-v2 {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .stat-label-v2 {
+          font-size: 11px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .stat-value-v2 {
+          font-size: 13px;
+          font-weight: 700;
+          color: #FF8A00;
+        }
+
+        .stat-divider-v2 {
+          width: 1px;
+          height: 24px;
+          background: #e5e7eb;
+        }
+
+        .store-meta-v2 {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .meta-text {
+          font-size: 11px;
+          color: #6b7280;
+        }
+
+        .review-alert {
+          background: #fef2f2;
+          color: #dc2626;
+          padding: 8px;
+          border-radius: 8px;
+          font-size: 11px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 4px;
+        }
+
+        /* ===== Empty State ===== */
+        .empty-state-v2 {
+          text-align: center;
+          padding: 60px 20px;
+          background: white;
+          border-radius: 20px;
+          margin: 20px 0;
+        }
+
+        .empty-icon-v2 {
+          font-size: 56px;
+          margin-bottom: 16px;
+          opacity: 0.6;
+        }
+
+        .empty-title-v2 {
           margin: 0 0 8px 0;
           font-size: 18px;
           font-weight: 700;
           color: #1f2937;
         }
 
-        .store-meta {
-          display: flex;
-          gap: 8px;
-          align-items: center;
+        .empty-text-v2 {
+          margin: 0 0 24px 0;
+          font-size: 14px;
+          color: #9ca3af;
+          line-height: 1.6;
         }
 
-        .store-category {
-          padding: 4px 8px;
-          background: #f3f4f6;
-          border-radius: 6px;
-          font-size: 12px;
-          color: #6b7280;
-          font-weight: 600;
-        }
-
-        .store-level-badge {
-          padding: 4px 10px;
-          border-radius: 8px;
-          font-size: 12px;
-          color: white;
-          font-weight: 700;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .store-body {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .store-address,
-        .store-visit {
-          margin: 0;
-          font-size: 13px;
-          color: #6b7280;
-        }
-
-        .store-benefits {
-          display: flex;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .benefit-item {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          padding: 6px 12px;
-          background: #fef3e2;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          color: #FF8A00;
-        }
-
-        .benefit-item.review-reminder {
-          background: #fef2f2;
-          color: #dc2626;
-        }
-
-        .recent-review {
-          display: flex;
-          gap: 8px;
-          padding: 12px;
-          background: #f9fafb;
+        .empty-btn {
+          padding: 12px 24px;
           border-radius: 12px;
-          border-left: 3px solid #FF8A00;
-        }
-
-        .review-icon {
-          font-size: 16px;
-        }
-
-        .review-text {
-          margin: 0;
-          font-size: 14px;
-          color: #4b5563;
-          font-style: italic;
-          line-height: 1.5;
-        }
-
-        .store-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 4px;
-        }
-
-        .action-btn {
-          flex: 1;
-          padding: 12px;
-          border-radius: 10px;
           border: none;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .action-btn.primary {
           background: #FF8A00;
           color: white;
-        }
-
-        .action-btn.primary:active {
-          background: #e67a00;
-        }
-
-        .action-btn.secondary {
-          background: #f3f4f6;
-          color: #6b7280;
-        }
-
-        .action-btn.secondary:active {
-          background: #e5e7eb;
-        }
-
-        /* 혜택 섹션 */
-        .benefit-section {
-          padding: 20px;
-        }
-
-        .benefit-grid {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 12px;
-        }
-
-        .benefit-card {
-          background: white;
-          border-radius: 12px;
-          padding: 16px 12px;
-          text-align: center;
-          cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        }
-
-        .benefit-card:active {
-          transform: scale(0.95);
-        }
-
-        .benefit-card-icon {
-          font-size: 28px;
-          margin-bottom: 8px;
-        }
-
-        .benefit-card h3 {
-          margin: 0 0 4px 0;
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 700;
-          color: #1f2937;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.2s;
         }
 
-        .benefit-card p {
-          margin: 0;
-          font-size: 11px;
-          color: #9ca3af;
+        .empty-btn:active {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 16px rgba(255, 138, 0, 0.3);
         }
 
-        /* 하단 CTA */
-        .footer-cta {
+        /* ===== Footer CTA ===== */
+        .footer-cta-v2 {
           position: fixed;
           bottom: 72px;
           left: 0;
           right: 0;
           padding: 12px 20px;
           background: white;
-          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.08);
+          box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
           display: flex;
           gap: 12px;
           z-index: 99;
         }
 
-        .cta-btn {
+        .cta-btn-v2 {
           flex: 1;
-          padding: 14px;
+          padding: 14px 20px;
           border-radius: 12px;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 700;
           cursor: pointer;
           transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
         }
 
-        .cta-btn.outline {
+        .cta-btn-v2.outline {
           background: white;
           border: 2px solid #FF8A00;
           color: #FF8A00;
         }
 
-        .cta-btn.outline:active {
+        .cta-btn-v2.outline:active {
           background: #fff5eb;
         }
 
-        .cta-btn.filled {
+        .cta-btn-v2.filled {
           background: #FF8A00;
           border: none;
           color: white;
         }
 
-        .cta-btn.filled:active {
+        .cta-btn-v2.filled:active {
           background: #e67a00;
         }
 
-        /* 바텀 네비게이션 */
+        /* ===== 바텀 네비게이션 ===== */
         .bottom-nav-bar {
           position: fixed;
           bottom: 0;
@@ -670,35 +938,18 @@ export const regularPageView = {
           font-weight: 500;
         }
 
-        /* Empty State */
-        .empty-state {
-          text-align: center;
-          padding: 80px 20px;
-        }
-
-        .empty-icon {
-          font-size: 64px;
-          margin-bottom: 16px;
-          opacity: 0.5;
-        }
-
-        .empty-state h3 {
-          margin: 0 0 8px 0;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .empty-state p {
-          margin: 0;
-          font-size: 14px;
-          color: #9ca3af;
-        }
-
         /* 반응형 */
-        @media (max-width: 480px) {
-          .benefit-grid {
+        @media (max-width: 380px) {
+          .stores-grid {
             grid-template-columns: 1fr;
+          }
+
+          .hero-title {
+            font-size: 16px;
+          }
+
+          .recent-actions {
+            flex-wrap: wrap;
           }
         }
       </style>
@@ -707,4 +958,4 @@ export const regularPageView = {
 };
 
 window.regularPageView = regularPageView;
-console.log('✅ regularPageView 모듈 로드 완료');
+console.log('✅ regularPageView v2 모듈 로드 완료 (리디자인)');
