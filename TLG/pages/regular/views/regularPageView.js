@@ -87,7 +87,7 @@ export const regularPageView = {
   },
 
   /**
-   * 매장 소식 피드 섹션 (NEW)
+   * 매장 소식 피드 섹션 - 요약형 (2~3개만 표시)
    */
   renderStoreFeed(posts) {
     if (!posts || posts.length === 0) return '';
@@ -96,6 +96,9 @@ export const regularPageView = {
       const diff = Date.now() - new Date(p.createdAt);
       return diff < 24 * 60 * 60 * 1000; // 24시간 이내
     }).length;
+
+    // 최신 2~3개만 표시
+    const previewPosts = posts.slice(0, 3);
 
     return `
       <section class="feed-section">
@@ -108,11 +111,26 @@ export const regularPageView = {
         
         <div class="section-header-compact">
           <h2 class="section-title">🗞 단골 매장 소식</h2>
+          <button class="view-all-btn" onclick="renderFeed()">
+            전체보기
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
         </div>
         
-        <div class="feed-list">
-          ${posts.map(post => this.renderPostCard(post)).join('')}
+        <div class="feed-list-preview">
+          ${previewPosts.map(post => this.renderPostCard(post)).join('')}
         </div>
+
+        ${posts.length > 3 ? `
+          <button class="show-more-btn" onclick="renderFeed()">
+            <span>더 많은 소식 보기 (${posts.length - 3}개)</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 9l-7 7-7-7"/>
+            </svg>
+          </button>
+        ` : ''}
       </section>
     `;
   },
@@ -680,6 +698,49 @@ export const regularPageView = {
 
         .filter-btn:active {
           background: #e5e7eb;
+        }
+
+        .view-all-btn {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          border: none;
+          background: #f3f4f6;
+          color: #6b7280;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .view-all-btn:active {
+          background: #e5e7eb;
+        }
+
+        .show-more-btn {
+          width: 100%;
+          padding: 16px;
+          border-radius: 12px;
+          border: 2px dashed #e5e7eb;
+          background: white;
+          color: #6b7280;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 12px;
+          transition: all 0.2s;
+        }
+
+        .show-more-btn:hover {
+          border-color: #FF8A00;
+          color: #FF8A00;
+          background: #fff5eb;
         }
 
         .recent-list {
