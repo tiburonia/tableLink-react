@@ -18,8 +18,13 @@ export const mypageEventHandler = {
       settingsBtn.onclick = async (e) => {
         e.preventDefault();
         try {
-          const { default: renderMyAccount } = await import('../renderMyAccount.js');
-          await renderMyAccount();
+          // 전역 함수 사용 (이미 index.html에서 로드됨)
+          if (typeof window.renderMyAccount === 'function') {
+            await window.renderMyAccount();
+          } else {
+            const { default: renderMyAccount } = await import('/TLG/pages/mypage/renderMyAccount.js');
+            await renderMyAccount();
+          }
         } catch (error) {
           console.error('❌ renderMyAccount 로드 실패:', error);
           alert('계정 페이지를 불러올 수 없습니다.');
