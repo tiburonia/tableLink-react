@@ -49,30 +49,50 @@ export const storeView = {
 
         <div id="storeInfoContainer">
           <div class="storeInfo">
-            <div class="store-header-section">
-              <div class="store-main-info">
-                <div class="store-name-container">
-                <div id="storeName">${store.name}</div>
-                <button id="favoriteBtn" class="favorite-btn">♡</button>
-                </div>
-                <div class="score-row">
-                  <div class="rating-container">
-                    <span id="reviewStar">★</span>
-                    <span id="reviewScore">${displayRating}</span>
-                    <span id="reviewLink" class="review-link">리뷰 보기</span>
-                  </div>
-                </div>
-
-
-                <div class="store-status-container">
-                  <span class="store-status ${store.isOpen ? "open" : "closed"}">
-                    ${store.isOpen ? "🟢 운영중" : "🔴 운영중지"}
-                  </span>
-                  <span class="store-category-tag">음식점</span>
-                </div>
-
-              </div>
+            <!-- 이벤트 뱃지 영역 -->
+            <div class="store-badge-section">
+              ${store.hasPromotion !== false ? '<span class="event-badge">🎁 첫 방문 할인</span>' : ''}
+              ${store.isNew ? '<span class="event-badge new">✨ 신규 오픈</span>' : ''}
             </div>
+
+            <!-- 카테고리 경로 -->
+            <div class="store-breadcrumb">
+              <span class="breadcrumb-item">${store.region?.sido || '서울'}</span>
+              <span class="breadcrumb-separator">›</span>
+              <span class="breadcrumb-item">${store.region?.sigungu || store.region?.eupmyeondong || '강남구'}</span>
+              <span class="breadcrumb-separator">›</span>
+              <span class="breadcrumb-item">${store.category || '한식'}</span>
+            </div>
+
+            <!-- 매장명과 즐겨찾기 -->
+            <div class="store-name-row">
+              <h1 id="storeName" class="store-main-title">${store.name}</h1>
+              <button id="favoriteBtn" class="favorite-btn-v2" aria-label="즐겨찾기">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="currentColor" stroke-width="2"/>
+                </svg>
+              </button>
+            </div>
+
+            <!-- 별점 및 리뷰 강조 영역 -->
+            <div class="rating-emphasis-section">
+              <div class="rating-display">
+                <span class="star-icon">⭐</span>
+                <span id="reviewScore" class="rating-score">${displayRating}</span>
+                <span class="rating-divider">/</span>
+                <span class="rating-max">5.0</span>
+              </div>
+              <button id="reviewLink" class="review-count-link" data-action="show-all-reviews">
+                리뷰 ${store.reviewCount || 0}개
+                <span class="chevron-icon">›</span>
+              </button>
+            </div>
+
+            <!-- 한줄 소개 (감성적 캐치프레이즈) -->
+            <div class="store-catchphrase">
+              ${store.description || store.catchphrase || '신선한 재료로 정성껏 준비한 특별한 맛을 경험해보세요'}
+            </div>
+
             <div class="store-additional-info-section"></div>
 
           </div>

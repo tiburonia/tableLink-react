@@ -87,6 +87,13 @@ export const storeLifecycleService = {
         this.loadStoreNotices(store)
       ]);
 
+      // store additional info section UI update (including notices)
+      const additionalInfoContainer = document.querySelector('.store-additional-info-section');
+      if (additionalInfoContainer) {
+        // The store object is now passed to render method as per the requirement
+        additionalInfoContainer.innerHTML = storeAdditionalInfoHTML.render(additionalInfo, notices, store);
+      }
+
       return { additionalInfo, notices };
     } catch (error) {
       console.error('❌ 매장 데이터 초기화 실패:', error);

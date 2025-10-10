@@ -6,16 +6,16 @@ export const storeAdditionalInfoHTML = {
   /**
    * 매장 추가 정보 섹션 렌더링 (공지사항 포함)
    */
-  render(additionalInfo, notices = null) {
+  render(additionalInfo, notices = null, store = null) {
     if (!additionalInfo) return '';
 
     return `
       <div class="native-store-info-container">
-        <!-- 상세 정보 리스트 -->
-        <div class="info-detail-list">
-          ${this.renderLocationItem(additionalInfo.address)}
-          ${this.renderOperatingHoursItem(additionalInfo.operatingHours)}
-          ${this.renderOperatingStatusItem()}
+        <!-- 핵심 정보 카드 (테이블링 스타일) -->
+        <div class="key-info-cards">
+          ${this.renderLocationCard(additionalInfo.address || store?.address)}
+          ${this.renderPriceCard(store)}
+          ${this.renderHoursCard(additionalInfo.operatingHours)}
         </div>
 
         <!-- 공지사항 섹션 -->
@@ -26,21 +26,23 @@ export const storeAdditionalInfoHTML = {
   },
 
   /**
-   * 위치 정보 아이템
+   * 위치 정보 카드 (테이블링 스타일)
    */
-  renderLocationItem(address) {
+  renderLocationCard(address) {
     if (!address || address === '주소 정보 없음') return '';
 
+    const shortAddress = address.split(' ').slice(0, 3).join(' ');
+
     return `
-      <div class="info-item">
-        <span class="info-icon location-icon">📍</span>
-        <div class="info-content">
-          <div class="info-main">
-            <span class="info-badge distance-badge">삼전역에서 250m</span>
-          </div>
-          <button class="info-link-btn">
+      <div class="info-card location-card">
+        <div class="info-card-icon">📍</div>
+        <div class="info-card-content">
+          <div class="info-card-value">${shortAddress}</div>
+          <button class="info-card-action" onclick="alert('지도로 이동합니다')">
             <span>위치</span>
-            <span class="chevron">›</span>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M4 2L8 6L4 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
           </button>
         </div>
       </div>
@@ -48,36 +50,53 @@ export const storeAdditionalInfoHTML = {
   },
 
   /**
-   * 영업시간 아이템
+   * 가격 정보 카드 (테이블링 스타일)
    */
-  renderOperatingHoursItem(hours) {
-    if (!hours || !hours.weekday) return '';
+  renderPriceCard(store) {
+    // 더미 데이터: 메뉴 기반 평균 가격 범위 계산
+    let priceRange = '5,000~15,000원';
+    
+    if (store?.menu && Array.isArray(store.menu) && store.menu.length > 0) {
+      const prices = store.menu.map(item => item.price || 0).filter(p => p > 0);
+      if (prices.length > 0) {
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        priceRange = `${(minPrice / 1000).toFixed(1)}~${(maxPrice / 1000).toFixed(1)}만원`;
+      }
+    }
 
     return `
-      <div class="info-item">
-        <span class="info-icon time-icon">⏰</span>
-        <div class="info-content">
-          <div class="info-main">
-            <span class="info-text primary-text">정상 영업안함</span>
-            <span class="info-subtext">지녀 6-10만원</span>
-          </div>
+      <div class="info-card price-card">
+        <div class="info-card-icon">💰</div>
+        <div class="info-card-content">
+          <div class="info-card-label">점심, 저녁 동일가</div>
+          <div class="info-card-value">${priceRange}</div>
         </div>
       </div>
     `;
   },
 
   /**
-   * 영업 상태 아이템
+   * 영업시간 카드 (테이블링 스타일)
    */
-  renderOperatingStatusItem() {
+  renderHoursCard(hours) {
+    const today = new Date();
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const todayName = dayNames[today.getDay()];
+    
+    let hoursText = '11:00 ~ 22:00'; // 기본값
+    
+    if (hours) {
+      const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+      hoursText = isWeekend ? (hours.weekend || hours.weekday) : hours.weekday;
+    }
+
     return `
-      <div class="info-item clickable">
-        <span class="info-icon clock-icon">🕐</span>
-        <div class="info-content">
-          <div class="info-main">
-            <span class="info-text">영업 시간은 매장에 문의해주세요</span>
-          </div>
-          <button class="info-chevron-btn">›</button>
+      <div class="info-card hours-card">
+        <div class="info-card-icon">⏰</div>
+        <div class="info-card-content">
+          <div class="info-card-label">오늘 (${todayName})</div>
+          <div class="info-card-value">${hoursText}</div>
         </div>
       </div>
     `;
@@ -133,7 +152,251 @@ export const storeAdditionalInfoHTML = {
         .native-store-info-container {
           background: #ffffff;
           padding: 0;
-          margin: 0 -16px;
+          margin: 0;
+        }
+
+        /* 이벤트 뱃지 */
+        .store-badge-section {
+          display: flex;
+          gap: 6px;
+          margin-bottom: 8px;
+          flex-wrap: wrap;
+        }
+
+        .event-badge {
+          display: inline-flex;
+          align-items: center;
+          padding: 4px 10px;
+          background: linear-gradient(135deg, #ff6b35 0%, #ff8c42 100%);
+          color: white;
+          font-size: 12px;
+          font-weight: 700;
+          border-radius: 4px;
+          letter-spacing: -0.3px;
+        }
+
+        .event-badge.new {
+          background: linear-gradient(135deg, #00d2ff 0%, #3a7bd5 100%);
+        }
+
+        /* 카테고리 경로 (breadcrumb) */
+        .store-breadcrumb {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 8px;
+          font-size: 13px;
+          color: #8e8e93;
+        }
+
+        .breadcrumb-item {
+          font-weight: 500;
+        }
+
+        .breadcrumb-separator {
+          color: #c7c7cc;
+          font-weight: 300;
+        }
+
+        /* 매장명 강조 */
+        .store-name-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+          gap: 12px;
+        }
+
+        .store-main-title {
+          font-size: 24px;
+          font-weight: 800;
+          color: #000000;
+          margin: 0;
+          line-height: 1.3;
+          letter-spacing: -0.5px;
+          flex: 1;
+        }
+
+        .favorite-btn-v2 {
+          width: 36px;
+          height: 36px;
+          border: none;
+          background: #f2f2f7;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          color: #ff3b30;
+          transition: all 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .favorite-btn-v2:active {
+          background: #e5e5ea;
+          transform: scale(0.95);
+        }
+
+        .favorite-btn-v2.active {
+          background: #ff3b30;
+          color: white;
+        }
+
+        /* 별점 강조 영역 */
+        .rating-emphasis-section {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .rating-display {
+          display: flex;
+          align-items: baseline;
+          gap: 4px;
+        }
+
+        .star-icon {
+          font-size: 20px;
+          line-height: 1;
+        }
+
+        .rating-score {
+          font-size: 20px;
+          font-weight: 800;
+          color: #000000;
+          letter-spacing: -0.5px;
+        }
+
+        .rating-divider {
+          font-size: 16px;
+          color: #c7c7cc;
+          font-weight: 300;
+          margin: 0 2px;
+        }
+
+        .rating-max {
+          font-size: 16px;
+          color: #8e8e93;
+          font-weight: 500;
+        }
+
+        .review-count-link {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: none;
+          border: none;
+          color: #007aff;
+          font-size: 15px;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 4px 8px;
+          border-radius: 6px;
+          transition: background 0.2s ease;
+        }
+
+        .review-count-link:active {
+          background: #f2f2f7;
+        }
+
+        .chevron-icon {
+          font-size: 18px;
+          font-weight: 300;
+        }
+
+        /* 한줄 소개 (감성적) */
+        .store-catchphrase {
+          font-size: 15px;
+          color: #3c3c43;
+          line-height: 1.5;
+          margin-bottom: 20px;
+          font-weight: 400;
+          letter-spacing: -0.3px;
+        }
+
+        /* 핵심 정보 카드 그리드 */
+        .key-info-cards {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          margin-bottom: 20px;
+        }
+
+        .info-card {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 14px 16px;
+          background: #f2f2f7;
+          border-radius: 12px;
+          transition: background 0.2s ease;
+        }
+
+        .info-card:active {
+          background: #e5e5ea;
+        }
+
+        .info-card-icon {
+          font-size: 20px;
+          width: 28px;
+          text-align: center;
+          flex-shrink: 0;
+        }
+
+        .info-card-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .info-card-label {
+          font-size: 13px;
+          color: #8e8e93;
+          font-weight: 500;
+        }
+
+        .info-card-value {
+          font-size: 15px;
+          color: #000000;
+          font-weight: 600;
+          letter-spacing: -0.3px;
+        }
+
+        .info-card-action {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          background: none;
+          border: none;
+          color: #007aff;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 4px;
+          margin-top: 2px;
+        }
+
+        .location-card .info-card-content {
+          flex-direction: row;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        /* 반응형 */
+        @media (max-width: 380px) {
+          .store-main-title {
+            font-size: 22px;
+          }
+
+          .rating-score {
+            font-size: 18px;
+          }
+
+          .store-catchphrase {
+            font-size: 14px;
+          }
         }
 
         /* 평점 섹션 */
