@@ -7,8 +7,8 @@ async function renderRegularPage() {
   try {
     console.log('🏪 단골매장 페이지 진입');
 
-    // Controller 동적 로드
-    const { regularPageController } = await import('./controllers/regularPageController.js');
+    // Controller 동적 로드 (절대 경로 사용)
+    const { regularPageController } = await import('/TLG/pages/regular/controllers/regularPageController.js');
 
     // 페이지 초기화
     await regularPageController.init();

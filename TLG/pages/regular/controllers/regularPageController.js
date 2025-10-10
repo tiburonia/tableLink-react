@@ -4,8 +4,8 @@
  * 흐름 제어 및 이벤트 처리
  */
 
-import { regularPageService } from '../services/regularPageService.js';
-import { regularPageView } from '../views/regularPageView.js';
+import { regularPageService } from '/TLG/pages/regular/services/regularPageService.js';
+import { regularPageView } from '/TLG/pages/regular/views/regularPageView.js';
 
 export const regularPageController = {
   /**

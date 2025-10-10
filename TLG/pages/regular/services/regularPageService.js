@@ -4,7 +4,7 @@
  * 비즈니스 로직 처리
  */
 
-import { regularPageRepository } from '../repositories/regularPageRepository.js';
+import { regularPageRepository } from '/TLG/pages/regular/repositories/regularPageRepository.js';
 
 export const regularPageService = {
   /**
