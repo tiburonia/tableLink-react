@@ -279,7 +279,7 @@ export const regularPageView = {
           top: 0;
           left: 0;
           width: 100%;
-          height: 100vh;
+          height: 775px;
           background: linear-gradient(135deg, #fff5eb 0%, #fef3e2 100%);
           overflow-y: auto;
           padding-bottom: 140px;
@@ -636,8 +636,6 @@ export const regularPageView = {
         .bottom-nav-bar {
           position: fixed;
           bottom: 0;
-          left: 0;
-          right: 0;
           background: white;
           display: flex;
           justify-content: space-around;
