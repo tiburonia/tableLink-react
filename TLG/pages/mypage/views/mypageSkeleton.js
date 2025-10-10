@@ -54,8 +54,8 @@ const mypageSkeleton = {
         <button onclick="renderMap()" class="nav-item" id="renderMapBtn">
           <span class="nav-icon"><img width="26" height="26" src="https://img.icons8.com/ios-filled/26/marker.png" alt="marker"/></span>
           <span class="nav-label">내주변</span>
-        <button class="nav-item active" onclick="renderMyPage()">
-          <span class="nav-icon"><<img width="30" height="30" src="https://img.icons8.com/pastel-glyph/30/shop--v2.png" alt="shop--v2"/></span>
+        <button class="nav-item">
+          <span class="nav-icon"><img width="30" height="30" src="https://img.icons8.com/pastel-glyph/30/shop--v2.png" alt="shop--v2"/></span>
            <span class="nav-label">단골매장</span>
         </button>
         <button class="nav-item active">
