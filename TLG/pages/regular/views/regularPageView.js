@@ -9,12 +9,13 @@ export const regularPageView = {
    * 메인 페이지 렌더링
    */
   render(data) {
-    const { summary, stores } = data;
+    const { summary, stores, posts } = data;
 
     return `
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
         ${this.renderHeroCard(summary)}
+        ${this.renderStoreFeed(posts)}
         ${this.renderRecentVisited(stores)}
         ${this.renderStoresList(stores)}
         ${this.renderFooterCTA()}
@@ -83,6 +84,122 @@ export const regularPageView = {
         </div>
       </section>
     `;
+  },
+
+  /**
+   * 매장 소식 피드 섹션 (NEW)
+   */
+  renderStoreFeed(posts) {
+    if (!posts || posts.length === 0) return '';
+
+    const newPostsCount = posts.filter(p => {
+      const diff = Date.now() - new Date(p.createdAt);
+      return diff < 24 * 60 * 60 * 1000; // 24시간 이내
+    }).length;
+
+    return `
+      <section class="feed-section">
+        ${newPostsCount > 0 ? `
+          <div class="new-posts-banner">
+            <span class="banner-icon">🔔</span>
+            <span class="banner-text">새로운 단골 소식 ${newPostsCount}개</span>
+          </div>
+        ` : ''}
+        
+        <div class="section-header-compact">
+          <h2 class="section-title">🗞 단골 매장 소식</h2>
+        </div>
+        
+        <div class="feed-list">
+          ${posts.map(post => this.renderPostCard(post)).join('')}
+        </div>
+      </section>
+    `;
+  },
+
+  /**
+   * 매장 소식 카드
+   */
+  renderPostCard(post) {
+    const levelColor = window.regularPageService?.getLevelColor(post.userLevel) || '#64748b';
+    const relativeTime = window.regularPageService?.getRelativeTime(post.createdAt) || '최근';
+    const tagColor = this.getTagColor(post.postType);
+
+    return `
+      <div class="post-card">
+        <div class="post-header">
+          <div class="post-store-info">
+            <div class="post-store-logo">${post.storeLogo}</div>
+            <div class="post-store-details">
+              <h4 class="post-store-name">${post.storeName}</h4>
+              <span class="post-meta-time">🕓 ${relativeTime}</span>
+            </div>
+          </div>
+          <div class="post-level-badge" style="background: ${levelColor}">
+            ${post.userLevelName}
+          </div>
+        </div>
+
+        <div class="post-body">
+          <div class="post-tag" style="background: ${tagColor}">
+            ${post.targetTag}
+          </div>
+          <h3 class="post-title">${post.title}</h3>
+          
+          ${post.hasImage ? `
+            <div class="post-image-container">
+              <img src="${post.imageUrl}" alt="${post.title}" class="post-image" />
+            </div>
+          ` : ''}
+          
+          <p class="post-content">${post.content}</p>
+        </div>
+
+        <div class="post-actions">
+          <div class="post-reactions">
+            <button class="reaction-btn ${post.hasLiked ? 'active' : ''}" onclick="toggleLike(${post.id})">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="${post.hasLiked ? '#FF8A00' : 'none'}" stroke="currentColor" stroke-width="2">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+              </svg>
+              <span>${post.likes}</span>
+            </button>
+            <button class="reaction-btn" onclick="viewComments(${post.id})">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span>${post.comments}</span>
+            </button>
+            <button class="reaction-btn" onclick="sharePost(${post.id})">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+              </svg>
+            </button>
+          </div>
+
+          ${post.hasCoupon ? `
+            <button class="coupon-btn ${post.couponReceived ? 'received' : ''}" 
+                    onclick="receiveCoupon(${post.id}, ${post.storeId})"
+                    ${post.couponReceived ? 'disabled' : ''}>
+              ${post.couponReceived ? '✅ 쿠폰받음' : '🎟️ 쿠폰받기'}
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  },
+
+  /**
+   * 태그 색상
+   */
+  getTagColor(postType) {
+    const colors = {
+      'event': '#FF8A00',
+      'new_menu': '#10b981',
+      'promotion': '#f59e0b',
+      'notice': '#6366f1'
+    };
+    return colors[postType] || '#64748b';
   },
 
   /**
@@ -674,6 +791,212 @@ export const regularPageView = {
 
         .recent-btn.secondary:active {
           background: #e5e7eb;
+        }
+
+        /* ===== 매장 소식 피드 ===== */
+        .feed-section {
+          padding: 16px 20px;
+        }
+
+        .new-posts-banner {
+          background: linear-gradient(135deg, #FF8A00 0%, #ff9f33 100%);
+          color: white;
+          padding: 12px 16px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 16px;
+          box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+        }
+
+        .banner-icon {
+          font-size: 18px;
+          animation: ring 2s infinite;
+        }
+
+        @keyframes ring {
+          0%, 100% { transform: rotate(0deg); }
+          10%, 30% { transform: rotate(-10deg); }
+          20%, 40% { transform: rotate(10deg); }
+        }
+
+        .banner-text {
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .feed-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .post-card {
+          background: white;
+          border-radius: 16px;
+          padding: 20px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          transition: all 0.3s ease;
+        }
+
+        .post-card:active {
+          transform: scale(0.99);
+        }
+
+        .post-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 16px;
+        }
+
+        .post-store-info {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+        }
+
+        .post-store-logo {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          background: #f3f4f6;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 22px;
+        }
+
+        .post-store-details {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .post-store-name {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+
+        .post-meta-time {
+          font-size: 12px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .post-level-badge {
+          padding: 6px 12px;
+          border-radius: 8px;
+          font-size: 11px;
+          color: white;
+          font-weight: 700;
+        }
+
+        .post-body {
+          margin-bottom: 16px;
+        }
+
+        .post-tag {
+          display: inline-block;
+          padding: 4px 10px;
+          border-radius: 6px;
+          font-size: 11px;
+          color: white;
+          font-weight: 700;
+          margin-bottom: 12px;
+        }
+
+        .post-title {
+          margin: 0 0 12px 0;
+          font-size: 17px;
+          font-weight: 700;
+          color: #1f2937;
+          line-height: 1.4;
+        }
+
+        .post-image-container {
+          width: 100%;
+          border-radius: 12px;
+          overflow: hidden;
+          margin-bottom: 12px;
+        }
+
+        .post-image {
+          width: 100%;
+          height: auto;
+          display: block;
+        }
+
+        .post-content {
+          margin: 0;
+          font-size: 14px;
+          color: #4b5563;
+          line-height: 1.6;
+        }
+
+        .post-actions {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding-top: 16px;
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .post-reactions {
+          display: flex;
+          gap: 12px;
+        }
+
+        .reaction-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 12px;
+          border-radius: 8px;
+          border: none;
+          background: #f3f4f6;
+          color: #6b7280;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .reaction-btn.active {
+          background: #fff5eb;
+          color: #FF8A00;
+        }
+
+        .reaction-btn:active {
+          transform: scale(0.95);
+        }
+
+        .coupon-btn {
+          padding: 10px 20px;
+          border-radius: 10px;
+          border: none;
+          background: #FF8A00;
+          color: white;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .coupon-btn:active {
+          transform: scale(0.95);
+          background: #e67a00;
+        }
+
+        .coupon-btn.received {
+          background: #10b981;
+          cursor: not-allowed;
         }
 
         /* ===== 매장 그리드 ===== */

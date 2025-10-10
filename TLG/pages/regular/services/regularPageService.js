@@ -12,15 +12,17 @@ export const regularPageService = {
    */
   async getRegularStoresData(userId) {
     try {
-      const [stores, summary] = await Promise.all([
+      const [stores, summary, posts] = await Promise.all([
         regularPageRepository.getUserRegularStores(userId),
-        regularPageRepository.getUserRegularSummary(userId)
+        regularPageRepository.getUserRegularSummary(userId),
+        regularPageRepository.getStorePosts(userId)
       ]);
 
       return {
         success: true,
         stores,
-        summary
+        summary,
+        posts
       };
     } catch (error) {
       console.error('❌ 단골매장 데이터 조회 실패:', error);
@@ -28,9 +30,27 @@ export const regularPageService = {
         success: false,
         stores: [],
         summary: null,
+        posts: [],
         error: error.message
       };
     }
+  },
+
+  /**
+   * 상대 시간 포맷
+   */
+  getRelativeTime(date) {
+    const now = new Date();
+    const diff = now - new Date(date);
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+    if (minutes < 60) return `${minutes}분 전`;
+    if (hours < 24) return `${hours}시간 전`;
+    if (days === 1) return '어제';
+    if (days < 7) return `${days}일 전`;
+    return new Date(date).toLocaleDateString();
   },
 
   /**

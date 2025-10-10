@@ -96,7 +96,38 @@ function goToCoupons() {
   viewAllCoupons();
 }
 
+// 피드 인터랙션 함수들
+function toggleLike(postId) {
+  console.log('❤️ 좋아요 토글:', postId);
+  alert('좋아요 기능은 곧 구현됩니다!');
+}
+
+function viewComments(postId) {
+  console.log('💬 댓글 보기:', postId);
+  alert('댓글 기능은 곧 구현됩니다!');
+}
+
+function sharePost(postId) {
+  console.log('🔁 공유하기:', postId);
+  alert('공유 기능은 곧 구현됩니다!');
+}
+
+function receiveCoupon(postId, storeId) {
+  console.log('🎟️ 쿠폰 받기:', postId, storeId);
+  alert('쿠폰이 발급되었습니다!');
+  // UI 업데이트 (실제로는 재렌더링 필요)
+  const btn = event.target;
+  btn.innerHTML = '✅ 쿠폰받음';
+  btn.classList.add('received');
+  btn.disabled = true;
+}
+
 // 전역으로 노출
+window.toggleLike = toggleLike;
+window.viewComments = viewComments;
+window.sharePost = sharePost;
+window.receiveCoupon = receiveCoupon;
+
 window.renderRegularPage = renderRegularPage;
 window.goToStore = goToStore;
 window.orderFromStore = orderFromStore;
