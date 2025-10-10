@@ -15,8 +15,9 @@ export const regularPageView = {
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
         ${this.renderSummarySection(summary)}
-        ${this.renderStoresList(stores)}
         ${this.renderBenefitSection(summary)}
+        <!-- 단골매장 소식 영역 -->
+        ${this.renderStoresList(stores)}
         ${this.renderFooterCTA()}
         ${this.renderBottomNav()}
       </div>
