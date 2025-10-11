@@ -88,7 +88,10 @@ export const mapView = {
   renderNotificationButton() {
     return `
       <button id="notificationBtn" class="notification-btn" title="알림">
-        <span>🔔</span>
+        <span>
+  <img width="30" height="30" src="https://img.icons8.com/pulsar-color/30/appointment-reminders.png" alt="appointment-reminders"/>
+</span>
+
         <span id="notificationBadge" class="notification-badge hidden">3</span>
       </button>
       <button id="currentLocationBtn" class="current-location-btn" title="현재 위치로 이동" onclick="renderMap()">
@@ -429,10 +432,10 @@ export const mapView = {
         /* 알림 버튼 */
         .notification-btn {
           position: absolute;
-          top: 160px;
-          right: 15px;
-          width: 35px;
-          height: 35px;
+          bottom: 205px;
+          right: 20px;
+          width: 48px;
+          height: 48px;
           border: none;
           border-radius: 50%;
           display: flex;

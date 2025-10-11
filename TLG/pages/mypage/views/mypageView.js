@@ -48,6 +48,8 @@ export const mypageView = {
         </div>
       </section>
 
+      <!-- 주문 섹션  오늘 구현하자.-->
+
       <!-- 결제 섹션 -->
       <section class="mypage-info-section">
         <h3 class="section-title-simple">결제</h3>
@@ -66,6 +68,9 @@ export const mypageView = {
           </li>
         </ul>
       </section>
+
+      <!-- 예약 섹션 -->
+      <!-- 혜택 섹션 -->
 
       <!-- 이용 정보 섹션 -->
       <section class="mypage-info-section">
