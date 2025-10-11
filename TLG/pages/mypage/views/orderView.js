@@ -98,52 +98,58 @@ export const orderView = {
   },
 
   /**
-   * 주문 카드 렌더링
+   * 주문 카드 렌더링 (네이버 쇼핑 스타일)
    */
   renderOrderCard(order, index) {
     const orderData = order.order_data || {};
     const items = orderData.items || [];
-    const itemsText = items.map(i => `${i.name}(${i.qty || i.quantity || 1}개)`).join(', ') || '메뉴 정보 없음';
+    const itemsText = items.length > 1 
+      ? `${items[0].name} 외 ${items.length - 1}건`
+      : items[0]?.name || '메뉴 정보 없음';
     const storeName = order.store_name || orderData.store || '매장 정보 없음';
     const orderDate = new Date(order.order_date);
+    const dateStr = `${orderDate.getMonth() + 1}.${orderDate.getDate()}`;
     const finalAmount = order.final_amount || order.total_amount || 0;
 
     return `
-      <div class="order-card" data-order-id="${order.id}">
-        <div class="order-card-header">
-          <div class="store-info">
-            <h3 class="store-name">${storeName}</h3>
-            <div class="order-meta">
-              <span class="order-date">${orderDate.toLocaleDateString()}</span>
-              ${order.table_number ? `<span class="table-badge">테이블 ${order.table_number}</span>` : ''}
-            </div>
-          </div>
-          <div class="status-badge completed">완료</div>
+      <div class="naver-order-card" data-order-id="${order.id}">
+        <!-- 1. 상태 영역 (상단) -->
+        <div class="order-status-header">
+          <span class="order-status-badge" style="color: #10b981;">
+            ✅ 완료
+          </span>
+          <button class="close-btn" aria-label="닫기">×</button>
         </div>
 
-        <div class="order-card-body">
-          <p class="order-items">${itemsText}</p>
-          
-          <div class="order-card-footer">
-            <div class="amount-info">
-              <span class="amount-label">결제금액</span>
-              <span class="amount-value">${finalAmount.toLocaleString()}원</span>
-            </div>
+        <!-- 2. 날짜 + 결제수단 정보 영역 -->
+        <div class="order-date-section">
+          <span class="order-date">${dateStr}. 결제</span>
+        </div>
 
-            <div class="action-buttons">
-              ${order.hasReview ? 
-                `<span class="review-done">✅ 리뷰 완료</span>` :
-                `<button class="review-btn" data-order-index="${index}">
-                  <span>📝</span>
-                  리뷰 작성
-                </button>`
-              }
-              <button class="reorder-btn" onclick="handleReorder('${order.id}')">
-                <span>🔄</span>
-                재주문
-              </button>
-            </div>
+        <!-- 3. 상품 요약 영역 (메인 콘텐츠) -->
+        <div class="order-main-section">
+          <div class="order-thumbnail">
+            <img src="/assets/store_default.png" alt="${storeName}" onerror="this.src='/assets/tablelink.png'">
           </div>
+          <div class="order-info">
+            <h3 class="order-title">${itemsText}</h3>
+            <p class="order-price">${finalAmount.toLocaleString()}원</p>
+            <a href="#" class="order-detail-link" onclick="event.preventDefault()">주문상세 ></a>
+          </div>
+        </div>
+
+        <!-- 4. 매장명 및 문의 영역 -->
+        <div class="order-store-section">
+          <a href="#" class="store-inquiry-link" onclick="event.preventDefault()">${storeName} 문의 ></a>
+        </div>
+
+        <!-- 5. 버튼 영역 (하단 CTA) -->
+        <div class="order-actions-footer">
+          ${order.hasReview ? 
+            `<span class="review-completed-badge">✅ 리뷰작성완료</span>` :
+            `<button class="naver-review-btn" data-order-index="${index}">리뷰 작성</button>`
+          }
+          <button class="action-btn-outline" onclick="handleReorder('${order.id}')">재주문</button>
         </div>
       </div>
     `;
@@ -308,149 +314,207 @@ export const orderView = {
           gap: 12px;
         }
 
-        .order-card {
-          background: #f8fafc;
-          border-radius: 12px;
-          padding: 14px;
-          border: 1px solid #e2e8f0;
-          transition: all 0.2s;
-        }
-
-        .order-card:active {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-        }
-
-        .order-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
+        /* 네이버 쇼핑 스타일 주문 카드 */
+        .naver-order-card {
+          background: #ffffff;
+          border: 1px solid #e5e5e5;
+          border-radius: 10px;
+          padding: 12px 16px;
           margin-bottom: 12px;
+          position: relative;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
         }
 
-        .store-name {
-          margin: 0 0 6px 0;
-          font-size: 15px;
-          font-weight: 700;
-          color: #1e293b;
+        .naver-order-card:active {
+          background: #fafafa;
+          transform: translateY(1px);
         }
 
-        .order-meta {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .order-date {
-          font-size: 12px;
-          color: #64748b;
-        }
-
-        .table-badge {
-          background: #3b82f6;
-          color: white;
-          padding: 2px 8px;
-          border-radius: 6px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .status-badge {
-          padding: 4px 10px;
-          border-radius: 8px;
-          font-size: 11px;
-          font-weight: 600;
-        }
-
-        .status-badge.completed {
-          background: #dcfce7;
-          color: #166534;
-        }
-
-        .order-card-body {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .order-items {
-          margin: 0;
-          font-size: 14px;
-          color: #475569;
-          line-height: 1.5;
-        }
-
-        .order-card-footer {
+        /* 1. 상태 영역 (상단) */
+        .order-status-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 12px;
+          margin-bottom: 8px;
         }
 
-        .amount-info {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-        }
-
-        .amount-label {
-          font-size: 11px;
-          color: #64748b;
-        }
-
-        .amount-value {
-          font-size: 16px;
-          font-weight: 700;
-          color: #3b82f6;
-        }
-
-        .action-buttons {
-          display: flex;
-          gap: 6px;
-        }
-
-        .review-btn,
-        .reorder-btn {
-          padding: 8px 12px;
-          border: none;
-          border-radius: 8px;
-          font-size: 12px;
+        .order-status-badge {
+          font-size: 14px;
           font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
           display: flex;
           align-items: center;
           gap: 4px;
         }
 
-        .review-btn {
-          background: #3b82f6;
-          color: white;
+        .close-btn {
+          background: none;
+          border: none;
+          font-size: 20px;
+          color: #aaa;
+          cursor: pointer;
+          padding: 4px;
+          width: 24px;
+          height: 24px;
+          line-height: 1;
+          transition: color 0.2s;
         }
 
-        .review-btn:active {
-          transform: scale(0.95);
-          background: #2563eb;
+        .close-btn:hover {
+          color: #666;
         }
 
-        .reorder-btn {
+        /* 2. 날짜 + 결제수단 정보 영역 */
+        .order-date-section {
+          margin-bottom: 12px;
+        }
+
+        .order-date {
+          font-size: 13px;
+          color: #666;
+          font-weight: 500;
+        }
+
+        /* 3. 상품 요약 영역 (메인 콘텐츠) */
+        .order-main-section {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 12px;
+        }
+
+        .order-thumbnail {
+          flex-shrink: 0;
+          width: 64px;
+          height: 64px;
+          border: 1px solid #e5e5e5;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #f5f5f5;
+        }
+
+        .order-thumbnail img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .order-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .order-title {
+          margin: 0 0 6px 0;
+          font-size: 15px;
+          font-weight: 600;
+          color: #333;
+          line-height: 1.4;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
+
+        .order-price {
+          font-size: 16px;
+          font-weight: 700;
+          color: #000;
+          margin-bottom: 6px;
+        }
+
+        .order-detail-link {
+          font-size: 13px;
+          color: #00BFA5;
+          text-decoration: none;
+          font-weight: 500;
+          transition: color 0.2s;
+        }
+
+        .order-detail-link:active {
+          color: #00897B;
+        }
+
+        /* 4. 매장명 및 문의 영역 */
+        .order-store-section {
+          margin-bottom: 12px;
+        }
+
+        .store-inquiry-link {
+          font-size: 13px;
+          color: #00BFA5;
+          text-decoration: none;
+          font-weight: 500;
+          display: inline-block;
+          transition: color 0.2s;
+        }
+
+        .store-inquiry-link:active {
+          color: #00897B;
+        }
+
+        /* 5. 버튼 영역 (하단 CTA) */
+        .order-actions-footer {
+          display: flex;
+          gap: 8px;
+          padding-top: 12px;
+          border-top: 1px solid #f0f0f0;
+        }
+
+        .action-btn-outline {
+          flex: 1;
+          min-width: 100px;
+          height: 40px;
+          border: 1px solid #ccc;
           background: white;
-          color: #475569;
-          border: 1px solid #e2e8f0;
+          color: #333;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          border-radius: 8px;
         }
 
-        .reorder-btn:active {
-          transform: scale(0.95);
-          background: #f8fafc;
+        .action-btn-outline:active {
+          background: #f5f5f5;
+          transform: scale(0.98);
         }
 
-        .review-done {
-          color: #166534;
+        .review-completed-badge {
+          flex: 1;
+          background: #f0f0f0;
+          color: #666;
+          padding: 0 12px;
+          border-radius: 8px;
           font-size: 12px;
           font-weight: 600;
-          padding: 6px 10px;
-          background: #dcfce7;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          height: 40px;
+        }
+
+        .naver-review-btn {
+          flex: 1;
+          background: #03c75a;
+          color: white;
+          border: none;
+          padding: 0 16px;
           border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          height: 40px;
+          min-width: 100px;
+        }
+
+        .naver-review-btn:active {
+          background: #02b350;
+          transform: scale(0.98);
         }
 
         .empty-state {
