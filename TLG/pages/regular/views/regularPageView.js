@@ -416,23 +416,32 @@ export const regularPageView = {
         <div class="favorite-list-grid">
           ${favoriteStores.map(store => `
             <div class="favorite-list-card" onclick="goToStore(${store.storeId})">
-              <div class="favorite-list-image">
-                <img 
-                  src="${store.imageUrl || '/TableLink.png'}" 
-                  alt="${store.storeName}"
-                  onerror="this.src='/TableLink.png'"
-                >
-                <button class="favorite-remove-btn" onclick="event.stopPropagation(); removeFavorite(${store.storeId})">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                  </svg>
-                </button>
+              <div class="favorite-list-left">
+                <div class="favorite-list-image">
+                  <img 
+                    src="${store.imageUrl || '/TableLink.png'}" 
+                    alt="${store.storeName}"
+                    onerror="this.src='/TableLink.png'"
+                  >
+                </div>
+                <div class="favorite-list-info">
+                  <div class="favorite-list-name-row">
+                    <h3 class="favorite-list-name">${store.storeName}</h3>
+                  </div>
+                  <div class="favorite-list-meta">
+                    <span class="favorite-list-category">${store.category || '기타'}</span>
+                    ${store.distance ? `
+                      <span class="favorite-list-divider">·</span>
+                      <span class="favorite-list-distance">${store.distance}</span>
+                    ` : ''}
+                  </div>
+                </div>
               </div>
-              <div class="favorite-list-info">
-                <h3 class="favorite-list-name">${store.storeName}</h3>
-                <p class="favorite-list-category">${store.category || '기타'}</p>
-                ${store.distance ? `<p class="favorite-list-distance">📍 ${store.distance}</p>` : ''}
-              </div>
+              <button class="favorite-remove-btn" onclick="event.stopPropagation(); removeFavorite(${store.storeId})">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              </button>
             </div>
           `).join('')}
         </div>
@@ -1276,31 +1285,44 @@ export const regularPageView = {
         }
 
         .favorite-list-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
         }
 
         .favorite-list-card {
-          background: white;
-          border-radius: 16px;
-          overflow: hidden;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 14px;
+          background: #f9fafb;
+          border-radius: 12px;
           cursor: pointer;
           transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
           position: relative;
         }
 
         .favorite-list-card:active {
-          transform: scale(0.97);
+          transform: scale(0.98);
+          background: #f3f4f6;
+        }
+
+        .favorite-list-left {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex: 1;
+          min-width: 0;
         }
 
         .favorite-list-image {
-          position: relative;
-          width: 100%;
-          height: 140px;
+          width: 50px;
+          height: 50px;
+          border-radius: 12px;
           overflow: hidden;
-          background: #e5e7eb;
+          background: white;
+          flex-shrink: 0;
         }
 
         .favorite-list-image img {
@@ -1309,54 +1331,72 @@ export const regularPageView = {
           object-fit: cover;
         }
 
-        .favorite-remove-btn {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 36px;
-          height: 36px;
-          border-radius: 50%;
-          border: none;
-          background: rgba(255, 255, 255, 0.9);
-          color: #ef4444;
-          cursor: pointer;
+        .favorite-list-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .favorite-list-name-row {
           display: flex;
           align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-          z-index: 10;
-        }
-
-        .favorite-remove-btn:active {
-          transform: scale(0.9);
-          background: white;
-        }
-
-        .favorite-list-info {
-          padding: 12px;
+          gap: 6px;
+          margin-bottom: 4px;
         }
 
         .favorite-list-name {
-          margin: 0 0 4px 0;
+          margin: 0;
           font-size: 15px;
           font-weight: 700;
           color: #1f2937;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
+          flex: 1;
+        }
+
+        .favorite-list-meta {
+          display: flex;
+          align-items: center;
+          gap: 6px;
         }
 
         .favorite-list-category {
-          margin: 0 0 4px 0;
-          font-size: 12px;
-          color: #9ca3af;
+          margin: 0;
+          font-size: 13px;
+          color: #6b7280;
           font-weight: 500;
+        }
+
+        .favorite-list-divider {
+          font-size: 12px;
+          color: #d1d5db;
         }
 
         .favorite-list-distance {
           margin: 0;
-          font-size: 11px;
-          color: #6b7280;
+          font-size: 13px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .favorite-remove-btn {
+          width: 36px;
+          height: 36px;
+          border-radius: 10px;
+          border: none;
+          background: white;
+          color: #ef4444;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+          flex-shrink: 0;
+        }
+
+        .favorite-remove-btn:active {
+          transform: scale(0.95);
+          background: #fee2e2;
         }
 
         /* ===== 바텀 네비게이션 ===== */
