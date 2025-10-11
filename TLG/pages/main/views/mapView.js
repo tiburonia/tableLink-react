@@ -512,16 +512,15 @@ export const mapView = {
 
         /* 키워드 네비게이션 바 */
         .keyword-nav {
-          position: fixed;
-          top: 100px;  
           display: flex;
           overflow-x: auto;
           white-space: nowrap;
-          padding: 8px 0;
+          padding: 8px 12px;
           gap: 8px;
           margin-top: 8px;
           scrollbar-width: none;
           -ms-overflow-style: none;
+          background: transparent;
         }
 
         .keyword-nav::-webkit-scrollbar {
