@@ -2569,3 +2569,50 @@ body {
   }
 
 }
+
+.store-badge-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.badge-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.store-story-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.store-story-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.store-story-btn:active {
+  transform: translateY(0);
+}
+
+.story-icon {
+  font-size: 14px;
+}
+
+.story-text {
+  letter-spacing: -0.3px;
+}

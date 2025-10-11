@@ -51,8 +51,14 @@ export const storeView = {
           <div class="storeInfo">
             <!-- 이벤트 뱃지 영역 -->
             <div class="store-badge-section">
-              ${store.hasPromotion !== false ? '<span class="event-badge">🎁 첫 방문 할인</span>' : ''}
-              ${store.isNew ? '<span class="event-badge new">✨ 신규 오픈</span>' : ''}
+              <div class="badge-left">
+                ${store.hasPromotion !== false ? '<span class="event-badge">🎁 첫 방문 할인</span>' : ''}
+                ${store.isNew ? '<span class="event-badge new">✨ 신규 오픈</span>' : ''}
+              </div>
+              <button class="store-story-btn" onclick="renderStoreFeed(${store.id})">
+                <span class="story-icon">📖</span>
+                <span class="story-text">매장 스토리</span>
+              </button>
             </div>
 
             <!-- 카테고리 경로 -->
