@@ -340,10 +340,17 @@ class UserRepository {
         s.name as store_name,
         si.category as store_category,
         COUNT(DISTINCT ot.id) as ticket_count,
+        EXISTS(
+          SELECT 1 FROM reviews r 
+          WHERE r.user_id = o.user_id 
+          AND r.store_id = o.store_id 
+          AND DATE(r.created_at) = DATE(o.created_at)
+        ) as has_review,
         COALESCE(
           json_agg(
             DISTINCT jsonb_build_object(
-              'menu_name', oi.menu_name,
+              'name', oi.menu_name,
+              'qty', oi.quantity,
               'quantity', oi.quantity,
               'unit_price', oi.unit_price,
               'total_price', oi.total_price
@@ -367,10 +374,23 @@ class UserRepository {
       LIMIT $2 OFFSET $3
     `, [userId, limit, offset]);
 
-    // null 값 필터링
+    // 프론트엔드가 기대하는 형식으로 매핑
     return result.rows.map(row => ({
-      ...row,
-      order_items: row.order_items || []
+      id: row.id,
+      order_date: row.created_at,
+      final_amount: parseInt(row.total_price) || 0,
+      total_amount: parseInt(row.total_price) || 0,
+      session_status: row.session_status,
+      source: row.source,
+      table_number: row.table_number,
+      store_id: row.store_id,
+      store_name: row.store_name,
+      store_category: row.store_category,
+      hasReview: row.has_review || false,
+      order_data: {
+        items: row.order_items || [],
+        store: row.store_name
+      }
     }));
   }
 

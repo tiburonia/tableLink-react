@@ -172,26 +172,33 @@ class UserController {
       const { userId } = req.params;
       const { limit = 100, offset = 0, status } = req.query;
 
+      console.log('📦 주문 내역 요청:', { userId, limit, offset, status });
+
       if (!userId) {
+        console.error('❌ userId 파라미터 누락');
         return res.status(400).json({
           success: false,
           error: '사용자 ID가 필요합니다'
         });
       }
 
-      const userPk = parseInt(userId);
+      const userPk = parseInt(userId, 10);
       if (isNaN(userPk) || userPk <= 0) {
+        console.error('❌ 유효하지 않은 userId:', userId);
         return res.status(400).json({
           success: false,
-          error: '유효하지 않은 사용자 ID입니다'
+          error: '유효하지 않은 사용자 ID입니다',
+          receivedUserId: userId
         });
       }
 
       const orders = await userService.getUserOrders(userPk, {
-        limit: parseInt(limit),
-        offset: parseInt(offset),
+        limit: parseInt(limit, 10),
+        offset: parseInt(offset, 10),
         status
       });
+
+      console.log(`✅ 주문 내역 조회 완료: ${orders.length}건`);
 
       res.json({
         success: true,
@@ -199,6 +206,7 @@ class UserController {
         count: orders.length
       });
     } catch (error) {
+      console.error('❌ getUserOrders 컨트롤러 에러:', error);
       next(error);
     }
   }

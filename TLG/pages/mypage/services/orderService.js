@@ -12,7 +12,15 @@ export const orderService = {
    */
   async loadOrderData(userId) {
     try {
+      console.log('📊 주문 데이터 로드 시작:', userId);
+
+      if (!userId) {
+        throw new Error('userId가 필요합니다');
+      }
+
       const orders = await orderRepository.getUserOrders(userId);
+
+      console.log('📦 주문 데이터:', orders);
 
       // 통계 계산
       const totalOrders = orders.length;
