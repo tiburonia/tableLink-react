@@ -110,7 +110,7 @@ export const orderView = {
           <div class="order-info">
             <h3 class="order-title">${itemsText}</h3>
             <p class="order-price">${finalAmount.toLocaleString()}원</p>
-            <a href="#" class="order-detail-link" onclick="event.preventDefault()">주문상세 ></a>
+            <a href="#" class="order-detail-link" onclick="alert('주문 상세 페이지는 준비중입니다.')" >주문상세 ></a>
           </div>
         </div>
 
