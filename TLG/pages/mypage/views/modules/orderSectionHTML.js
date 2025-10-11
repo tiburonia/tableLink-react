@@ -38,52 +38,58 @@ export function generateOrderSectionHTML(orders) {
 function generateOrderItemHTML(order) {
   const orderData = order.order_data || {};
   const items = orderData.items || [];
-  const itemsText = items.map(i => `${i.name}(${i.quantity || i.qty || 1}개)`).join(', ') || '메뉴 정보 없음';
   const storeName = order.store_name || orderData.store || '매장 정보 없음';
-  const orderDate = new Date(order.order_date).toLocaleDateString();
+  const orderDate = new Date(order.order_date);
+  const dateStr = `${orderDate.getMonth() + 1}. ${orderDate.getDate().toString().padStart(2, '0')}`;
   
   const originalAmount = order.total_amount || order.original_amount || 0;
   const usedPoint = order.used_point || 0;
   const couponDiscount = order.coupon_discount || 0;
   const finalAmount = order.final_amount || originalAmount;
 
-  let discountInfo = '';
-  if (usedPoint > 0 || couponDiscount > 0) {
-    const totalDiscount = usedPoint + couponDiscount;
-    discountInfo = `
-      <div class="order-discount">
-        💰 ${totalDiscount.toLocaleString()}원 할인 적용
-        ${usedPoint > 0 ? `(포인트 ${usedPoint.toLocaleString()}원` : ''}
-        ${usedPoint > 0 && couponDiscount > 0 ? ' + ' : ''}
-        ${couponDiscount > 0 ? `쿠폰 ${couponDiscount.toLocaleString()}원)` : usedPoint > 0 ? ')' : ''}
-      </div>
-    `;
-  }
+  // 첫 번째 메뉴 이름 (대표 메뉴)
+  const firstItem = items[0] || { name: '메뉴 정보 없음', quantity: 0 };
+  const itemCount = items.length;
+  const menuTitle = itemCount > 1 ? `${firstItem.name} 외 ${itemCount - 1}건` : firstItem.name;
+
+  // 할인 정보
+  const hasDiscount = usedPoint > 0 || couponDiscount > 0;
+  const payBadge = hasDiscount ? `<span class="pay-badge">네이버페이</span>` : '';
 
   const reviewButton = order.hasReview
-    ? `<div class="review-completed">✅ 리뷰작성 완료</div>`
-    : `<button class="review-btn" onclick="renderReviewWrite(${JSON.stringify(order).replace(/"/g, '&quot;')})">
+    ? `<div class="review-completed-badge">✓ 리뷰작성완료</div>`
+    : `<button class="naver-review-btn" onclick="renderReviewWrite(${JSON.stringify(order).replace(/"/g, '&quot;')})">
          리뷰 작성
        </button>`;
 
   return `
-    <div class="order-item">
-      <div class="order-item-header">
-        <div>
-          <div class="order-store-name">${storeName}</div>
-          <div class="order-meta">
-            <span>📅 ${orderDate}</span>
+    <div class="naver-order-card">
+      <button class="close-btn" aria-label="닫기">×</button>
+      
+      <div class="order-header">
+        <span class="order-date">${dateStr}. 결제</span>
+      </div>
+
+      <div class="order-body">
+        <div class="order-thumbnail">
+          <img src="/assets/store_default.png" alt="${storeName}" onerror="this.src='/assets/tablelink.png'">
+        </div>
+        <div class="order-content">
+          <h3 class="order-title">${menuTitle}</h3>
+          <div class="order-price">
+            ${finalAmount.toLocaleString()}원 ${payBadge}
+          </div>
+          <div class="order-detail-links">
+            <a href="#" class="detail-link">주문상세 〉</a>
+            <a href="#" class="detail-link">${storeName} 문의 〉</a>
           </div>
         </div>
-        <div class="order-status">완료</div>
       </div>
-      <div class="order-info">
-        <strong>주문 내역:</strong> ${itemsText}
-        ${discountInfo}
-      </div>
-      <div class="order-footer">
-        <div class="order-amount">${finalAmount.toLocaleString()}원</div>
-        ${reviewButton}
+
+      <div class="order-actions">
+        <button class="action-btn secondary" onclick="alert('취소/교환/반품 준비중')">취소요청</button>
+        <button class="action-btn secondary" onclick="alert('영수증조회 준비중')">영수증조회</button>
+        <button class="action-btn primary" onclick="alert('더보기 준비중')">⋯</button>
       </div>
     </div>
   `;
