@@ -12,7 +12,7 @@ export const orderRepository = {
    */
   async getUserOrders(userId, limit = 100) {
     try {
-      const response = await fetch(`/api/orders/users/${userId}?limit=${limit}`);
+      const response = await fetch(`/api/users/:userId/orders?limit=${limit}`);
 
       if (!response.ok) {
         throw new Error('주문 내역 조회 실패');
