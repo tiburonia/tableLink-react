@@ -10,6 +10,9 @@ const userController = require('../controllers/userController');
 // 사용자 정보 조회 (마이페이지용)
 router.post('/info', userController.getUserInfo.bind(userController));
 
+// 사용자 주문 내역 조회
+router.get('/:userId/orders', userController.getUserOrders.bind(userController));
+
 // 사용자 즐겨찾기 상태 조회
 router.get('/favorite/status/:userId/:storeId', userController.getFavoriteStatus.bind(userController));
 

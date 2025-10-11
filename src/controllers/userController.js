@@ -165,6 +165,45 @@ class UserController {
   }
 
   /**
+   * 사용자 주문 내역 조회
+   */
+  async getUserOrders(req, res, next) {
+    try {
+      const { userId } = req.params;
+      const { limit = 100, offset = 0, status } = req.query;
+
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: '사용자 ID가 필요합니다'
+        });
+      }
+
+      const userPk = parseInt(userId);
+      if (isNaN(userPk) || userPk <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: '유효하지 않은 사용자 ID입니다'
+        });
+      }
+
+      const orders = await userService.getUserOrders(userPk, {
+        limit: parseInt(limit),
+        offset: parseInt(offset),
+        status
+      });
+
+      res.json({
+        success: true,
+        orders,
+        count: orders.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * 전화번호로 회원 조회
    */
   async searchByPhone(req, res, next) {

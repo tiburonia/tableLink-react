@@ -221,6 +221,29 @@ class UserService {
   }
 
   /**
+   * 사용자 주문 내역 조회
+   */
+  async getUserOrders(userId, options = {}) {
+    try {
+      console.log('📖 사용자 주문 내역 조회 (PK):', userId);
+
+      const user = await userRepository.getUserById(userId);
+      if (!user) {
+        throw new Error('사용자를 찾을 수 없습니다');
+      }
+
+      const orders = await userRepository.getUserOrders(userId, options);
+
+      console.log(`✅ 사용자 주문 내역 조회 완료: ${orders.length}건`);
+
+      return orders;
+    } catch (error) {
+      console.error('❌ getUserOrders 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
    * 전화번호로 회원 조회
    */
   async searchByPhone(phone) {
