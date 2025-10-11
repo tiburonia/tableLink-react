@@ -75,6 +75,9 @@ export const mypageController = {
         return;
       } // hasReview 포함
 
+      // 데이터를 전역 변수에 저장 (Hero Card 업데이트를 위해)
+      window.mypageData = data;
+
       // 2. 스타일 주입
       mypageView.injectStyles();
 

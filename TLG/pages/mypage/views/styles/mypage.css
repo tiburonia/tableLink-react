@@ -49,7 +49,119 @@ body {
   color: #666;
 }
 
-/* 예약/이용예정 카드 */
+/* Hero Card - 등급/포인트 정보 */
+.mypage-hero-card {
+  margin: 16px 16px 8px 16px;
+  border-radius: 24px;
+  padding: 28px 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+  box-shadow: 0 8px 24px rgba(255, 138, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  width: fit-content;
+}
+
+.hero-emoji {
+  font-size: 20px;
+}
+
+.hero-level {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.hero-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.hero-title strong {
+  color: #FF8A00;
+  font-weight: 800;
+}
+
+.hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  font-size: 18px;
+}
+
+.stat-text {
+  font-size: 14px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.stat-text strong {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.hero-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.hero-btn.outline {
+  background: white;
+  color: #FF8A00;
+  border: 2px solid #FF8A00;
+}
+
+.hero-btn.outline:active {
+  background: #fff5eb;
+}
+
+.hero-btn.filled {
+  background: #FF8A00;
+  color: white;
+}
+
+.hero-btn.filled:active {
+  background: #e67a00;
+}
+
+/* 예약/이용예정 카드 (사용 안 함) */
 .mypage-reserve-card {
   background-color: #fff;
   border-radius: 12px;
@@ -57,6 +169,7 @@ body {
   padding: 32px 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   text-align: center;
+  display: none;
 }
 
 .reserve-icon {

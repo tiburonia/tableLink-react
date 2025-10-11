@@ -14,7 +14,6 @@ export const regularPageView = {
     return `
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
-        ${this.renderHeroCard(summary)}
         ${this.renderStoreFeed(posts)}
         ${this.renderRecentVisited(stores)}
         ${this.renderStoresList(stores)}
@@ -47,44 +46,7 @@ export const regularPageView = {
     `;
   },
 
-  /**
-   * Hero Card - 등급/포인트 감정적 강화
-   */
-  renderHeroCard(summary) {
-    const levelName = summary?.topLevelName || '신규고객';
-    const levelEmoji = this.getLevelEmoji(summary?.topLevel);
-    const levelColor = this.getHeroGradient(summary?.topLevel);
-    const totalPoints = summary?.totalPoints || 0;
-    const totalCoupons = summary?.totalCoupons || 0;
-
-    return `
-      <section class="hero-section">
-        <div class="hero-card" style="background: ${levelColor}">
-          <div class="hero-content">
-            <div class="hero-badge">
-              <span class="hero-emoji">${levelEmoji}</span>
-              <span class="hero-level">${levelName}</span>
-            </div>
-            <h2 class="hero-title">준혁님은 현재 <strong>${levelName}</strong> 등급이에요!</h2>
-            <div class="hero-stats">
-              <div class="hero-stat">
-                <span class="stat-icon">💰</span>
-                <span class="stat-text">누적 포인트: <strong>${totalPoints.toLocaleString()}P</strong></span>
-              </div>
-              <div class="hero-stat">
-                <span class="stat-icon">🎟️</span>
-                <span class="stat-text">보유 쿠폰: <strong>${totalCoupons}장</strong></span>
-              </div>
-            </div>
-            <div class="hero-actions">
-              <button class="hero-btn outline" onclick="viewPointHistory()">포인트 내역</button>
-              <button class="hero-btn filled" onclick="viewAllCoupons()">쿠폰함</button>
-            </div>
-          </div>
-        </div>
-      </section>
-    `;
-  },
+  
 
   /**
    * 매장 소식 피드 섹션 - 요약형 (2~3개만 표시)
@@ -452,31 +414,7 @@ export const regularPageView = {
     `;
   },
 
-  /**
-   * 등급별 이모지
-   */
-  getLevelEmoji(level) {
-    const emojis = {
-      'PLATINUM': '💎',
-      'GOLD': '👑',
-      'SILVER': '⭐',
-      'BRONZE': '🥉'
-    };
-    return emojis[level] || '🏅';
-  },
-
-  /**
-   * Hero 카드 그라데이션
-   */
-  getHeroGradient(level) {
-    const gradients = {
-      'PLATINUM': 'linear-gradient(135deg, #e5e4e2 0%, #f8f9fa 100%)',
-      'GOLD': 'linear-gradient(135deg, #ffd700 0%, #fff5e7 100%)',
-      'SILVER': 'linear-gradient(135deg, #c0c0c0 0%, #f1f3f5 100%)',
-      'BRONZE': 'linear-gradient(135deg, #cd7f32 0%, #fff5eb 100%)'
-    };
-    return gradients[level] || 'linear-gradient(135deg, #f8f9fa 0%, #fff 100%)';
-  },
+  
 
   /**
    * 스타일
@@ -553,114 +491,6 @@ export const regularPageView = {
           font-size: 13px;
           color: #9ca3af;
           font-weight: 500;
-        }
-
-        /* ===== Hero Card ===== */
-        .hero-section {
-          padding: 20px 20px 16px 20px;
-        }
-
-        .hero-card {
-          border-radius: 24px;
-          padding: 28px 24px;
-          box-shadow: 0 8px 24px rgba(255, 138, 0, 0.15);
-          border: 1px solid rgba(255, 255, 255, 0.8);
-        }
-
-        .hero-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: rgba(255, 255, 255, 0.9);
-          padding: 8px 16px;
-          border-radius: 20px;
-          margin-bottom: 16px;
-        }
-
-        .hero-emoji {
-          font-size: 20px;
-        }
-
-        .hero-level {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .hero-title {
-          margin: 0 0 20px 0;
-          font-size: 18px;
-          font-weight: 600;
-          color: #374151;
-          line-height: 1.4;
-        }
-
-        .hero-title strong {
-          color: #FF8A00;
-          font-weight: 800;
-        }
-
-        .hero-stats {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-bottom: 20px;
-        }
-
-        .hero-stat {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .stat-icon {
-          font-size: 18px;
-        }
-
-        .stat-text {
-          font-size: 14px;
-          color: #4b5563;
-          font-weight: 500;
-        }
-
-        .stat-text strong {
-          color: #1f2937;
-          font-weight: 700;
-        }
-
-        .hero-actions {
-          display: flex;
-          gap: 10px;
-        }
-
-        .hero-btn {
-          flex: 1;
-          padding: 12px 20px;
-          border-radius: 12px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s;
-          border: none;
-        }
-
-        .hero-btn.outline {
-          background: white;
-          color: #FF8A00;
-          border: 2px solid #FF8A00;
-        }
-
-        .hero-btn.outline:active {
-          background: #fff5eb;
-        }
-
-        .hero-btn.filled {
-          background: #FF8A00;
-          color: white;
-        }
-
-        .hero-btn.filled:active {
-          background: #e67a00;
         }
 
         /* ===== 최근 방문 섹션 ===== */

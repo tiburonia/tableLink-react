@@ -21,13 +21,31 @@ export const mypageView = {
         
       </header>
       <div id="mypageContainer" style="overflow-y: auto; height: 660px;">
-      <!-- 예약/이용예정 카드 -->
-      <section class="mypage-reserve-card">
-        <div class="reserve-icon">😢</div>
-        <p class="reserve-text">이용 예정인 내역이 없어요.</p>
-        <button class="reserve-action-btn" onclick="renderMap()">
-          📍 내 주변 매장 보러가기
-        </button>
+      <!-- Hero Card - 등급/포인트 정보 -->
+      <section class="mypage-hero-card">
+        <div class="hero-content">
+          <div class="hero-badge">
+            <span class="hero-emoji" id="heroEmoji">🏅</span>
+            <span class="hero-level" id="heroLevel">신규고객</span>
+          </div>
+          <h2 class="hero-title">
+            <span id="userName">${displayName || '고객'}</span>님은 현재 <strong id="levelName">신규고객</strong> 등급이에요!
+          </h2>
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <span class="stat-icon">💰</span>
+              <span class="stat-text">누적 포인트: <strong id="totalPoints">0P</strong></span>
+            </div>
+            <div class="hero-stat">
+              <span class="stat-icon">🎟️</span>
+              <span class="stat-text">보유 쿠폰: <strong id="totalCoupons">0장</strong></span>
+            </div>
+          </div>
+          <div class="hero-actions">
+            <button class="hero-btn outline" onclick="renderAllPoints()">포인트 내역</button>
+            <button class="hero-btn filled" onclick="renderAllCoupons()">쿠폰함</button>
+          </div>
+        </div>
       </section>
 
       <!-- 결제 섹션 -->

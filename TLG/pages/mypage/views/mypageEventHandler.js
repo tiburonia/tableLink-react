@@ -12,6 +12,9 @@ export const mypageEventHandler = {
   initialize() {
     console.log('🎯 마이페이지 이벤트 핸들러 초기화');
 
+    // Hero Card 데이터 업데이트
+    this.updateHeroCard();
+
     // 설정 버튼 이벤트 리스너 등록
     const settingsBtn = document.querySelector('.settings-btn-icon');
     if (settingsBtn) {
@@ -42,6 +45,52 @@ export const mypageEventHandler = {
     this.attachViewAllListeners();
 
     console.log('✅ 마이페이지 이벤트 핸들러 초기화 완료');
+  },
+
+  /**
+   * Hero Card 업데이트
+   */
+  updateHeroCard() {
+    const regularSummary = window.mypageData?.regularSummary;
+    if (!regularSummary) return;
+
+    const levelEmojis = {
+      'PLATINUM': '💎',
+      'GOLD': '👑',
+      'SILVER': '⭐',
+      'BRONZE': '🥉'
+    };
+
+    const levelGradients = {
+      'PLATINUM': 'linear-gradient(135deg, #e5e4e2 0%, #f8f9fa 100%)',
+      'GOLD': 'linear-gradient(135deg, #ffd700 0%, #fff5e7 100%)',
+      'SILVER': 'linear-gradient(135deg, #c0c0c0 0%, #f1f3f5 100%)',
+      'BRONZE': 'linear-gradient(135deg, #cd7f32 0%, #fff5eb 100%)'
+    };
+
+    const levelEmoji = levelEmojis[regularSummary.topLevel] || '🏅';
+    const levelGradient = levelGradients[regularSummary.topLevel] || 'linear-gradient(135deg, #f8f9fa 0%, #fff 100%)';
+
+    // DOM 업데이트
+    const heroCard = document.querySelector('.mypage-hero-card');
+    if (heroCard) {
+      heroCard.style.background = levelGradient;
+    }
+
+    const heroEmojiEl = document.getElementById('heroEmoji');
+    if (heroEmojiEl) heroEmojiEl.textContent = levelEmoji;
+
+    const heroLevelEl = document.getElementById('heroLevel');
+    if (heroLevelEl) heroLevelEl.textContent = regularSummary.topLevelName;
+
+    const levelNameEl = document.getElementById('levelName');
+    if (levelNameEl) levelNameEl.textContent = regularSummary.topLevelName;
+
+    const totalPointsEl = document.getElementById('totalPoints');
+    if (totalPointsEl) totalPointsEl.textContent = `${regularSummary.totalPoints.toLocaleString()}P`;
+
+    const totalCouponsEl = document.getElementById('totalCoupons');
+    if (totalCouponsEl) totalCouponsEl.textContent = `${regularSummary.totalCoupons}장`;
   },
 
   /**
