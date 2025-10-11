@@ -204,7 +204,7 @@ export const regularPageView = {
   },
 
   /**
-   * 최근 방문 매장 섹션 (미니멀)
+   * 최근 방문 매장 섹션
    */
   renderRecentVisited(stores) {
     if (!stores || stores.length === 0) return '';
@@ -224,7 +224,7 @@ export const regularPageView = {
   },
 
   /**
-   * 최근 방문 카드 (미니멀)
+   * 최근 방문 카드
    */
   renderRecentCardMinimal(store) {
     const levelIcon = window.regularPageService?.getLevelIcon(store.level) || '🏅';
@@ -239,7 +239,15 @@ export const regularPageView = {
             <h3 class="recent-name-minimal">${store.storeName}</h3>
             <span class="recent-level-minimal">${levelIcon}</span>
           </div>
-          <p class="recent-meta-minimal">${store.lastVisit} · ${store.points.toLocaleString()}P</p>
+          <div class="recent-info-row">
+            <span class="recent-category">${store.category}</span>
+            <span class="recent-divider">·</span>
+            <span class="recent-visit">${store.lastVisit}</span>
+          </div>
+          <div class="recent-stats-row">
+            <span class="recent-points">💰 ${store.points.toLocaleString()}P</span>
+            ${store.coupons > 0 ? `<span class="recent-coupons">🎟️ ${store.coupons}장</span>` : ''}
+          </div>
         </div>
       </div>
     `;
@@ -621,9 +629,9 @@ export const regularPageView = {
           transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
-        /* ===== 최근 방문 섹션 (미니멀) ===== */
+        /* ===== 최근 방문 섹션 ===== */
         .recent-section-minimal {
-          padding: 12px 20px;
+          padding: 16px 20px;
           background: white;
           margin-bottom: 8px;
         }
@@ -706,16 +714,16 @@ export const regularPageView = {
         .recent-list-minimal {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
 
         .recent-card-minimal {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 10px 12px;
+          gap: 14px;
+          padding: 14px;
           background: #f9fafb;
-          border-radius: 10px;
+          border-radius: 12px;
           cursor: pointer;
           transition: all 0.2s;
         }
@@ -726,14 +734,14 @@ export const regularPageView = {
         }
 
         .recent-icon-minimal {
-          font-size: 24px;
-          width: 40px;
-          height: 40px;
+          font-size: 28px;
+          width: 50px;
+          height: 50px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: white;
-          border-radius: 10px;
+          border-radius: 12px;
           flex-shrink: 0;
         }
 
@@ -747,12 +755,12 @@ export const regularPageView = {
           align-items: center;
           justify-content: space-between;
           gap: 8px;
-          margin-bottom: 2px;
+          margin-bottom: 4px;
         }
 
         .recent-name-minimal {
           margin: 0;
-          font-size: 14px;
+          font-size: 15px;
           font-weight: 700;
           color: #1f2937;
           overflow: hidden;
@@ -761,8 +769,50 @@ export const regularPageView = {
         }
 
         .recent-level-minimal {
-          font-size: 14px;
+          font-size: 16px;
           flex-shrink: 0;
+        }
+
+        .recent-info-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 4px;
+        }
+
+        .recent-category {
+          font-size: 13px;
+          color: #6b7280;
+          font-weight: 500;
+        }
+
+        .recent-divider {
+          font-size: 12px;
+          color: #d1d5db;
+        }
+
+        .recent-visit {
+          font-size: 13px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .recent-stats-row {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .recent-points {
+          font-size: 13px;
+          font-weight: 600;
+          color: #FF8A00;
+        }
+
+        .recent-coupons {
+          font-size: 12px;
+          font-weight: 600;
+          color: #10b981;
         }
 
         .recent-meta-minimal {
