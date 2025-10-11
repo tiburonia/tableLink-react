@@ -1,16 +1,18 @@
 
 /**
- * Order History Entry Point
+ * Order History Entry Point (ES6 Module)
  * 레이어드 아키텍처 기반 주문 내역
+ * 
+ * 사용법:
+ * import { renderAllOrderHTML } from './renderAllOrderHTML.js';
+ * await renderAllOrderHTML(userInfo);
  */
 
-async function renderAllOrderHTML(userInfo) {
+export async function renderAllOrderHTML(userInfo) {
   try {
-    console.log('📦 renderAllOrderHTML 호출 (레이어드 아키텍처)');
+    console.log('📦 renderAllOrderHTML 호출 (ES6 모듈)');
 
-    // 동적 import로 컨트롤러 로드
     const { orderController } = await import('./controllers/orderController.js');
-    
     await orderController.renderAllOrders(userInfo);
 
   } catch (error) {
@@ -37,6 +39,4 @@ async function renderAllOrderHTML(userInfo) {
   }
 }
 
-// 전역 함수 등록
-window.renderAllOrderHTML = renderAllOrderHTML;
-console.log('✅ renderAllOrderHTML 전역 등록 완료 (레이어드 아키텍처)');
+console.log('✅ renderAllOrderHTML ES6 모듈 로드 완료');

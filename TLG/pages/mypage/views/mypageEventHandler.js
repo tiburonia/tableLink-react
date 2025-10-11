@@ -47,11 +47,19 @@ export const mypageEventHandler = {
     // 주문 내역 전체보기 버튼 이벤트 (모든 버튼에 적용)
     const viewAllOrdersBtns = document.querySelectorAll('[data-action="view-all-orders"]');
     viewAllOrdersBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (window.userInfo && typeof window.renderAllOrderHTML === 'function') {
-          window.renderAllOrderHTML(window.userInfo);
-        } else {
-          console.error('❌ renderAllOrderHTML 함수 또는 사용자 정보 없음');
+      btn.addEventListener('click', async () => {
+        if (!window.userInfo) {
+          console.error('❌ 사용자 정보 없음');
+          return;
+        }
+        
+        try {
+          // ES6 모듈 동적 import
+          const { orderController } = await import('/TLG/pages/mypage/controllers/orderController.js');
+          await orderController.renderAllOrders(window.userInfo);
+        } catch (error) {
+          console.error('❌ 주문 내역 로드 실패:', error);
+          alert('주문 내역을 불러올 수 없습니다.');
         }
       });
     });
@@ -119,10 +127,18 @@ export const mypageEventHandler = {
 
     if (quickOrdersBtn) {
       quickOrdersBtn.addEventListener('click', async () => {
-        await this.loadScript('/TLG/pages/store/views/order/renderAllOrderHTML.js');
-        if (typeof renderAllOrderHTML === 'function') {
+        if (!window.userInfo) {
+          console.error('❌ 사용자 정보 없음');
+          return;
+        }
+        
+        try {
           window.previousScreen = 'renderMyPage';
-          renderAllOrderHTML(window.userInfo);
+          const { orderController } = await import('/TLG/pages/mypage/controllers/orderController.js');
+          await orderController.renderAllOrders(window.userInfo);
+        } catch (error) {
+          console.error('❌ 주문 내역 로드 실패:', error);
+          alert('주문 내역을 불러올 수 없습니다.');
         }
       });
     }
