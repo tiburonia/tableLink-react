@@ -14,7 +14,6 @@ export const regularPageView = {
     return `
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
-        ${this.renderLocalToggle()}
         
         <!-- Regular Pane (단골 매장) -->
         <div class="regular-pane">
@@ -28,7 +27,7 @@ export const regularPageView = {
         <div class="favorite-pane" style="display:none">
           ${this.renderFavoriteListGrid(favoriteStores)}
         </div>
-
+        ${this.renderLocalToggle()}
         ${this.renderBottomNav()}
       </div>
       ${this.getStyles()}
@@ -517,7 +516,7 @@ export const regularPageView = {
         }
 
         .regular-page-container {
-          min-height: 100dvh;
+          height: 714px;
           background: #fafafa;
           padding-bottom: calc(68px + 16px);
           overflow-y: auto;
@@ -526,7 +525,7 @@ export const regularPageView = {
         /* ===== 헤더 ===== */
         .regular-header {
           background: white;
-          padding: 60px 20px 16px 20px;
+          padding: 0px 20px 16px 20px;
           position: sticky;
           top: 0;
           z-index: 100;
@@ -581,6 +580,9 @@ export const regularPageView = {
 
         /* ===== 로컬 토글 ===== */
         .local-toggle {
+          left: 70px;
+          bottom: 90px;
+          position: absolute;
           display: flex;
           justify-content: center;
           gap: 8px;
@@ -1357,8 +1359,6 @@ export const regularPageView = {
         .bottom-nav-bar {
           position: fixed;
           bottom: 0;
-          left: 0;
-          right: 0;
           background: white;
           display: flex;
           justify-content: space-around;
