@@ -578,37 +578,72 @@ export const regularPageView = {
           font-weight: 500;
         }
 
-        /* ===== 로컬 토글 ===== */
+        /* ===== 로컬 토글 (Floating Capsule Segmented Control) ===== */
         .local-toggle {
-          left: 70px;
+          position: fixed;
+          left: 50%;
           bottom: 90px;
-          position: absolute;
-          display: flex;
-          justify-content: center;
-          gap: 8px;
-          padding: 8px 12px;
-          margin: 8px 20px;
-          border-radius: 12px;
-          background: #fff;
-          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+          transform: translateX(-50%);
+          display: inline-flex;
+          align-items: center;
+          padding: 4px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 100px;
+          box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.08),
+            0 2px 8px rgba(0, 0, 0, 0.04),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          z-index: 90;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .local-toggle:hover {
+          box-shadow: 
+            0 12px 40px rgba(0, 0, 0, 0.12),
+            0 4px 12px rgba(0, 0, 0, 0.06),
+            inset 0 1px 0 rgba(255, 255, 255, 0.9);
         }
 
         .toggle-btn {
+          position: relative;
           border: none;
-          background: #f3f4f6;
-          border-radius: 8px;
-          padding: 8px 12px;
-          font-size: 13px;
+          background: transparent;
+          border-radius: 100px;
+          padding: 10px 24px;
+          font-size: 14px;
+          font-weight: 600;
           color: #6b7280;
           cursor: pointer;
-          transition: all 0.2s;
-          flex: 1;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          white-space: nowrap;
+          z-index: 1;
+        }
+
+        .toggle-btn:hover:not(.active) {
+          color: #374151;
         }
 
         .toggle-btn.active {
-          background: #fff5eb;
-          color: #FF8A00;
+          background: linear-gradient(135deg, #FF8A00 0%, #FF9F33 100%);
+          color: white;
           font-weight: 700;
+          box-shadow: 
+            0 4px 16px rgba(255, 138, 0, 0.25),
+            0 2px 8px rgba(255, 138, 0, 0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.2);
+          transform: scale(1.02);
+        }
+
+        .toggle-btn.active::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 100px;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+          pointer-events: none;
         }
 
         /* ===== Pane 전환 ===== */
