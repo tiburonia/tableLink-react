@@ -219,6 +219,33 @@ class UserService {
     console.log('✅ 사용자 정보 업데이트 완료:', userId);
     return updatedUser;
   }
+
+  /**
+   * 전화번호로 회원 조회
+   */
+  async searchByPhone(phone) {
+    // 전화번호에서 하이픈 제거
+    const cleanPhone = phone.replace(/[-\s]/g, '');
+    console.log(`📱 정규화된 전화번호: ${phone} → ${cleanPhone}`);
+
+    const user = await userRepository.getUserByPhone(cleanPhone);
+
+    if (!user) {
+      console.log(`❌ 전화번호 ${phone}로 등록된 회원 없음`);
+      return null;
+    }
+
+    console.log(`✅ 회원 조회 성공: ${user.name} (ID: ${user.id})`);
+
+    return {
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      point: user.point || 0,
+      createdAt: user.created_at
+    };
+  }
 }
 
 module.exports = new UserService();

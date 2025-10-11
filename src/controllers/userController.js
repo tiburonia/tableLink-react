@@ -153,13 +153,43 @@ class UserController {
     try {
       const { userId, storeId } = req.params;
 
-      const isFavorited = await userService.getFavoriteStatus(parseInt(userId), parseInt(storeId));
+      const isFavorite = await userService.getFavoriteStatus(parseInt(userId), parseInt(storeId));
 
       res.json({
         success: true,
-        userId: parseInt(userId),
-        storeId: parseInt(storeId),
-        isFavorited
+        isFavorite
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 전화번호로 회원 조회
+   */
+  async searchByPhone(req, res, next) {
+    try {
+      const { phone } = req.query;
+
+      if (!phone) {
+        return res.status(400).json({
+          success: false,
+          error: '전화번호가 필요합니다'
+        });
+      }
+
+      const user = await userService.searchByPhone(phone);
+
+      if (!user) {
+        return res.json({
+          success: false,
+          error: '해당 전화번호로 등록된 회원을 찾을 수 없습니다'
+        });
+      }
+
+      res.json({
+        success: true,
+        user
       });
     } catch (error) {
       next(error);

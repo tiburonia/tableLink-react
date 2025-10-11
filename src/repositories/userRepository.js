@@ -29,6 +29,17 @@ class UserRepository {
   }
 
   /**
+   * 유저 정보 조회 (전화번호로)
+   */
+  async getUserByPhone(phone) {
+    const result = await pool.query(`
+      SELECT * FROM users WHERE phone = $1
+    `, [phone]);
+
+    return result.rows[0];
+  }
+
+  /**
    * 사용자 리뷰 조회
    */
   async getUserReviews(userId) {
