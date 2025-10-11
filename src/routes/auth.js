@@ -61,6 +61,8 @@ router.put('/users/update', userController.updateUserInfo);
  */
 router.get('/users/favorites/:userId', userController.getFavoriteStores);
 
+
+
 /**
  * [POST] /users/favorite/toggle - 즐겨찾기 토글
  */

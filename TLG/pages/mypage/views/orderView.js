@@ -45,36 +45,12 @@ export const orderView = {
   renderContent(orders, stats, userInfo) {
     return `
       <div class="order-content">
-        ${this.renderStats(stats)}
         ${this.renderOrderList(orders, userInfo)}
       </div>
     `;
   },
 
-  /**
-   * 통계 카드 렌더링
-   */
-  renderStats(stats) {
-    return `
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">📊</div>
-          <div class="stat-value">${stats.totalOrders}건</div>
-          <div class="stat-label">총 주문</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">📅</div>
-          <div class="stat-value">${stats.thisMonthOrders}건</div>
-          <div class="stat-label">이번 달</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon">💰</div>
-          <div class="stat-value">${stats.totalAmount.toLocaleString()}원</div>
-          <div class="stat-label">총 금액</div>
-        </div>
-      </div>
-    `;
-  },
+  
 
   /**
    * 주문 목록 렌더링
