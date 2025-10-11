@@ -620,6 +620,7 @@ export const regularPageView = {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           white-space: nowrap;
           z-index: 1;
+          flex: 1;
         }
 
         .toggle-btn:hover:not(.active) {
