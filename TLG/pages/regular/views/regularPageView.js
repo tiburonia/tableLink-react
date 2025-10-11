@@ -1,4 +1,3 @@
-
 /**
  * 단골매장 페이지 View (v3 - 네비게이션 개선)
  * UI 렌더링 - 단일 네비게이션 레이어 + 탭 전환
@@ -14,7 +13,7 @@ export const regularPageView = {
     return `
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
-        
+
         <!-- Regular Pane (단골 매장) -->
         <div class="regular-pane">
           ${this.renderFavoriteStoresPreview(favoriteStores)}
@@ -89,7 +88,7 @@ export const regularPageView = {
             <span class="banner-text">새로운 단골 소식 ${newPostsCount}개</span>
           </div>
         ` : ''}
-        
+
         <div class="section-header-compact">
           <h2 class="section-title">🗞 단골 매장 소식</h2>
           <button class="view-all-btn" onclick="renderFeed()">
@@ -99,7 +98,7 @@ export const regularPageView = {
             </svg>
           </button>
         </div>
-        
+
         <div class="feed-list-preview">
           ${previewPosts.map(post => this.renderPostCard(post)).join('')}
         </div>
@@ -117,74 +116,60 @@ export const regularPageView = {
   },
 
   /**
-   * 매장 소식 카드
+   * 매장 소식 카드 (미니멀 버전)
    */
   renderPostCard(post) {
-    const levelColor = window.regularPageService?.getLevelColor(post.userLevel) || '#64748b';
-    const relativeTime = window.regularPageService?.getRelativeTime(post.createdAt) || '최근';
-    const tagColor = this.getTagColor(post.postType);
+    const relativeTime = this.getRelativeTime(post.createdAt);
+    const typeInfo = this.getTypeInfo(post.postType);
+    const truncatedContent = post.content.length > 50
+      ? post.content.substring(0, 50) + '...'
+      : post.content;
 
     return `
-      <div class="post-card">
-        <div class="post-header">
-          <div class="post-store-info">
-            <div class="post-store-logo">${post.storeLogo}</div>
-            <div class="post-store-details">
-              <h4 class="post-store-name">${post.storeName}</h4>
-              <span class="post-meta-time">🕓 ${relativeTime}</span>
+      <article class="feed-post-card" onclick="renderFeed()">
+        <div class="post-card-compact">
+          <div class="post-left">
+            <span class="store-emoji-small">${post.storeLogo}</span>
+            <div class="post-info">
+              <div class="post-header-row">
+                <span class="post-type-tag" style="color: ${typeInfo.color};">
+                  ${typeInfo.icon}
+                </span>
+                <h4 class="post-card-title-compact">${post.title}</h4>
+              </div>
+              <p class="post-card-preview">${truncatedContent}</p>
+              <div class="post-meta-row">
+                <span class="store-name-small">${post.storeName}</span>
+                <span class="post-time-small">${relativeTime}</span>
+              </div>
             </div>
           </div>
-          <div class="post-level-badge" style="background: ${levelColor}">
-            ${post.userLevelName}
-          </div>
-        </div>
 
-        <div class="post-body">
-          <div class="post-tag" style="background: ${tagColor}">
-            ${post.targetTag}
-          </div>
-          <h3 class="post-title">${post.title}</h3>
-          
           ${post.hasImage ? `
-            <div class="post-image-container">
-              <img src="${post.imageUrl}" alt="${post.title}" class="post-image" />
+            <div class="post-thumbnail">
+              <img src="${post.imageUrl}" alt="${post.title}">
             </div>
           ` : ''}
-          
-          <p class="post-content">${post.content}</p>
         </div>
 
-        <div class="post-actions">
-          <div class="post-reactions">
-            <button class="reaction-btn ${post.hasLiked ? 'active' : ''}" onclick="toggleLike(${post.id})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="${post.hasLiked ? '#FF8A00' : 'none'}" stroke="currentColor" stroke-width="2">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-              <span>${post.likes}</span>
-            </button>
-            <button class="reaction-btn" onclick="viewComments(${post.id})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span>${post.comments}</span>
-            </button>
-            <button class="reaction-btn" onclick="sharePost(${post.id})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-            </button>
-          </div>
-
+        <div class="post-actions-minimal">
+          <button class="action-btn-minimal" onclick="event.stopPropagation(); toggleLike(${post.id})">
+            <span>${post.hasLiked ? '❤️' : '🤍'}</span>
+            <span class="action-count">${post.likes}</span>
+          </button>
+          <button class="action-btn-minimal" onclick="event.stopPropagation(); viewComments(${post.id})">
+            <span>💬</span>
+            <span class="action-count">${post.comments}</span>
+          </button>
           ${post.hasCoupon ? `
-            <button class="coupon-btn ${post.couponReceived ? 'received' : ''}" 
-                    onclick="receiveCoupon(${post.id}, ${post.storeId})"
+            <button class="coupon-btn-minimal ${post.couponReceived ? 'received' : ''}"
+                    onclick="event.stopPropagation(); receiveCoupon(${post.id}, ${post.storeId})"
                     ${post.couponReceived ? 'disabled' : ''}>
-              ${post.couponReceived ? '✅ 쿠폰받음' : '🎟️ 쿠폰받기'}
+              ${post.couponReceived ? '✓' : '🎁'}
             </button>
           ` : ''}
         </div>
-      </div>
+      </article>
     `;
   },
 
@@ -310,11 +295,11 @@ export const regularPageView = {
             ${levelIcon} ${store.levelName}
           </div>
         </div>
-        
+
         <div class="store-card-body">
           <h3 class="store-name-v2">${store.storeName}</h3>
           <p class="store-category-v2">${store.category}</p>
-          
+
           <div class="store-stats-v2">
             <div class="stat-item-v2">
               <span class="stat-label-v2">포인트</span>
@@ -591,7 +576,7 @@ export const regularPageView = {
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
           border-radius: 100px;
-          box-shadow: 
+          box-shadow:
             0 8px 32px rgba(0, 0, 0, 0.08),
             0 2px 8px rgba(0, 0, 0, 0.04),
             inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -601,7 +586,7 @@ export const regularPageView = {
         }
 
         .local-toggle:hover {
-          box-shadow: 
+          box-shadow:
             0 12px 40px rgba(0, 0, 0, 0.12),
             0 4px 12px rgba(0, 0, 0, 0.06),
             inset 0 1px 0 rgba(255, 255, 255, 0.9);
@@ -631,7 +616,7 @@ export const regularPageView = {
           background: linear-gradient(135deg, #FF8A00 0%, #FF9F33 100%);
           color: white;
           font-weight: 700;
-          box-shadow: 
+          box-shadow:
             0 4px 16px rgba(255, 138, 0, 0.25),
             0 2px 8px rgba(255, 138, 0, 0.15),
             inset 0 1px 0 rgba(255, 255, 255, 0.2);
@@ -844,210 +829,204 @@ export const regularPageView = {
           background: #e5e7eb;
         }
 
-        /* ===== 매장 소식 피드 ===== */
+        /* ===== 단골 소식 피드 섹션 (미니멀) ===== */
         .feed-section {
-          padding: 16px 20px;
+          background: white;
+          border-radius: 12px;
+          padding: 16px;
+          margin-bottom: 16px;
         }
 
         .new-posts-banner {
-          background: linear-gradient(135deg, #FF8A00 0%, #ff9f33 100%);
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
           color: white;
-          padding: 12px 16px;
-          border-radius: 12px;
+          padding: 8px 12px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
-          gap: 8px;
-          margin-bottom: 16px;
-          box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+          gap: 6px;
+          margin-bottom: 12px;
+          font-size: 12px;
+          font-weight: 600;
         }
 
         .banner-icon {
-          font-size: 18px;
-          animation: ring 2s infinite;
-        }
-
-        @keyframes ring {
-          0%, 100% { transform: rotate(0deg); }
-          10%, 30% { transform: rotate(-10deg); }
-          20%, 40% { transform: rotate(10deg); }
-        }
-
-        .banner-text {
           font-size: 14px;
-          font-weight: 700;
         }
 
         .feed-list-preview {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 8px;
         }
 
-        .post-card {
-          background: white;
-          border-radius: 16px;
-          padding: 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          transition: all 0.3s ease;
+        .feed-post-card {
+          background: #f8f9fa;
+          border-radius: 10px;
+          padding: 12px;
+          transition: all 0.2s;
+          cursor: pointer;
         }
 
-        .post-card:active {
-          transform: scale(0.99);
+        .feed-post-card:hover {
+          background: #f1f3f5;
+          transform: translateX(2px);
         }
 
-        .post-header {
+        .post-card-compact {
           display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
+          gap: 10px;
+          margin-bottom: 8px;
         }
 
-        .post-store-info {
+        .post-left {
+          flex: 1;
           display: flex;
-          gap: 12px;
-          align-items: center;
+          gap: 10px;
+          min-width: 0;
         }
 
-        .post-store-logo {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
-          background: #f3f4f6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 22px;
+        .store-emoji-small {
+          font-size: 18px;
+          flex-shrink: 0;
         }
 
-        .post-store-details {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
+        .post-info {
+          flex: 1;
+          min-width: 0;
         }
 
-        .post-store-name {
-          margin: 0;
-          font-size: 15px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .post-meta-time {
-          font-size: 12px;
-          color: #9ca3af;
-          font-weight: 500;
-        }
-
-        .post-level-badge {
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 11px;
-          color: white;
-          font-weight: 700;
-        }
-
-        .post-body {
-          margin-bottom: 16px;
-        }
-
-        .post-tag {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 11px;
-          color: white;
-          font-weight: 700;
-          margin-bottom: 12px;
-        }
-
-        .post-title {
-          margin: 0 0 12px 0;
-          font-size: 17px;
-          font-weight: 700;
-          color: #1f2937;
-          line-height: 1.4;
-        }
-
-        .post-image-container {
-          width: 100%;
-          border-radius: 12px;
-          overflow: hidden;
-          margin-bottom: 12px;
-        }
-
-        .post-image {
-          width: 100%;
-          height: auto;
-          display: block;
-        }
-
-        .post-content {
-          margin: 0;
-          font-size: 14px;
-          color: #4b5563;
-          line-height: 1.6;
-        }
-
-        .post-actions {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 16px;
-          border-top: 1px solid #f3f4f6;
-        }
-
-        .post-reactions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .reaction-btn {
+        .post-header-row {
           display: flex;
           align-items: center;
           gap: 6px;
-          padding: 8px 12px;
+          margin-bottom: 4px;
+        }
+
+        .post-type-tag {
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+
+        .post-card-title-compact {
+          font-size: 14px;
+          font-weight: 700;
+          color: #2c3e50;
+          margin: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          flex: 1;
+        }
+
+        .post-card-preview {
+          font-size: 12px;
+          color: #7f8c8d;
+          line-height: 1.4;
+          margin: 0 0 6px 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .post-meta-row {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 11px;
+          color: #95a5a6;
+        }
+
+        .store-name-small {
+          font-weight: 600;
+        }
+
+        .post-time-small {
+          color: #bdc3c7;
+        }
+
+        .post-thumbnail {
+          width: 60px;
+          height: 60px;
           border-radius: 8px;
+          overflow: hidden;
+          flex-shrink: 0;
+        }
+
+        .post-thumbnail img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .post-actions-minimal {
+          display: flex;
+          gap: 4px;
+          padding-top: 8px;
+          border-top: 1px solid #ecf0f1;
+        }
+
+        .action-btn-minimal {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 4px 8px;
           border: none;
-          background: #f3f4f6;
-          color: #6b7280;
-          font-size: 13px;
+          background: transparent;
+          border-radius: 6px;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .action-btn-minimal:hover {
+          background: rgba(0, 0, 0, 0.05);
+        }
+
+        .action-count {
+          font-size: 11px;
+          color: #7f8c8d;
+        }
+
+        .coupon-btn-minimal {
+          margin-left: auto;
+          padding: 4px 10px;
+          border: none;
+          background: linear-gradient(135deg, #FF8A00 0%, #FF9F33 100%);
+          color: white;
+          border-radius: 6px;
+          font-size: 12px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
         }
 
-        .reaction-btn.active {
-          background: #fff5eb;
-          color: #FF8A00;
+        .coupon-btn-minimal.received {
+          background: #e9ecef;
+          color: #95a5a6;
+          cursor: not-allowed;
         }
 
-        .reaction-btn:active {
-          transform: scale(0.95);
-        }
-
-        .coupon-btn {
-          padding: 10px 20px;
-          border-radius: 10px;
+        .show-more-btn {
+          width: 100%;
+          padding: 10px;
+          background: #f8f9fa;
           border: none;
-          background: #FF8A00;
-          color: white;
+          border-radius: 8px;
+          color: #546e7a;
           font-size: 13px;
-          font-weight: 700;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.2s;
           display: flex;
           align-items: center;
-          gap: 6px;
+          justify-content: center;
+          gap: 4px;
+          margin-top: 8px;
+          transition: all 0.2s;
         }
 
-        .coupon-btn:active {
-          transform: scale(0.95);
-          background: #e67a00;
-        }
-
-        .coupon-btn.received {
-          background: #10b981;
-          cursor: not-allowed;
+        .show-more-btn:hover {
+          background: #e9ecef;
         }
 
         /* ===== 매장 그리드 ===== */
