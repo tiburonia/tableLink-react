@@ -129,7 +129,7 @@ export const orderView = {
         <!-- 3. 상품 요약 영역 (메인 콘텐츠) -->
         <div class="order-main-section">
           <div class="order-thumbnail">
-            <img src="/assets/store_default.png" alt="${storeName}" onerror="this.src='/assets/tablelink.png'">
+            <img src="/assets/store_default.png" alt="${storeName}" onerror="this.src='/TableLink.png'">
           </div>
           <div class="order-info">
             <h3 class="order-title">${itemsText}</h3>
