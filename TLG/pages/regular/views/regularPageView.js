@@ -204,7 +204,7 @@ export const regularPageView = {
   },
 
   /**
-   * 최근 방문 매장 섹션
+   * 최근 방문 매장 섹션 (미니멀)
    */
   renderRecentVisited(stores) {
     if (!stores || stores.length === 0) return '';
@@ -212,138 +212,96 @@ export const regularPageView = {
     const recentStores = stores.slice(0, 3);
 
     return `
-      <section class="recent-section">
+      <section class="recent-section-minimal">
         <div class="section-header-compact">
-          <h2 class="section-title">📍 최근 방문한 매장</h2>
+          <h2 class="section-title">📍 최근 방문</h2>
         </div>
-        <div class="recent-list">
-          ${recentStores.map(store => this.renderRecentCard(store)).join('')}
+        <div class="recent-list-minimal">
+          ${recentStores.map(store => this.renderRecentCardMinimal(store)).join('')}
         </div>
       </section>
     `;
   },
 
   /**
-   * 최근 방문 카드
+   * 최근 방문 카드 (미니멀)
    */
-  renderRecentCard(store) {
-    const levelColor = window.regularPageService?.getLevelColor(store.level) || '#64748b';
+  renderRecentCardMinimal(store) {
     const levelIcon = window.regularPageService?.getLevelIcon(store.level) || '🏅';
 
     return `
-      <div class="recent-card" onclick="goToStore(${store.storeId})">
-        <div class="recent-thumbnail">
-          <div class="thumbnail-placeholder" style="background: linear-gradient(135deg, ${levelColor}50, ${levelColor}30)">
-            <span class="thumbnail-icon">${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}</span>
-          </div>
+      <div class="recent-card-minimal" onclick="goToStore(${store.storeId})">
+        <div class="recent-icon-minimal">
+          ${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}
         </div>
-        <div class="recent-info">
-          <div class="recent-header">
-            <h3 class="recent-name">${store.storeName}</h3>
-            <span class="recent-badge" style="background: ${levelColor}">${levelIcon} ${store.levelName}</span>
+        <div class="recent-details-minimal">
+          <div class="recent-name-row">
+            <h3 class="recent-name-minimal">${store.storeName}</h3>
+            <span class="recent-level-minimal">${levelIcon}</span>
           </div>
-          <p class="recent-meta">${store.lastVisit} 방문 · 포인트 ${store.points.toLocaleString()}P</p>
-          <div class="recent-actions">
-            <button class="recent-btn primary" onclick="event.stopPropagation(); orderFromStore(${store.storeId})">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-              </svg>
-              다시 주문
-            </button>
-            ${store.hasUnwrittenReview ? `
-              <button class="recent-btn secondary" onclick="event.stopPropagation(); writeReview(${store.storeId})">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                리뷰 남기기
-              </button>
-            ` : ''}
-          </div>
+          <p class="recent-meta-minimal">${store.lastVisit} · ${store.points.toLocaleString()}P</p>
         </div>
       </div>
     `;
   },
 
   /**
-   * 매장 리스트 - 카드 강화
+   * 매장 리스트 (미니멀 + 자세히 보기)
    */
   renderStoresList(stores) {
     if (!stores || stores.length === 0) {
       return this.renderEmptyState();
     }
 
+    const initialCount = 4;
+    const hasMore = stores.length > initialCount;
+
     return `
-      <section class="stores-section">
+      <section class="stores-section-minimal">
         <div class="section-header-compact">
           <h2 class="section-title">내 단골 매장</h2>
-          <button class="filter-btn" id="filterBtn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="4" y1="21" x2="4" y2="14"/>
-              <line x1="4" y1="10" x2="4" y2="3"/>
-              <line x1="12" y1="21" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12" y2="3"/>
-              <line x1="20" y1="21" x2="20" y2="16"/>
-              <line x1="20" y1="12" x2="20" y2="3"/>
+        </div>
+        <div class="stores-list-minimal" id="storesList">
+          ${stores.slice(0, initialCount).map(store => this.renderStoreCardMinimal(store)).join('')}
+        </div>
+        ${hasMore ? `
+          <button class="show-all-stores-btn" onclick="showAllStores()" id="showAllBtn">
+            전체 ${stores.length}곳 보기
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 9l-7 7-7-7"/>
             </svg>
           </button>
-        </div>
-        <div class="stores-grid">
-          ${stores.map(store => this.renderEnhancedStoreCard(store)).join('')}
+        ` : ''}
+        <div class="hidden-stores" style="display:none">
+          ${hasMore ? stores.slice(initialCount).map(store => this.renderStoreCardMinimal(store)).join('') : ''}
         </div>
       </section>
     `;
   },
 
   /**
-   * 강화된 매장 카드
+   * 미니멀 매장 카드
    */
-  renderEnhancedStoreCard(store) {
-    const levelColor = window.regularPageService?.getLevelColor(store.level) || '#64748b';
+  renderStoreCardMinimal(store) {
     const levelIcon = window.regularPageService?.getLevelIcon(store.level) || '🏅';
 
     return `
-      <div class="store-card-v2" onclick="goToStore(${store.storeId})">
-        <div class="store-card-header">
-          <div class="store-thumbnail-v2" style="background: linear-gradient(135deg, ${levelColor}40, ${levelColor}20)">
-            <span class="store-icon-v2">${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}</span>
+      <div class="store-card-minimal" onclick="goToStore(${store.storeId})">
+        <div class="store-left-minimal">
+          <div class="store-icon-minimal">
+            ${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}
           </div>
-          <div class="store-badge-v2" style="background: ${levelColor}">
-            ${levelIcon} ${store.levelName}
+          <div class="store-info-minimal">
+            <div class="store-name-row">
+              <h3 class="store-name-minimal">${store.storeName}</h3>
+              <span class="store-level-badge-minimal">${levelIcon}</span>
+            </div>
+            <p class="store-meta-minimal">${store.category} · ${store.lastVisit}</p>
           </div>
         </div>
-
-        <div class="store-card-body">
-          <h3 class="store-name-v2">${store.storeName}</h3>
-          <p class="store-category-v2">${store.category}</p>
-
-          <div class="store-stats-v2">
-            <div class="stat-item-v2">
-              <span class="stat-label-v2">포인트</span>
-              <span class="stat-value-v2">${store.points.toLocaleString()}P</span>
-            </div>
-            <div class="stat-divider-v2"></div>
-            <div class="stat-item-v2">
-              <span class="stat-label-v2">쿠폰</span>
-              <span class="stat-value-v2">${store.coupons}장</span>
-            </div>
-          </div>
-
-          <div class="store-meta-v2">
-            <span class="meta-text">🕒 ${store.lastVisit}</span>
-            <span class="meta-text">📍 ${store.distance}</span>
-          </div>
-
-          ${store.hasUnwrittenReview ? `
-            <div class="review-alert">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              리뷰 작성하고 쿠폰 받기
-            </div>
-          ` : ''}
+        <div class="store-right-minimal">
+          <div class="store-points-minimal">${store.points.toLocaleString()}P</div>
+          ${store.coupons > 0 ? `<div class="store-coupons-minimal">🎟️ ${store.coupons}</div>` : ''}
         </div>
       </div>
     `;
@@ -663,21 +621,23 @@ export const regularPageView = {
           transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
-        /* ===== 최근 방문 섹션 ===== */
-        .recent-section {
-          padding: 16px 20px;
+        /* ===== 최근 방문 섹션 (미니멀) ===== */
+        .recent-section-minimal {
+          padding: 12px 20px;
+          background: white;
+          margin-bottom: 8px;
         }
 
         .section-header-compact {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 16px;
+          margin-bottom: 12px;
         }
 
         .section-title {
           margin: 0;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 700;
           color: #1f2937;
         }
@@ -743,115 +703,73 @@ export const regularPageView = {
           background: #fff5eb;
         }
 
-        .recent-list {
+        .recent-list-minimal {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
         }
 
-        .recent-card {
-          background: white;
-          border-radius: 16px;
-          padding: 16px;
+        .recent-card-minimal {
           display: flex;
-          gap: 14px;
+          align-items: center;
+          gap: 12px;
+          padding: 10px 12px;
+          background: #f9fafb;
+          border-radius: 10px;
           cursor: pointer;
           transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
 
-        .recent-card:active {
+        .recent-card-minimal:active {
+          background: #f3f4f6;
           transform: scale(0.98);
         }
 
-        .recent-thumbnail {
-          flex-shrink: 0;
-        }
-
-        .thumbnail-placeholder {
-          width: 64px;
-          height: 64px;
-          border-radius: 12px;
+        .recent-icon-minimal {
+          font-size: 24px;
+          width: 40px;
+          height: 40px;
           display: flex;
           align-items: center;
           justify-content: center;
+          background: white;
+          border-radius: 10px;
+          flex-shrink: 0;
         }
 
-        .thumbnail-icon {
-          font-size: 28px;
-        }
-
-        .recent-info {
+        .recent-details-minimal {
           flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
+          min-width: 0;
         }
 
-        .recent-header {
+        .recent-name-row {
           display: flex;
+          align-items: center;
           justify-content: space-between;
-          align-items: flex-start;
+          gap: 8px;
+          margin-bottom: 2px;
         }
 
-        .recent-name {
+        .recent-name-minimal {
           margin: 0;
-          font-size: 16px;
+          font-size: 14px;
           font-weight: 700;
           color: #1f2937;
-        }
-
-        .recent-badge {
-          padding: 4px 10px;
-          border-radius: 8px;
-          font-size: 11px;
-          color: white;
-          font-weight: 700;
+          overflow: hidden;
+          text-overflow: ellipsis;
           white-space: nowrap;
         }
 
-        .recent-meta {
+        .recent-level-minimal {
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+
+        .recent-meta-minimal {
           margin: 0;
-          font-size: 13px;
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        .recent-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 4px;
-        }
-
-        .recent-btn {
-          padding: 8px 14px;
-          border-radius: 8px;
-          border: none;
           font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          transition: all 0.2s;
-        }
-
-        .recent-btn.primary {
-          background: #FF8A00;
-          color: white;
-        }
-
-        .recent-btn.primary:active {
-          background: #e67a00;
-        }
-
-        .recent-btn.secondary {
-          background: #f3f4f6;
-          color: #6b7280;
-        }
-
-        .recent-btn.secondary:active {
-          background: #e5e7eb;
+          color: #9ca3af;
+          font-weight: 500;
         }
 
         /* ===== 단골 소식 피드 섹션 (미니멀) ===== */
@@ -1054,132 +972,129 @@ export const regularPageView = {
           background: #e9ecef;
         }
 
-        /* ===== 매장 그리드 ===== */
-        .stores-section {
-          padding: 16px 20px;
-        }
-
-        .stores-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 12px;
-        }
-
-        .store-card-v2 {
+        /* ===== 매장 섹션 (미니멀) ===== */
+        .stores-section-minimal {
+          padding: 12px 20px;
           background: white;
-          border-radius: 16px;
-          padding: 16px;
-          cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          margin-bottom: 80px;
         }
 
-        .store-card-v2:active {
-          transform: scale(0.97);
-        }
-
-        .store-card-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        }
-
-        .store-thumbnail-v2 {
-          width: 48px;
-          height: 48px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .store-icon-v2 {
-          font-size: 24px;
-        }
-
-        .store-badge-v2 {
-          padding: 4px 8px;
-          border-radius: 8px;
-          font-size: 10px;
-          color: white;
-          font-weight: 700;
-        }
-
-        .store-card-body {
+        .stores-list-minimal {
           display: flex;
           flex-direction: column;
           gap: 8px;
         }
 
-        .store-name-v2 {
-          margin: 0;
-          font-size: 15px;
-          font-weight: 700;
-          color: #1f2937;
-          line-height: 1.3;
+        .store-card-minimal {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.2s;
         }
 
-        .store-category-v2 {
+        .store-card-minimal:active {
+          background: #f3f4f6;
+          transform: scale(0.98);
+        }
+
+        .store-left-minimal {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .store-icon-minimal {
+          font-size: 24px;
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: white;
+          border-radius: 10px;
+          flex-shrink: 0;
+        }
+
+        .store-info-minimal {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .store-name-row {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-bottom: 2px;
+        }
+
+        .store-name-minimal {
+          margin: 0;
+          font-size: 14px;
+          font-weight: 700;
+          color: #1f2937;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .store-level-badge-minimal {
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+
+        .store-meta-minimal {
           margin: 0;
           font-size: 12px;
           color: #9ca3af;
           font-weight: 500;
         }
 
-        .store-stats-v2 {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 8px 0;
-        }
-
-        .stat-item-v2 {
+        .store-right-minimal {
           display: flex;
           flex-direction: column;
+          align-items: flex-end;
           gap: 2px;
+          flex-shrink: 0;
         }
 
-        .stat-label-v2 {
-          font-size: 11px;
-          color: #9ca3af;
-          font-weight: 500;
-        }
-
-        .stat-value-v2 {
+        .store-points-minimal {
           font-size: 13px;
           font-weight: 700;
           color: #FF8A00;
         }
 
-        .stat-divider-v2 {
-          width: 1px;
-          height: 24px;
-          background: #e5e7eb;
-        }
-
-        .store-meta-v2 {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .meta-text {
+        .store-coupons-minimal {
           font-size: 11px;
           color: #6b7280;
         }
 
-        .review-alert {
-          background: #fef2f2;
-          color: #dc2626;
-          padding: 8px;
-          border-radius: 8px;
-          font-size: 11px;
+        .show-all-stores-btn {
+          width: 100%;
+          padding: 12px;
+          margin-top: 12px;
+          border-radius: 10px;
+          border: 1px solid #e5e7eb;
+          background: white;
+          color: #6b7280;
+          font-size: 13px;
           font-weight: 600;
+          cursor: pointer;
           display: flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
-          margin-top: 4px;
+          transition: all 0.2s;
+        }
+
+        .show-all-stores-btn:active {
+          background: #f9fafb;
         }
 
         /* ===== Empty State ===== */

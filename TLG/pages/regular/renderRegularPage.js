@@ -234,6 +234,19 @@ document.addEventListener('click', (e) => {
   }
 });
 
+// 전체 매장 보기 함수
+function showAllStores() {
+  const storesList = document.getElementById('storesList');
+  const hiddenStores = document.querySelector('.hidden-stores');
+  const showAllBtn = document.getElementById('showAllBtn');
+
+  if (storesList && hiddenStores && showAllBtn) {
+    storesList.innerHTML += hiddenStores.innerHTML;
+    showAllBtn.style.display = 'none';
+    hiddenStores.style.display = 'none';
+  }
+}
+
 // 전역으로 노출
 window.toggleLike = toggleLike;
 window.viewComments = viewComments;
@@ -241,6 +254,7 @@ window.sharePost = sharePost;
 window.receiveCoupon = receiveCoupon;
 window.switchRegularTab = switchRegularTab;
 window.removeFavorite = removeFavorite;
+window.showAllStores = showAllStores;
 
 window.renderRegularPage = renderRegularPage;
 window.goToStore = goToStore;
