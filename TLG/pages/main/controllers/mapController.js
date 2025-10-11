@@ -163,8 +163,41 @@ export const mapController = {
       this.moveToCurrentLocation();
     });
 
+    // 키워드 네비게이션 이벤트
+    this.setupKeywordNavEvents();
+
     // 위치 설정 이벤트
     this.setupLocationEvents();
+  },
+
+  /**
+   * 키워드 네비게이션 이벤트 설정
+   */
+  setupKeywordNavEvents() {
+    document.addEventListener('click', (e) => {
+      const keywordBtn = e.target.closest('.keyword-btn');
+      if (!keywordBtn) return;
+
+      const keyword = keywordBtn.dataset.keyword;
+      if (keyword) {
+        console.log(`🔍 키워드 네비게이션 클릭: "${keyword}"`);
+        this.handleKeywordClick(keyword);
+      }
+    });
+  },
+
+  /**
+   * 키워드 클릭 처리
+   */
+  handleKeywordClick(keyword) {
+    // renderSearch 함수로 검색 실행
+    if (typeof renderSearch === 'function') {
+      renderSearch(keyword);
+    } else if (window.renderSearch) {
+      window.renderSearch(keyword);
+    } else {
+      console.error('❌ renderSearch 함수를 찾을 수 없습니다');
+    }
   },
 
   /**

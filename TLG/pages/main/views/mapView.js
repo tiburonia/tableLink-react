@@ -50,6 +50,35 @@ export const mapView = {
         </div>
         <div id="searchResults" class="search-results hidden"></div>
       </div>
+      ${this.renderKeywordNav()}
+    `;
+  },
+
+  /**
+   * 키워드 네비게이션 바 렌더링
+   */
+  renderKeywordNav() {
+    const keywords = [
+      { text: '치킨', icon: '🍗' },
+      { text: '피자', icon: '🍕' },
+      { text: '민생지원금 가능', icon: '💳' },
+      { text: 'Top 100', icon: '🔥' },
+      { text: '분식', icon: '🍜' },
+      { text: '카페', icon: '☕' },
+      { text: '한식', icon: '🍚' },
+      { text: '데이트', icon: '💝' },
+      { text: '점심추천', icon: '🌞' }
+    ];
+
+    return `
+      <nav class="keyword-nav">
+        ${keywords.map(kw => `
+          <button class="keyword-btn" data-keyword="${kw.text}">
+            <span class="keyword-icon">${kw.icon}</span>
+            <span class="keyword-text">${kw.text}</span>
+          </button>
+        `).join('')}
+      </nav>
     `;
   },
 
@@ -486,6 +515,61 @@ export const mapView = {
           right: 12px;
           z-index: 1002;
           pointer-events: auto;
+        }
+
+        /* 키워드 네비게이션 바 */
+        .keyword-nav {
+          display: flex;
+          overflow-x: auto;
+          white-space: nowrap;
+          padding: 8px 0;
+          gap: 8px;
+          margin-top: 8px;
+          scrollbar-width: none;
+          -ms-overflow-style: none;
+        }
+
+        .keyword-nav::-webkit-scrollbar {
+          display: none;
+        }
+
+        .keyword-btn {
+          flex-shrink: 0;
+          background: linear-gradient(135deg, #f8f9fa 0%, #f1f3f5 100%);
+          border: 1px solid rgba(0, 0, 0, 0.06);
+          border-radius: 20px;
+          padding: 6px 14px;
+          font-size: 13px;
+          color: #374151;
+          cursor: pointer;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+          display: flex;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .keyword-btn:hover {
+          background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+          transform: translateY(-1px);
+          box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+          border-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .keyword-btn:active {
+          background: linear-gradient(135deg, #dee2e6 0%, #ced4da 100%);
+          transform: scale(0.96);
+          box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+
+        .keyword-icon {
+          font-size: 14px;
+          line-height: 1;
+        }
+
+        .keyword-text {
+          font-weight: 500;
+          letter-spacing: -0.3px;
         }
 
         .search-container {
