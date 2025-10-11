@@ -48,9 +48,9 @@ export const mapView = {
           <button id="searchBtn"><img width="26" height="26" src="https://img.icons8.com/sf-black/26/search.png" alt="search"/></button>
           <input id="searchInput" type="text" placeholder="매장명, 카테고리 또는 위치 검색...">
         </div>
-        <div id="searchResults" class="search-results hidden"></div>
+         ${this.renderKeywordNav()}
       </div>
-      ${this.renderKeywordNav()}
+     
     `;
   },
 
@@ -429,7 +429,7 @@ export const mapView = {
         /* 알림 버튼 */
         .notification-btn {
           position: absolute;
-          top: 130px;
+          top: 160px;
           right: 15px;
           width: 35px;
           height: 35px;
@@ -513,10 +513,14 @@ export const mapView = {
 
         /* 키워드 네비게이션 바 */
         .keyword-nav {
+          padding: 0 5px 0 5px;
+          position: fixed;
+          left: 0;
+          width: 390px;
           display: flex;
           overflow-x: auto;
           white-space: nowrap;
-          padding: 8px 12px;
+          /* padding: 8px 12px; */
           gap: 8px;
           margin-top: 8px;
           scrollbar-width: none;
