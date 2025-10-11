@@ -54,7 +54,7 @@ export const mypageView = {
       <section class="mypage-info-section">
         <h3 class="section-title-simple">결제</h3>
         <ul class="simple-menu-list">
-          <li onclick="renderAllOrderHTML(userInfo)">
+          <li data-action="view-all-orders" style="cursor: pointer;">
             <span>결제 내역</span>
             <span class="arrow-icon">›</span>
           </li>
@@ -84,7 +84,7 @@ export const mypageView = {
             <span>내 단골가게</span>
             <span class="arrow-icon">›</span>
           </li>
-          <li onclick="renderAllOrderHTML(userInfo)">
+          <li data-action="view-all-orders" style="cursor: pointer;">
             <span>이용 내역</span>
             <span class="arrow-icon">›</span>
           </li>

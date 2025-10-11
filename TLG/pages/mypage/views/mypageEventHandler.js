@@ -44,6 +44,21 @@ export const mypageEventHandler = {
     // 전체보기 버튼 이벤트
     this.attachViewAllListeners();
 
+    // 주문 내역 전체보기 버튼 이벤트 (모든 버튼에 적용)
+    const viewAllOrdersBtns = document.querySelectorAll('[data-action="view-all-orders"]');
+    viewAllOrdersBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (window.userInfo && typeof window.renderAllOrderHTML === 'function') {
+          window.renderAllOrderHTML(window.userInfo);
+        } else {
+          console.error('❌ renderAllOrderHTML 함수 또는 사용자 정보 없음');
+        }
+      });
+    });
+    if (viewAllOrdersBtns.length > 0) {
+      console.log(`✅ 주문 내역 버튼 ${viewAllOrdersBtns.length}개에 이벤트 등록 완료`);
+    }
+
     console.log('✅ 마이페이지 이벤트 핸들러 초기화 완료');
   },
 
