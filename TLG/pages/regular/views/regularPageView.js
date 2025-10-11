@@ -412,6 +412,9 @@ export const regularPageView = {
               매장 찾아보기
             </button>
           </div>
+
+          ${this.renderFooterCTA()}
+          ${this.renderBottomNav()}
         </div>
       `;
     }
@@ -442,6 +445,9 @@ export const regularPageView = {
             </div>
           `).join('')}
         </div>
+
+        ${this.renderFooterCTA()}
+        ${this.renderBottomNav()}
       </div>
     `;
   },
