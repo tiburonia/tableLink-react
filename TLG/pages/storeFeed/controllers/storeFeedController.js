@@ -46,6 +46,13 @@ export const storeFeedController = {
    */
   setupEventListeners() {
     document.addEventListener('click', async (e) => {
+      // 네비게이션 필터링
+      const filterBtn = e.target.closest('.nav-btn');
+      if (filterBtn) {
+        this.handleFilterChange(filterBtn);
+        return;
+      }
+
       const target = e.target.closest('[data-action]');
       if (!target) return;
 
@@ -118,6 +125,30 @@ export const storeFeedController = {
     if (followersSpan) {
       followersSpan.textContent = `${store.followers}명의 단골`;
     }
+  },
+
+  /**
+   * 필터 변경 핸들러
+   */
+  handleFilterChange(filterBtn) {
+    const selected = filterBtn.dataset.filter;
+    
+    // 모든 버튼 비활성화
+    document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+    
+    // 선택된 버튼 활성화
+    filterBtn.classList.add('active');
+
+    // 피드 포스트 필터링
+    document.querySelectorAll('.feed-post').forEach(post => {
+      if (selected === 'all' || post.dataset.type === selected) {
+        post.style.display = 'block';
+      } else {
+        post.style.display = 'none';
+      }
+    });
+
+    console.log(`🔄 [StoreFeedController] 필터 변경: ${selected}`);
   },
 
   /**

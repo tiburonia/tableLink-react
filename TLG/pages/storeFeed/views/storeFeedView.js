@@ -1,7 +1,7 @@
 
 /**
  * StoreFeed View
- * UI 렌더링 계층
+ * UI 렌더링 계층 - SNS 스타일 하단 네비게이션 포함
  */
 
 export const storeFeedView = {
@@ -35,9 +35,29 @@ export const storeFeedView = {
           </button>
         </div>
 
-        <div class="feed-timeline">
+        <div class="feed-timeline" id="feed-timeline">
           ${posts.map(post => this.renderPost(post)).join('')}
         </div>
+
+        <!-- SNS 스타일 하단 네비게이션 -->
+        <nav class="feed-nav">
+          <button class="nav-btn active" data-filter="all">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">전체</span>
+          </button>
+          <button class="nav-btn" data-filter="story">
+            <span class="nav-icon">📖</span>
+            <span class="nav-label">스토리</span>
+          </button>
+          <button class="nav-btn" data-filter="promotion">
+            <span class="nav-icon">🎁</span>
+            <span class="nav-label">이벤트</span>
+          </button>
+          <button class="nav-btn" data-filter="notice">
+            <span class="nav-icon">📢</span>
+            <span class="nav-label">공지</span>
+          </button>
+        </nav>
 
         ${this.getStyles()}
       </section>
@@ -49,7 +69,7 @@ export const storeFeedView = {
    */
   renderPost(post) {
     return `
-      <article class="feed-post ${post.type}" data-post-id="${post.id}">
+      <article class="feed-post ${post.type}" data-type="${post.type}" data-post-id="${post.id}">
         <div class="post-header">
           <img src="${post.avatar}" alt="avatar" class="post-avatar"/>
           <div class="post-meta">
@@ -112,8 +132,8 @@ export const storeFeedView = {
           flex-direction: column;
           background: #fafafa;
           height: 794px;
-          padding: 0px;
-          overflow: auto;
+          overflow: hidden;
+          position: relative;
         }
 
         /* 헤더 */
@@ -225,7 +245,9 @@ export const storeFeedView = {
 
         /* 피드 타임라인 */
         .feed-timeline {
-          padding: 0;
+          flex: 1;
+          overflow-y: auto;
+          padding-bottom: 70px;
         }
 
         .feed-post {
@@ -343,6 +365,65 @@ export const storeFeedView = {
 
         .like-icon, .comment-icon, .save-icon {
           font-size: 16px;
+        }
+
+        /* ===== SNS 스타일 하단 네비게이션 ===== */
+        .feed-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          width: 100%;
+          max-width: 430px;
+          background: rgba(255, 255, 255, 0.92);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          display: flex;
+          justify-content: space-around;
+          align-items: center;
+          padding: 8px 0 12px 0;
+          border-top: 1px solid #e5e7eb;
+          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+          z-index: 150;
+        }
+
+        .nav-btn {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 2px;
+          border: none;
+          background: none;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          padding: 4px 12px;
+        }
+
+        .nav-icon {
+          font-size: 20px;
+          transition: transform 0.2s ease;
+        }
+
+        .nav-label {
+          font-size: 10px;
+          letter-spacing: -0.2px;
+          font-weight: 500;
+        }
+
+        .nav-btn.active {
+          color: #111827;
+        }
+
+        .nav-btn.active .nav-icon {
+          transform: scale(1.15);
+        }
+
+        .nav-btn:hover {
+          color: #374151;
+        }
+
+        .nav-btn:hover .nav-icon {
+          transform: scale(1.1);
         }
       </style>
     `;
