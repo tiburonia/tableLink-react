@@ -11,7 +11,7 @@ export const mypageService = {
    */
   async loadMypageData(userPk) {
     try {
-      const data = await mypageRepository.getUserMypageData(userPk);
+      const data = await mypageRepository.getMypageData(userPk);
 
       // 단골 등급 정보 가져오기
       const regularSummary = await this.getRegularSummary(userPk);

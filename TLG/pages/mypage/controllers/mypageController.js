@@ -98,7 +98,7 @@ export const mypageController = {
       console.error('❌ 마이페이지 렌더링 실패:', error);
       
       // 에러 발생 시에도 작업 정리
-      if (this.currentRenderingTask && this.currentRenderingTask.id === taskId) {
+      if (this.currentRenderingTask) {
         this.currentRenderingTask = null;
       }
       
