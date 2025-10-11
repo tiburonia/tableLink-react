@@ -147,7 +147,11 @@ export const regularPageView = {
 
           ${post.hasImage ? `
             <div class="post-thumbnail">
-              <img src="${post.imageUrl}" alt="${post.title}">
+              <img 
+                src="${post.imageUrl || '/TableLink.png'}" 
+                alt="매장 소식"
+                onerror="this.src='/TableLink.png'"
+              >
             </div>
           ` : ''}
         </div>
@@ -391,7 +395,11 @@ export const regularPageView = {
           ${preview.map(store => `
             <div class="favorite-card" onclick="goToStore(${store.storeId})">
               <div class="favorite-thumb">
-                <img src="${store.imageUrl || '/assets/store_default.png'}" alt="${store.storeName}" onerror="this.src='/assets/store_default.png'" />
+                <img 
+                  src="${store.imageUrl || '/TableLink.png'}" 
+                  alt="${store.storeName}"
+                  onerror="this.src='/TableLink.png'"
+                >
               </div>
               <div class="favorite-info">
                 <h3 class="favorite-name">${store.storeName}</h3>
@@ -444,7 +452,11 @@ export const regularPageView = {
           ${favoriteStores.map(store => `
             <div class="favorite-list-card" onclick="goToStore(${store.storeId})">
               <div class="favorite-list-image">
-                <img src="${store.imageUrl || '/assets/store_default.png'}" alt="${store.storeName}" onerror="this.src='/assets/store_default.png'" />
+                <img 
+                  src="${store.imageUrl || '/TableLink.png'}" 
+                  alt="${store.storeName}"
+                  onerror="this.src='/TableLink.png'"
+                >
                 <button class="favorite-remove-btn" onclick="event.stopPropagation(); removeFavorite(${store.storeId})">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                     <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
