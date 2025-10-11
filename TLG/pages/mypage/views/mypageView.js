@@ -102,7 +102,7 @@ export const mypageView = {
           <span class="nav-label">내주변</span>
         <button class="nav-item" onclick="renderRegularPage()">
           <span class="nav-icon"><img width="30" height="30" src="https://img.icons8.com/pastel-glyph/30/shop--v2.png" alt="shop--v2"/></span>
-           <span class="nav-label">단골매장</span>
+           <span class="nav-label">내맛집</span>
         </button>
         <button class="nav-item active">
           <span class="nav-icon"><img width="30" height="30" src="https://img.icons8.com/ios-filled/30/more.png" alt="more"/></span>

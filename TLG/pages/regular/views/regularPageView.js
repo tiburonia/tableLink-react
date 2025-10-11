@@ -17,10 +17,10 @@ export const regularPageView = {
         
         <!-- Regular Pane (단골 매장) -->
         <div class="regular-pane">
+          ${this.renderFavoriteStoresPreview(favoriteStores)}
           ${this.renderStoreFeed(posts)}
           ${this.renderRecentVisited(stores)}
           ${this.renderStoresList(stores)}
-          ${this.renderFavoriteStoresPreview(favoriteStores)}
         </div>
 
         <!-- Favorite Pane (즐겨찾기 전체) -->
@@ -608,11 +608,12 @@ export const regularPageView = {
         }
 
         .toggle-btn {
+          min-width: 100px;
           position: relative;
           border: none;
           background: transparent;
           border-radius: 100px;
-          padding: 10px 24px;
+          padding: 10px 12px;
           font-size: 14px;
           font-weight: 600;
           color: #6b7280;
@@ -620,7 +621,6 @@ export const regularPageView = {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           white-space: nowrap;
           z-index: 1;
-          flex: 1;
         }
 
         .toggle-btn:hover:not(.active) {
