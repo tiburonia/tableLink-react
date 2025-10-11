@@ -506,6 +506,7 @@ export const mapView = {
           top: 48px;
           left: 12px;
           right: 12px;
+          max-width: calc(430px - 24px);
           z-index: 1002;
           pointer-events: auto;
         }
