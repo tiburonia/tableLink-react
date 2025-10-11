@@ -25,9 +25,9 @@
 
 /* 기본 레이아웃 */
 #subContent {
+  height: 714px;
   position: fixed;
-  top: 0;
-  bottom: 60px;
+  bottom: 80px;
   left: 0;
   width: 100%;
   max-width: 430px;

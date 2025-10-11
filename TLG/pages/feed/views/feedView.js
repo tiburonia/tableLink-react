@@ -220,7 +220,7 @@ export const feedView = {
           top: 0;
           background: white;
           border-bottom: 1px solid #e5e7eb;
-          padding: 60px 16px 12px 16px;
+          padding: 12px 16px 12px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -258,7 +258,6 @@ export const feedView = {
         /* 탭 */
         .feed-tabs {
           position: sticky;
-          top: 84px;
           background: white;
           padding: 12px 16px 8px 16px;
           display: flex;
@@ -483,7 +482,6 @@ export const feedView = {
         .bottom-nav-bar {
           position: fixed;
           bottom: 0;
-          left: 0;
           width: 100%;
           max-width: 430px;
           background: rgba(255, 255, 255, 0.92);

@@ -1,0 +1,114 @@
+목표 정리
+
+renderMap 상단 searchBar 아래에 “인기 키워드 네비게이션 바” 추가
+클릭 시 → renderSearch(keyword) 자동 호출
+
+🧩 설계 개요
+구분	설명
+컴포넌트 위치	renderMap() 내 searchBar 바로 아래
+구조	가로 스크롤형 네비게이션 바 (overflow-x: auto)
+요소	키워드 버튼들 (치킨, 피자, 민생지원금 가능, top100 등)
+동작	클릭 시 renderSearch(keyword) 실행
+UX 톤	미니멀 + 둥근 pill 버튼 + 작고 간격 있는 구획
+시각 효과	가볍고 공기감 있는 spacing, soft shadow, hover 반응
+🧱 HTML 구조 (renderMap 내 삽입 예시)
+// renderMap 내부 searchBar 바로 아래 추가
+const keywordNavHTML = `
+  <nav class="keyword-nav">
+    <button class="keyword-btn" data-keyword="치킨">🍗 치킨</button>
+    <button class="keyword-btn" data-keyword="피자">🍕 피자</button>
+    <button class="keyword-btn" data-keyword="민생지원금 가능">💳 민생지원금 가능</button>
+    <button class="keyword-btn" data-keyword="top100">🔥 Top 100</button>
+    <button class="keyword-btn" data-keyword="분식">🍜 분식</button>
+    <button class="keyword-btn" data-keyword="카페">☕ 카페</button>
+  </nav>
+`;
+
+document.querySelector('.search-bar').insertAdjacentHTML('afterend', keywordNavHTML);
+
+🎨 CSS 스타일
+.keyword-nav {
+  display: flex;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 6px 10px;
+  gap: 8px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE */
+}
+
+.keyword-nav::-webkit-scrollbar {
+  display: none; /* Chrome, Safari */
+}
+
+.keyword-btn {
+  flex-shrink: 0;
+  background: #f3f4f6;
+  border: none;
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.keyword-btn:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+.keyword-btn:active {
+  background: #d1d5db;
+  transform: scale(0.96);
+}
+
+⚙️ 클릭 이벤트 로직
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.keyword-btn');
+  if (!btn) return;
+
+  const keyword = btn.dataset.keyword;
+  console.log(`🔍 키워드 클릭: ${keyword}`);
+
+  // renderSearch로 바로 이동
+  renderSearch(keyword);
+});
+
+💡 UX 디테일 팁
+항목	추천값
+height	약 42~48px (searchBar보다 낮게)
+gap	6~8px → 손가락 탭 시 간격 쾌적
+폰트 크기	13px (한 줄에서 많은 키워드 표현 가능)
+radius	20px 이상 → pill형 버튼 감성
+스크롤	스와이프 가능하게 (overflow-x: auto)
+아이콘	키워드 앞에 이모지나 작은 아이콘 붙이기 → 인식성 ↑
+📱 시각 예시
+[🔍 검색바]
+🍗 치킨    🍕 피자    💳 민생지원금 가능    🔥 Top100    🍜 분식    ☕ 카페
+──────────────────────────────────────────────
+[지도 영역]
+
+
+👉 UX적으로는 카테고리+트렌드+이슈형 키워드 섞으면 좋음.
+예: “데이트”, “점심추천”, “한강뷰”, “비 오는 날 메뉴” 같은 감성형 키워드도 가능.
+
+🧠 확장 아이디어 (추후)
+
+키워드 클릭 시 renderSearch(keyword, { source: 'quick-nav' }) 식으로 호출
+→ 나중에 “어떤 경로로 검색 진입했는지” 분석 가능 (데이터 기반 UX 분석)
+
+active 상태 유지 (선택된 키워드 색상 강조)
+
+TL 추천 키워드 API 붙이면 자동 갱신 가능
+
+✅ 정리
+항목	내용
+기능명	Keyword Navigation Bar
+삽입 위치	renderMap → searchBar 아래
+UX 특징	pill형 버튼, 가로 스크롤, 경쾌한 gap, 작은 height
+동작	클릭 시 renderSearch(keyword) 실행
+목적	검색 접근성 향상 + 사용자의 탐색 흐름 유도

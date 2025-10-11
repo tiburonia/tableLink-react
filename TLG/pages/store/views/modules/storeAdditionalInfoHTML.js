@@ -546,7 +546,7 @@ export const storeAdditionalInfoHTML = {
         /* 공지사항 섹션 */
         .notices-section {
           background: #ffffff;
-          padding: 24px 20px;
+          padding-bottom: 10px;
           margin-top: 8px;
           border-top: 2px solid #f8fafc;
         }

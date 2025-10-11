@@ -134,6 +134,7 @@ export const storeFeedView = {
           height: 794px;
           overflow: hidden;
           position: relative;
+          padding: 0;
         }
 
         /* 헤더 */
@@ -184,7 +185,6 @@ export const storeFeedView = {
           background: white;
           padding: 16px;
           border-bottom: 1px solid #f3f4f6;
-          margin-bottom: 12px;
         }
 
         .store-avatar {
