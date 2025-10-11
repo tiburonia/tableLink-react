@@ -50,7 +50,6 @@ export const regularPageView = {
             </button>
           </div>
         </div>
-        <p class="header-subtitle">총 단골 ${summary?.totalStores || 0}곳 · 최근 방문 ${summary?.lastVisit || '-'}</p>
       </header>
     `;
   },
@@ -501,7 +500,7 @@ export const regularPageView = {
         /* ===== 헤더 ===== */
         .regular-header {
           background: white;
-          padding: 0px 20px 16px 20px;
+          padding: 0px 20px 
           position: sticky;
           top: 0;
           z-index: 100;
