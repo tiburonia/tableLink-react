@@ -174,7 +174,7 @@ export const orderView = {
       <style>
         .order-history-container {
           position: fixed;
-          top: 0;
+          top: 60px;
           left: 0;
           right: 0;
           bottom: 0;

@@ -48,16 +48,19 @@ export const mypageView = {
         </div>
       </section>
 
-      <!-- 주문 섹션  오늘 구현하자.-->
-
+      <section class="mypage-info-section">
+        <h3 class="section-title-simple">주문</h3>
+        <ul class="simple-menu-list">
+          <li data-action="view-all-orders" style="cursor: pointer;">
+            <span>주문 내역</span>
+            <span class="arrow-icon">›</span>
+          </li>
+        </ul>
+      </section>
       <!-- 결제 섹션 -->
       <section class="mypage-info-section">
         <h3 class="section-title-simple">결제</h3>
         <ul class="simple-menu-list">
-          <li data-action="view-all-orders" style="cursor: pointer;">
-            <span>결제 내역</span>
-            <span class="arrow-icon">›</span>
-          </li>
           <li onclick="alert('준비중입니다')">
             <span>테이블링크 간편결제 관리</span>
             <span class="arrow-icon">›</span>
