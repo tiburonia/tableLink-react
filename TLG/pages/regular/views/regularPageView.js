@@ -1,7 +1,7 @@
 
 /**
- * 단골매장 페이지 View (v2 - 리디자인)
- * UI 렌더링 - 감정적 몰입감 + 개인화 강화
+ * 단골매장 페이지 View (v3 - 네비게이션 개선)
+ * UI 렌더링 - 단일 네비게이션 레이어 + 탭 전환
  */
 
 export const regularPageView = {
@@ -14,11 +14,21 @@ export const regularPageView = {
     return `
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
-        ${this.renderStoreFeed(posts)}
-        ${this.renderRecentVisited(stores)}
-        ${this.renderStoresList(stores)}
-        ${this.renderFavoriteStores(favoriteStores)}
-        ${this.renderFooterCTA()}
+        ${this.renderLocalToggle()}
+        
+        <!-- Regular Pane (단골 매장) -->
+        <div class="regular-pane">
+          ${this.renderStoreFeed(posts)}
+          ${this.renderRecentVisited(stores)}
+          ${this.renderStoresList(stores)}
+          ${this.renderFavoriteStoresPreview(favoriteStores)}
+        </div>
+
+        <!-- Favorite Pane (즐겨찾기 전체) -->
+        <div class="favorite-pane" style="display:none">
+          ${this.renderFavoriteListGrid(favoriteStores)}
+        </div>
+
         ${this.renderBottomNav()}
       </div>
       ${this.getStyles()}
@@ -26,13 +36,13 @@ export const regularPageView = {
   },
 
   /**
-   * 헤더 영역 - 심플하게 개선
+   * 헤더 영역
    */
   renderHeader(summary) {
     return `
       <header class="regular-header">
         <div class="header-content">
-          <h1 class="page-title">❤️ 단골매장</h1>
+          <h1 class="page-title">🍽️ 내 맛집</h1>
           <div class="header-actions">
             <button class="icon-btn" id="searchBtn" aria-label="검색">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -47,20 +57,29 @@ export const regularPageView = {
     `;
   },
 
-  
+  /**
+   * 로컬 토글 바 (단골/즐겨찾기)
+   */
+  renderLocalToggle() {
+    return `
+      <div class="local-toggle">
+        <button class="toggle-btn active" data-tab="regular">❤️ 단골</button>
+        <button class="toggle-btn" data-tab="favorite">⭐ 즐겨찾기</button>
+      </div>
+    `;
+  },
 
   /**
-   * 매장 소식 피드 섹션 - 요약형 (2~3개만 표시)
+   * 매장 소식 피드 섹션
    */
   renderStoreFeed(posts) {
     if (!posts || posts.length === 0) return '';
 
     const newPostsCount = posts.filter(p => {
       const diff = Date.now() - new Date(p.createdAt);
-      return diff < 24 * 60 * 60 * 1000; // 24시간 이내
+      return diff < 24 * 60 * 60 * 1000;
     }).length;
 
-    // 최신 2~3개만 표시
     const previewPosts = posts.slice(0, 3);
 
     return `
@@ -184,7 +203,7 @@ export const regularPageView = {
   },
 
   /**
-   * 최근 방문 매장 섹션 (NEW)
+   * 최근 방문 매장 섹션
    */
   renderRecentVisited(stores) {
     if (!stores || stores.length === 0) return '';
@@ -352,9 +371,9 @@ export const regularPageView = {
   },
 
   /**
-   * 즐겨찾기 매장 섹션 (가로 스크롤)
+   * 즐겨찾기 매장 미리보기 (가로 스크롤)
    */
-  renderFavoriteStores(favoriteStores) {
+  renderFavoriteStoresPreview(favoriteStores) {
     if (!favoriteStores || favoriteStores.length === 0) return '';
 
     const preview = favoriteStores.slice(0, 8);
@@ -362,8 +381,8 @@ export const regularPageView = {
     return `
       <section class="favorite-section">
         <div class="section-header-compact">
-          <h2 class="section-title">⭐ 즐겨찾기 매장</h2>
-          <button class="view-all-btn" onclick="switchRegularTab('favorite')">
+          <h2 class="section-title">⭐ 내가 찜해둔 곳</h2>
+          <button class="view-all-btn" data-tab="favorite">
             전체보기
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 18l6-6-6-6"/>
@@ -389,43 +408,41 @@ export const regularPageView = {
   },
 
   /**
-   * 즐겨찾기 전체 리스트 페이지 렌더링
+   * 즐겨찾기 전체 그리드
    */
-  renderFavoriteListPage(favoriteStores) {
+  renderFavoriteListGrid(favoriteStores) {
     if (!favoriteStores || favoriteStores.length === 0) {
       return `
-        <div class="favorite-list-page">
-          <header class="favorite-list-header">
-            <h1 class="page-title">⭐ 즐겨찾기 매장</h1>
-            <p class="header-subtitle">총 0곳</p>
-          </header>
-          
-          <div class="empty-state-v2">
-            <div class="empty-icon-v2">⭐</div>
-            <h3 class="empty-title-v2">즐겨찾기한 매장이 없어요</h3>
-            <p class="empty-text-v2">마음에 드는 매장을 즐겨찾기하고<br>빠르게 찾아보세요!</p>
-            <button class="empty-btn" onclick="renderMap()">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-                <circle cx="12" cy="10" r="3"/>
-              </svg>
-              매장 찾아보기
-            </button>
-          </div>
-
-          ${this.renderFooterCTA()}
-          ${this.renderBottomNav()}
+        <div class="empty-state-v2">
+          <div class="empty-icon-v2">⭐</div>
+          <h3 class="empty-title-v2">즐겨찾기한 매장이 없어요</h3>
+          <p class="empty-text-v2">마음에 드는 매장을 즐겨찾기하고<br>빠르게 찾아보세요!</p>
+          <button class="empty-btn" onclick="renderMap()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            매장 찾아보기
+          </button>
         </div>
       `;
     }
 
     return `
-      <div class="favorite-list-page">
-        <header class="favorite-list-header">
-          <h1 class="page-title">⭐ 즐겨찾기 매장</h1>
-          <p class="header-subtitle">총 ${favoriteStores.length}곳</p>
-        </header>
-
+      <section class="favorite-list-grid-section">
+        <div class="section-header-compact">
+          <h2 class="section-title">⭐ 즐겨찾기 (${favoriteStores.length}곳)</h2>
+          <button class="filter-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="4" y1="21" x2="4" y2="14"/>
+              <line x1="4" y1="10" x2="4" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12" y2="3"/>
+              <line x1="20" y1="21" x2="20" y2="16"/>
+              <line x1="20" y1="12" x2="20" y2="3"/>
+            </svg>
+          </button>
+        </div>
         <div class="favorite-list-grid">
           ${favoriteStores.map(store => `
             <div class="favorite-list-card" onclick="goToStore(${store.storeId})">
@@ -445,39 +462,7 @@ export const regularPageView = {
             </div>
           `).join('')}
         </div>
-
-        ${this.renderFooterCTA()}
-        ${this.renderBottomNav()}
-      </div>
-    `;
-  },
-
-  /**
-   * Content Carousel 탭 네비게이션 (footer-cta-v2)
-   */
-  renderFooterCTA() {
-    return `
-      <div class="content-carousel-wrapper">
-        <div class="content-carousel-container" id="contentCarousel">
-          <div class="carousel-page active" data-page="regular">
-            <!-- 단골 페이지 컨텐츠는 메인 컨테이너에 렌더링됨 -->
-          </div>
-          <div class="carousel-page" data-page="favorite">
-            <!-- 즐겨찾기 페이지 컨텐츠는 동적으로 렌더링됨 -->
-          </div>
-        </div>
-        
-        <footer class="footer-tab-nav">
-          <button class="tab-nav-btn active" data-tab="regular" onclick="switchRegularTab('regular')">
-            <span class="tab-icon">❤️</span>
-            <span class="tab-label">단골 매장</span>
-          </button>
-          <button class="tab-nav-btn" data-tab="favorite" onclick="switchRegularTab('favorite')">
-            <span class="tab-icon">⭐</span>
-            <span class="tab-label">즐겨찾기</span>
-          </button>
-        </footer>
-      </div>
+      </section>
     `;
   },
 
@@ -509,7 +494,7 @@ export const regularPageView = {
           <span class="nav-icon">
             <img width="26" height="26" src="https://img.icons8.com/pastel-glyph/26/shop--v2.png" alt="regular"/>
           </span>
-          <span class="nav-label">단골매장</span>
+          <span class="nav-label">내맛집</span>
         </button>
         <button onclick="renderMyPage()" class="nav-item">
           <span class="nav-icon">
@@ -520,8 +505,6 @@ export const regularPageView = {
       </nav>
     `;
   },
-
-  
 
   /**
    * 스타일
@@ -534,14 +517,10 @@ export const regularPageView = {
         }
 
         .regular-page-container {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 775px;
+          min-height: 100dvh;
           background: #fafafa;
+          padding-bottom: calc(68px + 16px);
           overflow-y: auto;
-          padding-bottom: 160px;
         }
 
         /* ===== 헤더 ===== */
@@ -598,6 +577,42 @@ export const regularPageView = {
           font-size: 13px;
           color: #9ca3af;
           font-weight: 500;
+        }
+
+        /* ===== 로컬 토글 ===== */
+        .local-toggle {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          padding: 8px 12px;
+          margin: 8px 20px;
+          border-radius: 12px;
+          background: #fff;
+          box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+        }
+
+        .toggle-btn {
+          border: none;
+          background: #f3f4f6;
+          border-radius: 8px;
+          padding: 8px 12px;
+          font-size: 13px;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.2s;
+          flex: 1;
+        }
+
+        .toggle-btn.active {
+          background: #fff5eb;
+          color: #FF8A00;
+          font-weight: 700;
+        }
+
+        /* ===== Pane 전환 ===== */
+        .regular-pane,
+        .favorite-pane {
+          transition: opacity 0.25s ease, transform 0.25s ease;
         }
 
         /* ===== 최근 방문 섹션 ===== */
@@ -824,7 +839,7 @@ export const regularPageView = {
           font-weight: 700;
         }
 
-        .feed-list {
+        .feed-list-preview {
           display: flex;
           flex-direction: column;
           gap: 16px;
@@ -1176,7 +1191,7 @@ export const regularPageView = {
 
         /* ===== 즐겨찾기 매장 ===== */
         .favorite-section {
-          padding: 16px 20px 0 20px;
+          padding: 16px 20px;
           background: white;
           border-radius: 20px 20px 0 0;
           margin-top: 12px;
@@ -1249,142 +1264,15 @@ export const regularPageView = {
           font-weight: 500;
         }
 
-        /* ===== Content Carousel Wrapper ===== */
-        .content-carousel-wrapper {
-          position: relative;
-        }
-
-        .content-carousel-container {
-          position: relative;
-          width: 100%;
-          overflow: hidden;
-        }
-
-        .carousel-page {
-          position: absolute;
-          top: 0;
-          left: 100%;
-          width: 100%;
-          height: 100%;
-          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          opacity: 0;
-        }
-
-        .carousel-page.active {
-          position: relative;
-          left: 0;
-          transform: translateX(0);
-          opacity: 1;
-        }
-
-        .carousel-page.slide-out-left {
-          transform: translateX(-100%);
-          opacity: 0;
-        }
-
-        .carousel-page.slide-in-right {
-          transform: translateX(0);
-          opacity: 1;
-        }
-
-        .carousel-page.slide-out-right {
-          transform: translateX(100%);
-          opacity: 0;
-        }
-
-        .carousel-page.slide-in-left {
-          transform: translateX(0);
-          opacity: 1;
-        }
-
-        /* ===== Footer Tab Navigation ===== */
-        .footer-tab-nav {
-          position: fixed;
-          bottom: 72px;
-          left: 0;
-          right: 0;
-          background: white;
-          box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-          display: flex;
-          z-index: 99;
-          border-top: 1px solid #f3f4f6;
-        }
-
-        .tab-nav-btn {
-          flex: 1;
-          padding: 16px;
-          border: none;
-          background: white;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          position: relative;
-        }
-
-        .tab-nav-btn::after {
-          content: '';
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: transparent;
-          transition: all 0.3s;
-        }
-
-        .tab-nav-btn.active::after {
-          background: #FF8A00;
-        }
-
-        .tab-nav-btn.active {
-          color: #FF8A00;
-        }
-
-        .tab-nav-btn:active {
-          background: #fafafa;
-        }
-
-        .tab-icon {
-          font-size: 24px;
-          transition: transform 0.2s;
-        }
-
-        .tab-nav-btn.active .tab-icon {
-          transform: scale(1.1);
-        }
-
-        .tab-label {
-          font-size: 12px;
-          font-weight: 600;
-          color: #6b7280;
-        }
-
-        .tab-nav-btn.active .tab-label {
-          color: #FF8A00;
-        }
-
-        /* ===== 즐겨찾기 리스트 페이지 ===== */
-        .favorite-list-page {
-          padding: 0 0 160px 0;
-        }
-
-        .favorite-list-header {
-          background: white;
-          padding: 60px 20px 16px 20px;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        /* ===== 즐겨찾기 전체 그리드 ===== */
+        .favorite-list-grid-section {
+          padding: 16px 20px;
         }
 
         .favorite-list-grid {
           display: grid;
           grid-template-columns: repeat(2, 1fr);
           gap: 12px;
-          padding: 16px 20px;
         }
 
         .favorite-list-card {
@@ -1469,6 +1357,8 @@ export const regularPageView = {
         .bottom-nav-bar {
           position: fixed;
           bottom: 0;
+          left: 0;
+          right: 0;
           background: white;
           display: flex;
           justify-content: space-around;
@@ -1504,12 +1394,9 @@ export const regularPageView = {
 
         /* 반응형 */
         @media (max-width: 380px) {
-          .stores-grid {
+          .stores-grid,
+          .favorite-list-grid {
             grid-template-columns: 1fr;
-          }
-
-          .hero-title {
-            font-size: 16px;
           }
 
           .recent-actions {
@@ -1522,4 +1409,4 @@ export const regularPageView = {
 };
 
 window.regularPageView = regularPageView;
-console.log('✅ regularPageView v2 모듈 로드 완료 (리디자인)');
+console.log('✅ regularPageView v3 모듈 로드 완료 (네비게이션 개선)');

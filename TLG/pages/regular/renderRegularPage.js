@@ -58,7 +58,7 @@ async function switchRegularTab(tab) {
 
   // 슬라이드 방향 결정 (regular -> favorite: 왼쪽으로, favorite -> regular: 오른쪽으로)
   const isMovingRight = (currentTab === 'regular' && tab === 'favorite');
-  
+
   if (tab === 'favorite') {
     // 즐겨찾기 페이지로 전환
     const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : window.userInfo;
@@ -66,17 +66,17 @@ async function switchRegularTab(tab) {
 
     const { regularPageService } = await import('/TLG/pages/regular/services/regularPageService.js');
     const result = await regularPageService.getRegularStoresData(userInfo.userId);
-    
+
     const { regularPageView } = await import('/TLG/pages/regular/views/regularPageView.js');
-    
+
     // Carousel 애니메이션 적용
     regularContainer.style.transform = isMovingRight ? 'translateX(-100%)' : 'translateX(100%)';
     regularContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    
+
     setTimeout(() => {
       regularContainer.innerHTML = regularPageView.renderFavoriteListPage(result.favoriteStores);
       regularContainer.style.transform = 'translateX(0)';
-      
+
       setTimeout(() => {
         regularContainer.style.transition = '';
       }, 300);
@@ -85,11 +85,11 @@ async function switchRegularTab(tab) {
     // 단골 매장 페이지로 전환
     regularContainer.style.transform = isMovingRight ? 'translateX(-100%)' : 'translateX(100%)';
     regularContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-    
+
     setTimeout(async () => {
       await renderRegularPage();
       regularContainer.style.transform = 'translateX(0)';
-      
+
       setTimeout(() => {
         regularContainer.style.transition = '';
       }, 300);
@@ -197,6 +197,42 @@ function receiveCoupon(postId, storeId) {
   btn.classList.add('received');
   btn.disabled = true;
 }
+
+// 탭 전환 이벤트 핸들러 (단골/즐겨찾기)
+document.addEventListener('click', (e) => {
+  const tabBtn = e.target.closest('.toggle-btn, .view-all-btn[data-tab]');
+  if (!tabBtn) return;
+
+  const tab = tabBtn.dataset.tab;
+  if (!tab) return;
+
+  // 토글 버튼 활성화
+  document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+  const targetToggle = document.querySelector(`.toggle-btn[data-tab="${tab}"]`);
+  if (targetToggle) targetToggle.classList.add('active');
+
+  // Pane 전환 (페이드 효과)
+  const regularPane = document.querySelector('.regular-pane');
+  const favoritePane = document.querySelector('.favorite-pane');
+
+  if (regularPane && favoritePane) {
+    if (tab === 'regular') {
+      favoritePane.style.opacity = '0';
+      setTimeout(() => {
+        favoritePane.style.display = 'none';
+        regularPane.style.display = 'block';
+        setTimeout(() => { regularPane.style.opacity = '1'; }, 10);
+      }, 250);
+    } else {
+      regularPane.style.opacity = '0';
+      setTimeout(() => {
+        regularPane.style.display = 'none';
+        favoritePane.style.display = 'block';
+        setTimeout(() => { favoritePane.style.opacity = '1'; }, 10);
+      }, 250);
+    }
+  }
+});
 
 // 전역으로 노출
 window.toggleLike = toggleLike;
