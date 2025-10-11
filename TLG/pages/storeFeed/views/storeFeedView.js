@@ -111,8 +111,9 @@ export const storeFeedView = {
           display: flex;
           flex-direction: column;
           background: #fafafa;
-          min-height: 100vh;
-          padding-bottom: 20px;
+          height: 794px;
+          padding: 0px;
+          overflow: auto;
         }
 
         /* 헤더 */
@@ -287,6 +288,7 @@ export const storeFeedView = {
           width: 100%;
           height: 280px;
           object-fit: cover;
+          padding: 20px;
         }
 
         .post-body {
