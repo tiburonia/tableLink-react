@@ -363,7 +363,7 @@ export const regularPageView = {
       <section class="favorite-section">
         <div class="section-header-compact">
           <h2 class="section-title">⭐ 즐겨찾기 매장</h2>
-          <button class="view-all-btn" onclick="alert('즐겨찾기 전체보기는 곧 구현됩니다!')">
+          <button class="view-all-btn" onclick="switchRegularTab('favorite')">
             전체보기
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 18l6-6-6-6"/>
@@ -389,24 +389,76 @@ export const regularPageView = {
   },
 
   /**
-   * 하단 고정 CTA
+   * 즐겨찾기 전체 리스트 페이지 렌더링
+   */
+  renderFavoriteListPage(favoriteStores) {
+    if (!favoriteStores || favoriteStores.length === 0) {
+      return `
+        <div class="favorite-list-page">
+          <header class="favorite-list-header">
+            <h1 class="page-title">⭐ 즐겨찾기 매장</h1>
+            <p class="header-subtitle">총 0곳</p>
+          </header>
+          
+          <div class="empty-state-v2">
+            <div class="empty-icon-v2">⭐</div>
+            <h3 class="empty-title-v2">즐겨찾기한 매장이 없어요</h3>
+            <p class="empty-text-v2">마음에 드는 매장을 즐겨찾기하고<br>빠르게 찾아보세요!</p>
+            <button class="empty-btn" onclick="renderMap()">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              매장 찾아보기
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="favorite-list-page">
+        <header class="favorite-list-header">
+          <h1 class="page-title">⭐ 즐겨찾기 매장</h1>
+          <p class="header-subtitle">총 ${favoriteStores.length}곳</p>
+        </header>
+
+        <div class="favorite-list-grid">
+          ${favoriteStores.map(store => `
+            <div class="favorite-list-card" onclick="goToStore(${store.storeId})">
+              <div class="favorite-list-image">
+                <img src="${store.imageUrl || '/assets/store_default.png'}" alt="${store.storeName}" onerror="this.src='/assets/store_default.png'" />
+                <button class="favorite-remove-btn" onclick="event.stopPropagation(); removeFavorite(${store.storeId})">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="favorite-list-info">
+                <h3 class="favorite-list-name">${store.storeName}</h3>
+                <p class="favorite-list-category">${store.category || '기타'}</p>
+                ${store.distance ? `<p class="favorite-list-distance">📍 ${store.distance}</p>` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  /**
+   * 탭 네비게이션 (footer-cta-v2 대체)
    */
   renderFooterCTA() {
     return `
-      <footer class="footer-cta-v2">
-        <button class="cta-btn-v2 outline" onclick="viewAllRegularStores()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          모든 단골 보기
+      <footer class="footer-tab-nav">
+        <button class="tab-nav-btn active" data-tab="regular" onclick="switchRegularTab('regular')">
+          <span class="tab-icon">❤️</span>
+          <span class="tab-label">단골 매장</span>
         </button>
-        <button class="cta-btn-v2 filled" onclick="goToCoupons()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
-          내 쿠폰함 바로가기
+        <button class="tab-nav-btn" data-tab="favorite" onclick="switchRegularTab('favorite')">
+          <span class="tab-icon">⭐</span>
+          <span class="tab-label">즐겨찾기</span>
         </button>
       </footer>
     `;
@@ -1180,52 +1232,172 @@ export const regularPageView = {
           font-weight: 500;
         }
 
-        /* ===== Footer CTA ===== */
-        .footer-cta-v2 {
+        /* ===== Footer Tab Navigation ===== */
+        .footer-tab-nav {
           position: fixed;
           bottom: 72px;
           left: 0;
           right: 0;
-          padding: 12px 20px;
           background: white;
           box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
           display: flex;
-          gap: 12px;
           z-index: 99;
+          border-top: 1px solid #f3f4f6;
         }
 
-        .cta-btn-v2 {
+        .tab-nav-btn {
           flex: 1;
-          padding: 14px 20px;
-          border-radius: 12px;
-          font-size: 14px;
-          font-weight: 700;
+          padding: 16px;
+          border: none;
+          background: white;
           cursor: pointer;
           transition: all 0.2s;
           display: flex;
+          flex-direction: column;
           align-items: center;
-          justify-content: center;
-          gap: 8px;
+          gap: 6px;
+          position: relative;
         }
 
-        .cta-btn-v2.outline {
-          background: white;
-          border: 2px solid #FF8A00;
+        .tab-nav-btn::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: transparent;
+          transition: all 0.3s;
+        }
+
+        .tab-nav-btn.active::after {
+          background: #FF8A00;
+        }
+
+        .tab-nav-btn.active {
           color: #FF8A00;
         }
 
-        .cta-btn-v2.outline:active {
-          background: #fff5eb;
+        .tab-nav-btn:active {
+          background: #fafafa;
         }
 
-        .cta-btn-v2.filled {
-          background: #FF8A00;
+        .tab-icon {
+          font-size: 24px;
+          transition: transform 0.2s;
+        }
+
+        .tab-nav-btn.active .tab-icon {
+          transform: scale(1.1);
+        }
+
+        .tab-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #6b7280;
+        }
+
+        .tab-nav-btn.active .tab-label {
+          color: #FF8A00;
+        }
+
+        /* ===== 즐겨찾기 리스트 페이지 ===== */
+        .favorite-list-page {
+          padding: 0 0 160px 0;
+        }
+
+        .favorite-list-header {
+          background: white;
+          padding: 60px 20px 16px 20px;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        }
+
+        .favorite-list-grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+          padding: 16px 20px;
+        }
+
+        .favorite-list-card {
+          background: white;
+          border-radius: 16px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+          position: relative;
+        }
+
+        .favorite-list-card:active {
+          transform: scale(0.97);
+        }
+
+        .favorite-list-image {
+          position: relative;
+          width: 100%;
+          height: 140px;
+          overflow: hidden;
+          background: #e5e7eb;
+        }
+
+        .favorite-list-image img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .favorite-remove-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
           border: none;
-          color: white;
+          background: rgba(255, 255, 255, 0.9);
+          color: #ef4444;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+          z-index: 10;
         }
 
-        .cta-btn-v2.filled:active {
-          background: #e67a00;
+        .favorite-remove-btn:active {
+          transform: scale(0.9);
+          background: white;
+        }
+
+        .favorite-list-info {
+          padding: 12px;
+        }
+
+        .favorite-list-name {
+          margin: 0 0 4px 0;
+          font-size: 15px;
+          font-weight: 700;
+          color: #1f2937;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .favorite-list-category {
+          margin: 0 0 4px 0;
+          font-size: 12px;
+          color: #9ca3af;
+          font-weight: 500;
+        }
+
+        .favorite-list-distance {
+          margin: 0;
+          font-size: 11px;
+          color: #6b7280;
         }
 
         /* ===== 바텀 네비게이션 ===== */

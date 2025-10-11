@@ -37,6 +37,44 @@ async function renderRegularPage() {
   }
 }
 
+// 탭 전환 함수
+async function switchRegularTab(tab) {
+  console.log('🔄 탭 전환:', tab);
+
+  const regularContainer = document.querySelector('.regular-page-container');
+  if (!regularContainer) return;
+
+  // 탭 버튼 활성화 상태 변경
+  document.querySelectorAll('.tab-nav-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === tab);
+  });
+
+  if (tab === 'favorite') {
+    // 즐겨찾기 페이지 표시
+    const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : window.userInfo;
+    if (!userInfo) return;
+
+    const { regularPageService } = await import('/TLG/pages/regular/services/regularPageService.js');
+    const result = await regularPageService.getRegularStoresData(userInfo.userId);
+    
+    const { regularPageView } = await import('/TLG/pages/regular/views/regularPageView.js');
+    regularContainer.innerHTML = regularPageView.renderFavoriteListPage(result.favoriteStores);
+  } else {
+    // 단골 매장 페이지로 돌아가기
+    renderRegularPage();
+  }
+}
+
+// 즐겨찾기 제거 함수
+function removeFavorite(storeId) {
+  console.log('💔 즐겨찾기 제거:', storeId);
+  if (confirm('즐겨찾기에서 삭제하시겠습니까?')) {
+    // TODO: API 호출하여 즐겨찾기 제거
+    alert('즐겨찾기에서 삭제되었습니다!');
+    switchRegularTab('favorite'); // 페이지 새로고침
+  }
+}
+
 // 전역 헬퍼 함수들
 function goToStore(storeId) {
   console.log('🏪 매장으로 이동:', storeId);
@@ -133,6 +171,8 @@ window.toggleLike = toggleLike;
 window.viewComments = viewComments;
 window.sharePost = sharePost;
 window.receiveCoupon = receiveCoupon;
+window.switchRegularTab = switchRegularTab;
+window.removeFavorite = removeFavorite;
 
 window.renderRegularPage = renderRegularPage;
 window.goToStore = goToStore;

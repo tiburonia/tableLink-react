@@ -108,22 +108,69 @@ export const regularPageRepository = {
   },
 
   /**
-   * 즐겨찾기 매장 가져오기
+   * 즐겨찾기 매장 가져오기 (더미 데이터)
    */
   async getUserFavoriteStores(userId) {
-    try {
-      const response = await fetch(`/api/users/${userId}/favorites`);
-      if (!response.ok) {
-        console.warn('즐겨찾기 조회 실패');
-        return [];
-      }
+    await new Promise(resolve => setTimeout(resolve, 200));
 
-      const data = await response.json();
-      return data.favorites || [];
-    } catch (error) {
-      console.error('즐겨찾기 조회 오류:', error);
-      return [];
-    }
+    return [
+      {
+        storeId: 201,
+        storeName: '스타벅스 강남점',
+        category: '카페',
+        imageUrl: 'https://via.placeholder.com/200x140/4ECDC4/FFF?text=Starbucks',
+        distance: '0.3km'
+      },
+      {
+        storeId: 202,
+        storeName: '맥도날드 역삼점',
+        category: '패스트푸드',
+        imageUrl: 'https://via.placeholder.com/200x140/FF6B6B/FFF?text=McDonald',
+        distance: '0.5km'
+      },
+      {
+        storeId: 203,
+        storeName: '투썸플레이스 삼성점',
+        category: '카페',
+        imageUrl: 'https://via.placeholder.com/200x140/95E1D3/FFF?text=A+Twosome+Place',
+        distance: '0.7km'
+      },
+      {
+        storeId: 204,
+        storeName: '이디야커피 선릉점',
+        category: '카페',
+        imageUrl: 'https://via.placeholder.com/200x140/F38181/FFF?text=EDIYA',
+        distance: '0.9km'
+      },
+      {
+        storeId: 205,
+        storeName: '파리바게뜨 논현점',
+        category: '베이커리',
+        imageUrl: 'https://via.placeholder.com/200x140/AA96DA/FFF?text=Paris+Baguette',
+        distance: '1.1km'
+      },
+      {
+        storeId: 206,
+        storeName: '공차 강남대로점',
+        category: '음료',
+        imageUrl: 'https://via.placeholder.com/200x140/FCBAD3/FFF?text=Gong+Cha',
+        distance: '1.3km'
+      },
+      {
+        storeId: 207,
+        storeName: '할리스커피 역삼점',
+        category: '카페',
+        imageUrl: 'https://via.placeholder.com/200x140/FFFFD2/333?text=Hollys',
+        distance: '1.5km'
+      },
+      {
+        storeId: 208,
+        storeName: '빽다방 선릉점',
+        category: '카페',
+        imageUrl: 'https://via.placeholder.com/200x140/A8D8EA/FFF?text=Paik',
+        distance: '1.8km'
+      }
+    ];
   },
 
   /**
