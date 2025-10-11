@@ -1,7 +1,6 @@
-
 /**
- * 단골매장 페이지 View (v2 - 리디자인)
- * UI 렌더링 - 감정적 몰입감 + 개인화 강화
+ * 단골매장 페이지 View (v3 - 하단 nav 전환)
+ * UI 렌더링 - 단골/즐겨찾기 전환
  */
 
 export const regularPageView = {
@@ -14,315 +13,86 @@ export const regularPageView = {
     return `
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
-        ${this.renderStoreFeed(posts)}
-        ${this.renderRecentVisited(stores)}
-        ${this.renderStoresList(stores)}
-        ${this.renderFooterCTA()}
-        ${this.renderBottomNav()}
+        ${this.renderStoreListContainer(stores)}
+        ${this.renderBottomTabNav()}
       </div>
       ${this.getStyles()}
     `;
   },
 
   /**
-   * 헤더 영역 - 심플하게 개선
+   * 헤더 영역 - 심플하게
    */
   renderHeader(summary) {
     return `
       <header class="regular-header">
-        <div class="header-content">
-          <h1 class="page-title">❤️ 단골매장</h1>
-          <div class="header-actions">
-            <button class="icon-btn" id="searchBtn" aria-label="검색">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        <p class="header-subtitle">총 단골 ${summary?.totalStores || 0}곳 · 최근 방문 ${summary?.lastVisit || '-'}</p>
+        <h1 class="page-title">내 매장</h1>
+        <p class="header-subtitle">총 ${summary?.totalStores || 0}곳 · 최근 방문 ${summary?.lastVisit || '-'}</p>
       </header>
     `;
   },
 
-  
-
   /**
-   * 매장 소식 피드 섹션 - 요약형 (2~3개만 표시)
+   * 매장 리스트 컨테이너 (단골/즐겨찾기)
    */
-  renderStoreFeed(posts) {
-    if (!posts || posts.length === 0) return '';
-
-    const newPostsCount = posts.filter(p => {
-      const diff = Date.now() - new Date(p.createdAt);
-      return diff < 24 * 60 * 60 * 1000; // 24시간 이내
-    }).length;
-
-    // 최신 2~3개만 표시
-    const previewPosts = posts.slice(0, 3);
-
+  renderStoreListContainer(stores) {
     return `
-      <section class="feed-section">
-        ${newPostsCount > 0 ? `
-          <div class="new-posts-banner">
-            <span class="banner-icon">🔔</span>
-            <span class="banner-text">새로운 단골 소식 ${newPostsCount}개</span>
-          </div>
-        ` : ''}
-        
-        <div class="section-header-compact">
-          <h2 class="section-title">🗞 단골 매장 소식</h2>
-          <button class="view-all-btn" onclick="renderFeed()">
-            전체보기
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
-          </button>
+      <main class="store-list-container">
+        <div class="store-list regular-list active">
+          ${stores && stores.length > 0 ? this.renderStoreCards(stores) : this.renderEmptyState('regular')}
         </div>
-        
-        <div class="feed-list-preview">
-          ${previewPosts.map(post => this.renderPostCard(post)).join('')}
+        <div class="store-list favorite-list">
+          ${this.renderEmptyState('favorite')}
         </div>
-
-        ${posts.length > 3 ? `
-          <button class="show-more-btn" onclick="renderFeed()">
-            <span>더 많은 소식 보기 (${posts.length - 3}개)</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
-        ` : ''}
-      </section>
+      </main>
     `;
   },
 
   /**
-   * 매장 소식 카드
+   * 매장 카드 렌더링
    */
-  renderPostCard(post) {
-    const levelColor = window.regularPageService?.getLevelColor(post.userLevel) || '#64748b';
-    const relativeTime = window.regularPageService?.getRelativeTime(post.createdAt) || '최근';
-    const tagColor = this.getTagColor(post.postType);
-
-    return `
-      <div class="post-card">
-        <div class="post-header">
-          <div class="post-store-info">
-            <div class="post-store-logo">${post.storeLogo}</div>
-            <div class="post-store-details">
-              <h4 class="post-store-name">${post.storeName}</h4>
-              <span class="post-meta-time">🕓 ${relativeTime}</span>
-            </div>
-          </div>
-          <div class="post-level-badge" style="background: ${levelColor}">
-            ${post.userLevelName}
-          </div>
-        </div>
-
-        <div class="post-body">
-          <div class="post-tag" style="background: ${tagColor}">
-            ${post.targetTag}
-          </div>
-          <h3 class="post-title">${post.title}</h3>
-          
-          ${post.hasImage ? `
-            <div class="post-image-container">
-              <img src="${post.imageUrl}" alt="${post.title}" class="post-image" />
-            </div>
-          ` : ''}
-          
-          <p class="post-content">${post.content}</p>
-        </div>
-
-        <div class="post-actions">
-          <div class="post-reactions">
-            <button class="reaction-btn ${post.hasLiked ? 'active' : ''}" onclick="toggleLike(${post.id})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="${post.hasLiked ? '#FF8A00' : 'none'}" stroke="currentColor" stroke-width="2">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-              </svg>
-              <span>${post.likes}</span>
-            </button>
-            <button class="reaction-btn" onclick="viewComments(${post.id})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-              </svg>
-              <span>${post.comments}</span>
-            </button>
-            <button class="reaction-btn" onclick="sharePost(${post.id})">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-              </svg>
-            </button>
-          </div>
-
-          ${post.hasCoupon ? `
-            <button class="coupon-btn ${post.couponReceived ? 'received' : ''}" 
-                    onclick="receiveCoupon(${post.id}, ${post.storeId})"
-                    ${post.couponReceived ? 'disabled' : ''}>
-              ${post.couponReceived ? '✅ 쿠폰받음' : '🎟️ 쿠폰받기'}
-            </button>
-          ` : ''}
-        </div>
-      </div>
-    `;
+  renderStoreCards(stores) {
+    return stores.map(store => this.renderStoreCard(store)).join('');
   },
 
   /**
-   * 태그 색상
+   * 개별 매장 카드
    */
-  getTagColor(postType) {
-    const colors = {
-      'event': '#FF8A00',
-      'new_menu': '#10b981',
-      'promotion': '#f59e0b',
-      'notice': '#6366f1'
-    };
-    return colors[postType] || '#64748b';
-  },
-
-  /**
-   * 최근 방문 매장 섹션 (NEW)
-   */
-  renderRecentVisited(stores) {
-    if (!stores || stores.length === 0) return '';
-
-    const recentStores = stores.slice(0, 3);
-
-    return `
-      <section class="recent-section">
-        <div class="section-header-compact">
-          <h2 class="section-title">📍 최근 방문한 매장</h2>
-        </div>
-        <div class="recent-list">
-          ${recentStores.map(store => this.renderRecentCard(store)).join('')}
-        </div>
-      </section>
-    `;
-  },
-
-  /**
-   * 최근 방문 카드
-   */
-  renderRecentCard(store) {
+  renderStoreCard(store) {
     const levelColor = window.regularPageService?.getLevelColor(store.level) || '#64748b';
     const levelIcon = window.regularPageService?.getLevelIcon(store.level) || '🏅';
 
     return `
-      <div class="recent-card" onclick="goToStore(${store.storeId})">
-        <div class="recent-thumbnail">
-          <div class="thumbnail-placeholder" style="background: linear-gradient(135deg, ${levelColor}50, ${levelColor}30)">
-            <span class="thumbnail-icon">${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}</span>
-          </div>
-        </div>
-        <div class="recent-info">
-          <div class="recent-header">
-            <h3 class="recent-name">${store.storeName}</h3>
-            <span class="recent-badge" style="background: ${levelColor}">${levelIcon} ${store.levelName}</span>
-          </div>
-          <p class="recent-meta">${store.lastVisit} 방문 · 포인트 ${store.points.toLocaleString()}P</p>
-          <div class="recent-actions">
-            <button class="recent-btn primary" onclick="event.stopPropagation(); orderFromStore(${store.storeId})">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-              </svg>
-              다시 주문
-            </button>
-            ${store.hasUnwrittenReview ? `
-              <button class="recent-btn secondary" onclick="event.stopPropagation(); writeReview(${store.storeId})">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                리뷰 남기기
-              </button>
-            ` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  /**
-   * 매장 리스트 - 카드 강화
-   */
-  renderStoresList(stores) {
-    if (!stores || stores.length === 0) {
-      return this.renderEmptyState();
-    }
-
-    return `
-      <section class="stores-section">
-        <div class="section-header-compact">
-          <h2 class="section-title">내 단골 매장</h2>
-          <button class="filter-btn" id="filterBtn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="4" y1="21" x2="4" y2="14"/>
-              <line x1="4" y1="10" x2="4" y2="3"/>
-              <line x1="12" y1="21" x2="12" y2="12"/>
-              <line x1="12" y1="8" x2="12" y2="3"/>
-              <line x1="20" y1="21" x2="20" y2="16"/>
-              <line x1="20" y1="12" x2="20" y2="3"/>
-            </svg>
-          </button>
-        </div>
-        <div class="stores-grid">
-          ${stores.map(store => this.renderEnhancedStoreCard(store)).join('')}
-        </div>
-      </section>
-    `;
-  },
-
-  /**
-   * 강화된 매장 카드
-   */
-  renderEnhancedStoreCard(store) {
-    const levelColor = window.regularPageService?.getLevelColor(store.level) || '#64748b';
-    const levelIcon = window.regularPageService?.getLevelIcon(store.level) || '🏅';
-
-    return `
-      <div class="store-card-v2" onclick="goToStore(${store.storeId})">
+      <div class="store-card" onclick="goToStore(${store.storeId})">
         <div class="store-card-header">
-          <div class="store-thumbnail-v2" style="background: linear-gradient(135deg, ${levelColor}40, ${levelColor}20)">
-            <span class="store-icon-v2">${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}</span>
+          <div class="store-thumbnail" style="background: linear-gradient(135deg, ${levelColor}40, ${levelColor}20)">
+            <span class="store-icon">${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}</span>
           </div>
-          <div class="store-badge-v2" style="background: ${levelColor}">
+          <div class="store-badge" style="background: ${levelColor}">
             ${levelIcon} ${store.levelName}
           </div>
         </div>
-        
+
         <div class="store-card-body">
-          <h3 class="store-name-v2">${store.storeName}</h3>
-          <p class="store-category-v2">${store.category}</p>
-          
-          <div class="store-stats-v2">
-            <div class="stat-item-v2">
-              <span class="stat-label-v2">포인트</span>
-              <span class="stat-value-v2">${store.points.toLocaleString()}P</span>
+          <h3 class="store-name">${store.storeName}</h3>
+          <p class="store-category">${store.category}</p>
+
+          <div class="store-stats">
+            <div class="stat-item">
+              <span class="stat-label">포인트</span>
+              <span class="stat-value">${store.points.toLocaleString()}P</span>
             </div>
-            <div class="stat-divider-v2"></div>
-            <div class="stat-item-v2">
-              <span class="stat-label-v2">쿠폰</span>
-              <span class="stat-value-v2">${store.coupons}장</span>
+            <div class="stat-divider"></div>
+            <div class="stat-item">
+              <span class="stat-label">쿠폰</span>
+              <span class="stat-value">${store.coupons}장</span>
             </div>
           </div>
 
-          <div class="store-meta-v2">
+          <div class="store-meta">
             <span class="meta-text">🕒 ${store.lastVisit}</span>
             <span class="meta-text">📍 ${store.distance}</span>
           </div>
-
-          ${store.hasUnwrittenReview ? `
-            <div class="review-alert">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
-                <line x1="12" y1="9" x2="12" y2="13"/>
-                <line x1="12" y1="17" x2="12.01" y2="17"/>
-              </svg>
-              리뷰 작성하고 쿠폰 받기
-            </div>
-          ` : ''}
         </div>
       </div>
     `;
@@ -331,90 +101,55 @@ export const regularPageView = {
   /**
    * Empty State
    */
-  renderEmptyState() {
-    return `
-      <section class="stores-section">
-        <div class="empty-state-v2">
-          <div class="empty-icon-v2">🏪</div>
-          <h3 class="empty-title-v2">단골 매장이 없어요</h3>
-          <p class="empty-text-v2">자주 가는 매장을 단골로 등록하고<br>특별한 혜택을 받아보세요!</p>
-          <button class="empty-btn" onclick="renderMap()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
-              <circle cx="12" cy="10" r="3"/>
-            </svg>
-            매장 찾아보기
-          </button>
-        </div>
-      </section>
-    `;
-  },
+  renderEmptyState(type) {
+    const config = {
+      regular: {
+        icon: '❤️',
+        title: '단골 매장이 없어요',
+        description: '자주 가는 매장을 단골로 등록하고<br>특별한 혜택을 받아보세요!'
+      },
+      favorite: {
+        icon: '⭐',
+        title: '즐겨찾기한 매장이 없어요',
+        description: '마음에 드는 매장을 즐겨찾기에 추가하고<br>빠르게 찾아보세요!'
+      }
+    };
 
-  /**
-   * 하단 고정 CTA
-   */
-  renderFooterCTA() {
+    const { icon, title, description } = config[type];
+
     return `
-      <footer class="footer-cta-v2">
-        <button class="cta-btn-v2 outline" onclick="viewAllRegularStores()">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
-          모든 단골 보기
-        </button>
-        <button class="cta-btn-v2 filled" onclick="goToCoupons()">
+      <div class="empty-state">
+        <div class="empty-icon">${icon}</div>
+        <h3 class="empty-title">${title}</h3>
+        <p class="empty-text">${description}</p>
+        <button class="empty-btn" onclick="renderMap()">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/>
             <circle cx="12" cy="10" r="3"/>
           </svg>
-          내 쿠폰함 바로가기
+          매장 찾아보기
         </button>
-      </footer>
+      </div>
     `;
   },
 
   /**
-   * 바텀 네비게이션
+   * 하단 탭 네비게이션
    */
-  renderBottomNav() {
+  renderBottomTabNav() {
     return `
-      <nav class="bottom-nav-bar">
-        <button onclick="renderSubMain()" class="nav-item">
-          <span class="nav-icon">
-            <img width="24" height="24" src="https://img.icons8.com/external-solid-adri-ansyah/24/external-home-essentials-ui-solid-adri-ansyah.png" alt="home"/>
-          </span>
-          <span class="nav-label">홈</span>
+      <nav class="bottom-tab-nav">
+        <button class="tab-btn active" data-tab="regular">
+          <span class="tab-icon">❤️</span>
+          <span class="tab-label">단골</span>
         </button>
-        <button onclick="TLL()" class="nav-item">
-          <span class="nav-icon">
-            <img width="26" height="26" src="https://img.icons8.com/external-tanah-basah-glyph-tanah-basah/26/external-qr-metaverse-tanah-basah-glyph-tanah-basah.png" alt="qr"/>
-          </span>
-          <span class="nav-label">QR 주문</span>
-        </button>
-        <button onclick="renderMap()" class="nav-item">
-          <span class="nav-icon">
-            <img width="24" height="24" src="https://img.icons8.com/ios-filled/24/marker.png" alt="map"/>
-          </span>
-          <span class="nav-label">내주변</span>
-        </button>
-        <button class="nav-item active">
-          <span class="nav-icon">
-            <img width="26" height="26" src="https://img.icons8.com/pastel-glyph/26/shop--v2.png" alt="regular"/>
-          </span>
-          <span class="nav-label">단골매장</span>
-        </button>
-        <button onclick="renderMyPage()" class="nav-item">
-          <span class="nav-icon">
-            <img width="26" height="26" src="https://img.icons8.com/ios-filled/26/more.png" alt="more"/>
-          </span>
-          <span class="nav-label">더보기</span>
+        <button class="tab-btn" data-tab="favorite">
+          <span class="tab-icon">⭐</span>
+          <span class="tab-label">즐겨찾기</span>
         </button>
       </nav>
     `;
   },
-
-  
 
   /**
    * 스타일
@@ -431,59 +166,28 @@ export const regularPageView = {
           top: 0;
           left: 0;
           width: 100%;
-          height: 775px;
+          max-width: 430px;
+          height: 100vh;
           background: #fafafa;
-          overflow-y: auto;
-          padding-bottom: 160px;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
         }
 
         /* ===== 헤더 ===== */
         .regular-header {
           background: white;
           padding: 60px 20px 16px 20px;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-        }
-
-        .header-content {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
+          border-bottom: 1px solid #f3f4f6;
+          text-align: center;
         }
 
         .page-title {
-          margin: 0;
+          margin: 0 0 8px 0;
           font-size: 24px;
           font-weight: 800;
           color: #1f2937;
           letter-spacing: -0.02em;
-        }
-
-        .header-actions {
-          display: flex;
-          gap: 8px;
-        }
-
-        .icon-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          border: none;
-          background: #f3f4f6;
-          color: #6b7280;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-
-        .icon-btn:active {
-          transform: scale(0.95);
-          background: #e5e7eb;
         }
 
         .header-subtitle {
@@ -493,415 +197,26 @@ export const regularPageView = {
           font-weight: 500;
         }
 
-        /* ===== 최근 방문 섹션 ===== */
-        .recent-section {
-          padding: 16px 20px;
-        }
-
-        .section-header-compact {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 16px;
-        }
-
-        .section-title {
-          margin: 0;
-          font-size: 18px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .filter-btn {
-          width: 32px;
-          height: 32px;
-          border-radius: 8px;
-          border: none;
-          background: #f3f4f6;
-          color: #6b7280;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.2s;
-        }
-
-        .filter-btn:active {
-          background: #e5e7eb;
-        }
-
-        .view-all-btn {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          padding: 6px 12px;
-          border-radius: 8px;
-          border: none;
-          background: #f3f4f6;
-          color: #6b7280;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .view-all-btn:active {
-          background: #e5e7eb;
-        }
-
-        .show-more-btn {
-          width: 100%;
-          padding: 16px;
-          border-radius: 12px;
-          border: 2px dashed #e5e7eb;
-          background: white;
-          color: #6b7280;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          margin-top: 12px;
-          transition: all 0.2s;
-        }
-
-        .show-more-btn:hover {
-          border-color: #FF8A00;
-          color: #FF8A00;
-          background: #fff5eb;
-        }
-
-        .recent-list {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .recent-card {
-          background: white;
-          border-radius: 16px;
-          padding: 16px;
-          display: flex;
-          gap: 14px;
-          cursor: pointer;
-          transition: all 0.2s;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-        }
-
-        .recent-card:active {
-          transform: scale(0.98);
-        }
-
-        .recent-thumbnail {
-          flex-shrink: 0;
-        }
-
-        .thumbnail-placeholder {
-          width: 64px;
-          height: 64px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-
-        .thumbnail-icon {
-          font-size: 28px;
-        }
-
-        .recent-info {
+        /* ===== 매장 리스트 컨테이너 ===== */
+        .store-list-container {
           flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
+          overflow-y: auto;
+          padding: 16px;
+          padding-bottom: 80px;
         }
 
-        .recent-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-        }
-
-        .recent-name {
-          margin: 0;
-          font-size: 16px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .recent-badge {
-          padding: 4px 10px;
-          border-radius: 8px;
-          font-size: 11px;
-          color: white;
-          font-weight: 700;
-          white-space: nowrap;
-        }
-
-        .recent-meta {
-          margin: 0;
-          font-size: 13px;
-          color: #6b7280;
-          font-weight: 500;
-        }
-
-        .recent-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 4px;
-        }
-
-        .recent-btn {
-          padding: 8px 14px;
-          border-radius: 8px;
-          border: none;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          transition: all 0.2s;
-        }
-
-        .recent-btn.primary {
-          background: #FF8A00;
-          color: white;
-        }
-
-        .recent-btn.primary:active {
-          background: #e67a00;
-        }
-
-        .recent-btn.secondary {
-          background: #f3f4f6;
-          color: #6b7280;
-        }
-
-        .recent-btn.secondary:active {
-          background: #e5e7eb;
-        }
-
-        /* ===== 매장 소식 피드 ===== */
-        .feed-section {
-          padding: 16px 20px;
-        }
-
-        .new-posts-banner {
-          background: linear-gradient(135deg, #FF8A00 0%, #ff9f33 100%);
-          color: white;
-          padding: 12px 16px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 16px;
-          box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
-        }
-
-        .banner-icon {
-          font-size: 18px;
-          animation: ring 2s infinite;
-        }
-
-        @keyframes ring {
-          0%, 100% { transform: rotate(0deg); }
-          10%, 30% { transform: rotate(-10deg); }
-          20%, 40% { transform: rotate(10deg); }
-        }
-
-        .banner-text {
-          font-size: 14px;
-          font-weight: 700;
-        }
-
-        .feed-list {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-
-        .post-card {
-          background: white;
-          border-radius: 16px;
-          padding: 20px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-          transition: all 0.3s ease;
-        }
-
-        .post-card:active {
-          transform: scale(0.99);
-        }
-
-        .post-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 16px;
-        }
-
-        .post-store-info {
-          display: flex;
-          gap: 12px;
-          align-items: center;
-        }
-
-        .post-store-logo {
-          width: 44px;
-          height: 44px;
-          border-radius: 12px;
-          background: #f3f4f6;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 22px;
-        }
-
-        .post-store-details {
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .post-store-name {
-          margin: 0;
-          font-size: 15px;
-          font-weight: 700;
-          color: #1f2937;
-        }
-
-        .post-meta-time {
-          font-size: 12px;
-          color: #9ca3af;
-          font-weight: 500;
-        }
-
-        .post-level-badge {
-          padding: 6px 12px;
-          border-radius: 8px;
-          font-size: 11px;
-          color: white;
-          font-weight: 700;
-        }
-
-        .post-body {
-          margin-bottom: 16px;
-        }
-
-        .post-tag {
-          display: inline-block;
-          padding: 4px 10px;
-          border-radius: 6px;
-          font-size: 11px;
-          color: white;
-          font-weight: 700;
-          margin-bottom: 12px;
-        }
-
-        .post-title {
-          margin: 0 0 12px 0;
-          font-size: 17px;
-          font-weight: 700;
-          color: #1f2937;
-          line-height: 1.4;
-        }
-
-        .post-image-container {
-          width: 100%;
-          border-radius: 12px;
-          overflow: hidden;
-          margin-bottom: 12px;
-        }
-
-        .post-image {
-          width: 100%;
-          height: auto;
-          display: block;
-        }
-
-        .post-content {
-          margin: 0;
-          font-size: 14px;
-          color: #4b5563;
-          line-height: 1.6;
-        }
-
-        .post-actions {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding-top: 16px;
-          border-top: 1px solid #f3f4f6;
-        }
-
-        .post-reactions {
-          display: flex;
-          gap: 12px;
-        }
-
-        .reaction-btn {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 12px;
-          border-radius: 8px;
-          border: none;
-          background: #f3f4f6;
-          color: #6b7280;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .reaction-btn.active {
-          background: #fff5eb;
-          color: #FF8A00;
-        }
-
-        .reaction-btn:active {
-          transform: scale(0.95);
-        }
-
-        .coupon-btn {
-          padding: 10px 20px;
-          border-radius: 10px;
-          border: none;
-          background: #FF8A00;
-          color: white;
-          font-size: 13px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .coupon-btn:active {
-          transform: scale(0.95);
-          background: #e67a00;
-        }
-
-        .coupon-btn.received {
-          background: #10b981;
-          cursor: not-allowed;
-        }
-
-        /* ===== 매장 그리드 ===== */
-        .stores-section {
-          padding: 16px 20px;
-        }
-
-        .stores-grid {
-          display: grid;
+        .store-list {
+          display: none;
           grid-template-columns: repeat(2, 1fr);
           gap: 12px;
         }
 
-        .store-card-v2 {
+        .store-list.active {
+          display: grid;
+        }
+
+        /* ===== 매장 카드 ===== */
+        .store-card {
           background: white;
           border-radius: 16px;
           padding: 16px;
@@ -910,8 +225,9 @@ export const regularPageView = {
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
 
-        .store-card-v2:active {
-          transform: scale(0.97);
+        .store-card:active {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .store-card-header {
@@ -921,7 +237,7 @@ export const regularPageView = {
           margin-bottom: 12px;
         }
 
-        .store-thumbnail-v2 {
+        .store-thumbnail {
           width: 48px;
           height: 48px;
           border-radius: 12px;
@@ -930,11 +246,11 @@ export const regularPageView = {
           justify-content: center;
         }
 
-        .store-icon-v2 {
+        .store-icon {
           font-size: 24px;
         }
 
-        .store-badge-v2 {
+        .store-badge {
           padding: 4px 8px;
           border-radius: 8px;
           font-size: 10px;
@@ -948,53 +264,56 @@ export const regularPageView = {
           gap: 8px;
         }
 
-        .store-name-v2 {
+        .store-name {
           margin: 0;
           font-size: 15px;
           font-weight: 700;
           color: #1f2937;
           line-height: 1.3;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
-        .store-category-v2 {
+        .store-category {
           margin: 0;
           font-size: 12px;
           color: #9ca3af;
           font-weight: 500;
         }
 
-        .store-stats-v2 {
+        .store-stats {
           display: flex;
           align-items: center;
           gap: 8px;
           padding: 8px 0;
         }
 
-        .stat-item-v2 {
+        .stat-item {
           display: flex;
           flex-direction: column;
           gap: 2px;
         }
 
-        .stat-label-v2 {
+        .stat-label {
           font-size: 11px;
           color: #9ca3af;
           font-weight: 500;
         }
 
-        .stat-value-v2 {
+        .stat-value {
           font-size: 13px;
           font-weight: 700;
           color: #FF8A00;
         }
 
-        .stat-divider-v2 {
+        .stat-divider {
           width: 1px;
           height: 24px;
           background: #e5e7eb;
         }
 
-        .store-meta-v2 {
+        .store-meta {
           display: flex;
           flex-direction: column;
           gap: 4px;
@@ -1005,21 +324,12 @@ export const regularPageView = {
           color: #6b7280;
         }
 
-        .review-alert {
-          background: #fef2f2;
-          color: #dc2626;
-          padding: 8px;
-          border-radius: 8px;
-          font-size: 11px;
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-top: 4px;
-        }
-
         /* ===== Empty State ===== */
-        .empty-state-v2 {
+        .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
           text-align: center;
           padding: 60px 20px;
           background: white;
@@ -1027,20 +337,20 @@ export const regularPageView = {
           margin: 20px 0;
         }
 
-        .empty-icon-v2 {
+        .empty-icon {
           font-size: 56px;
           margin-bottom: 16px;
           opacity: 0.6;
         }
 
-        .empty-title-v2 {
+        .empty-title {
           margin: 0 0 8px 0;
           font-size: 18px;
           font-weight: 700;
           color: #1f2937;
         }
 
-        .empty-text-v2 {
+        .empty-text {
           margin: 0 0 24px 0;
           font-size: 14px;
           color: #9ca3af;
@@ -1067,68 +377,26 @@ export const regularPageView = {
           box-shadow: 0 4px 16px rgba(255, 138, 0, 0.3);
         }
 
-        /* ===== Footer CTA ===== */
-        .footer-cta-v2 {
-          position: fixed;
-          bottom: 72px;
-          left: 0;
-          right: 0;
-          padding: 12px 20px;
-          background: white;
-          box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
-          display: flex;
-          gap: 12px;
-          z-index: 99;
-        }
-
-        .cta-btn-v2 {
-          flex: 1;
-          padding: 14px 20px;
-          border-radius: 12px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
-          transition: all 0.2s;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-        }
-
-        .cta-btn-v2.outline {
-          background: white;
-          border: 2px solid #FF8A00;
-          color: #FF8A00;
-        }
-
-        .cta-btn-v2.outline:active {
-          background: #fff5eb;
-        }
-
-        .cta-btn-v2.filled {
-          background: #FF8A00;
-          border: none;
-          color: white;
-        }
-
-        .cta-btn-v2.filled:active {
-          background: #e67a00;
-        }
-
-        /* ===== 바텀 네비게이션 ===== */
-        .bottom-nav-bar {
+        /* ===== 하단 탭 네비게이션 ===== */
+        .bottom-tab-nav {
           position: fixed;
           bottom: 0;
-          background: white;
+          left: 0;
+          right: 0;
+          max-width: 430px;
+          margin: 0 auto;
           display: flex;
-          justify-content: space-around;
-          padding: 8px 0 12px 0;
+          justify-content: center;
+          align-items: center;
+          gap: 40px;
+          padding: 12px 0 16px 0;
+          background: white;
           border-top: 1px solid #f3f4f6;
-          box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
-          z-index: 1000;
+          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
+          z-index: 100;
         }
 
-        .nav-item {
+        .tab-btn {
           background: none;
           border: none;
           display: flex;
@@ -1136,34 +404,43 @@ export const regularPageView = {
           align-items: center;
           gap: 4px;
           cursor: pointer;
-          padding: 6px 12px;
-          flex: 1;
+          transition: all 0.2s ease;
+          padding: 8px 16px;
+        }
+
+        .tab-btn:active {
+          transform: scale(0.95);
+        }
+
+        .tab-icon {
+          font-size: 24px;
+          transition: transform 0.2s;
+        }
+
+        .tab-label {
+          font-size: 13px;
+          color: #9ca3af;
+          font-weight: 500;
           transition: all 0.2s;
         }
 
-        .nav-item.active .nav-label {
-          color: #FF8A00;
-          font-weight: 700;
+        .tab-btn.active .tab-icon {
+          transform: scale(1.1);
         }
 
-        .nav-label {
-          font-size: 11px;
-          color: #9ca3af;
-          font-weight: 500;
+        .tab-btn.active .tab-label {
+          color: #1f2937;
+          font-weight: 700;
         }
 
         /* 반응형 */
         @media (max-width: 380px) {
-          .stores-grid {
+          .store-list {
             grid-template-columns: 1fr;
           }
 
-          .hero-title {
-            font-size: 16px;
-          }
-
-          .recent-actions {
-            flex-wrap: wrap;
+          .page-title {
+            font-size: 20px;
           }
         }
       </style>
@@ -1172,4 +449,4 @@ export const regularPageView = {
 };
 
 window.regularPageView = regularPageView;
-console.log('✅ regularPageView v2 모듈 로드 완료 (리디자인)');
+console.log('✅ regularPageView v3 모듈 로드 완료 (하단 nav 전환)');
