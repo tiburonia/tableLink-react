@@ -19,7 +19,7 @@ export function generateOrderSectionHTML(orders) {
             <p class="section-subtitle">나의 주문 내역을 확인하세요</p>
           </div>
         </div>
-        <button class="modern-see-more-btn" onclick="renderAllOrderHTML(userInfo)">
+        <button class="modern-see-more-btn" data-action="view-all-orders">
           <span class="btn-text">전체보기</span>
           <div class="btn-icon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
