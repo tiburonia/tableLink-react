@@ -119,7 +119,7 @@ export const regularPageView = {
    * 매장 소식 카드 (미니멀 버전)
    */
   renderPostCard(post) {
-    const relativeTime = this.getRelativeTime(post.createdAt);
+    const relativeTime = window.regularPageService?.getRelativeTime(post.createdAt) || '최근';
     const typeInfo = this.getTypeInfo(post.postType);
     const truncatedContent = post.content.length > 50
       ? post.content.substring(0, 50) + '...'
@@ -171,6 +171,19 @@ export const regularPageView = {
         </div>
       </article>
     `;
+  },
+
+  /**
+   * 포스트 타입 정보
+   */
+  getTypeInfo(postType) {
+    const typeMap = {
+      'event': { icon: '🎉', color: '#FF8A00', label: '이벤트' },
+      'new_menu': { icon: '🍽️', color: '#10b981', label: '신메뉴' },
+      'promotion': { icon: '🎁', color: '#f59e0b', label: '프로모션' },
+      'notice': { icon: '📢', color: '#6366f1', label: '공지사항' }
+    };
+    return typeMap[postType] || { icon: '📝', color: '#64748b', label: '소식' };
   },
 
   /**
