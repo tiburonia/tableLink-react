@@ -59,26 +59,25 @@ export const regularPageController = {
    * 이벤트 리스너 설정
    */
   setupEventListeners() {
-    // 탭 전환 버튼
-    document.addEventListener('click', (e) => {
-      const tabBtn = e.target.closest('.tab-btn');
-      if (!tabBtn) return;
+    // 정렬 버튼
+    const sortBtn = document.getElementById('sortBtn');
+    if (sortBtn) {
+      sortBtn.addEventListener('click', () => {
+        console.log('정렬 버튼 클릭');
+        alert('정렬 기능은 곧 구현됩니다!');
+      });
+    }
 
-      const tab = tabBtn.dataset.tab;
-
-      // 버튼 스타일 업데이트
-      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-      tabBtn.classList.add('active');
-
-      // 리스트 전환
-      document.querySelectorAll('.store-list').forEach(list => list.classList.remove('active'));
-      const targetList = document.querySelector(`.${tab}-list`);
-      if (targetList) {
-        targetList.classList.add('active');
-      }
-
-      console.log('✅ 탭 전환:', tab);
-    });
+    // 검색 버튼
+    const searchBtn = document.getElementById('searchBtn');
+    if (searchBtn) {
+      searchBtn.addEventListener('click', () => {
+        console.log('검색 버튼 클릭');
+        if (typeof renderSearch === 'function') {
+          renderSearch('');
+        }
+      });
+    }
   },
 
   /**
