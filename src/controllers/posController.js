@@ -1,11 +1,29 @@
 
 const orderService = require('../services/orderService');
 const tableService = require('../services/tableService');
+const storeService = require('../services/storeService');
 
 /**
  * POS 컨트롤러 - HTTP 요청/응답 처리
  */
 class POSController {
+  /**
+   * POS 전용 매장 정보 조회
+   */
+  async getPOSStoreInfo(req, res, next) {
+    try {
+      const { storeId } = req.params;
+      const store = await storeService.getPOSStoreInfo(storeId);
+      
+      res.json({
+        success: true,
+        store: store
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   /**
    * 매장 메뉴 조회
    */

@@ -37,7 +37,7 @@ const POSCore = {
      * 매장 정보 로드
      */
     async loadStoreInfo() {
-        const response = await fetch(`/api/stores/${this.storeId}`);
+        const response = await fetch(`/api/pos/store/${this.storeId}`);
         if (!response.ok) {
             throw new Error('매장 정보 조회 실패');
         }

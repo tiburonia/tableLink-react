@@ -8,6 +8,11 @@ const posController = require('../controllers/posController');
  */
 
 /**
+ * [GET] /store/:storeId - POS 전용 매장 정보 조회
+ */
+router.get('/store/:storeId', posController.getPOSStoreInfo);
+
+/**
  * [GET] /stores/:storeId/menu - 매장 메뉴 조회
  */
 router.get('/stores/:storeId/menu', posController.getStoreMenu);

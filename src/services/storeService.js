@@ -96,6 +96,51 @@ class StoreService {
 
 
   /**
+   * POS 전용 매장 정보 조회
+   */
+  async getPOSStoreInfo(storeId) {
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    console.log(`🏪 [POS] 매장 ${storeId} 정보 조회 요청`);
+
+    // 매장 기본정보 조회
+    const storeResult = await storeRepository.getStoreById(numericStoreId);
+    const store = storeResult[0];
+
+    if (!store) {
+      throw new Error('매장을 찾을 수 없습니다');
+    }
+
+    // 테이블 정보 조회
+    const tables = await tableRepository.getStoreTable(numericStoreId);
+
+    const posStoreInfo = {
+      id: store.id,
+      store_id: store.id,
+      name: store.name,
+      is_open: store.is_open,
+      store_tel_number: store.store_tel_number,
+      rating_average: parseFloat(store.rating_average) || 0.0,
+      review_count: store.review_count || 0,
+      sido: store.sido,
+      sigungu: store.sigungu,
+      eupmyeondong: store.eupmyeondong,
+      full_address: store.full_address,
+      lng: store.lng,
+      lat: store.lat,
+      tables: tables || [],
+      tableCount: tables ? tables.length : 0
+    };
+
+    console.log(`✅ [POS] 매장 ${storeId} 정보 조회 완료: ${store.name}`);
+    
+    return posStoreInfo;
+  }
+
+  /**
    * 매장 검색
    */
   async searchStores(query, limit) {
