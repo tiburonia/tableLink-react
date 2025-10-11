@@ -424,19 +424,12 @@ export const mapView = {
   getMapStyles() {
     return `
       <style>
-        html, body {
-          margin: 0;
-          padding: 0;
-          height: 100%;
-          font-family: 'Noto Sans KR', sans-serif;
-          background: #f8f8f8;
-          overflow: hidden;
-        }
+       
 
         /* 알림 버튼 */
         .notification-btn {
           position: absolute;
-          top: 115px;
+          top: 130px;
           right: 15px;
           width: 35px;
           height: 35px;
@@ -519,6 +512,8 @@ export const mapView = {
 
         /* 키워드 네비게이션 바 */
         .keyword-nav {
+          position: fixed;
+          top: 100px;  
           display: flex;
           overflow-x: auto;
           white-space: nowrap;
