@@ -9,7 +9,7 @@ export const regularPageView = {
    * 메인 페이지 렌더링
    */
   render(data) {
-    const { summary, stores, posts } = data;
+    const { summary, stores, posts, favoriteStores = [] } = data;
 
     return `
       <div class="regular-page-container">
@@ -17,6 +17,7 @@ export const regularPageView = {
         ${this.renderStoreFeed(posts)}
         ${this.renderRecentVisited(stores)}
         ${this.renderStoresList(stores)}
+        ${this.renderFavoriteStores(favoriteStores)}
         ${this.renderFooterCTA()}
         ${this.renderBottomNav()}
       </div>
@@ -345,6 +346,43 @@ export const regularPageView = {
             </svg>
             매장 찾아보기
           </button>
+        </div>
+      </section>
+    `;
+  },
+
+  /**
+   * 즐겨찾기 매장 섹션 (가로 스크롤)
+   */
+  renderFavoriteStores(favoriteStores) {
+    if (!favoriteStores || favoriteStores.length === 0) return '';
+
+    const preview = favoriteStores.slice(0, 8);
+
+    return `
+      <section class="favorite-section">
+        <div class="section-header-compact">
+          <h2 class="section-title">⭐ 즐겨찾기 매장</h2>
+          <button class="view-all-btn" onclick="alert('즐겨찾기 전체보기는 곧 구현됩니다!')">
+            전체보기
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="favorite-scroll">
+          ${preview.map(store => `
+            <div class="favorite-card" onclick="goToStore(${store.storeId})">
+              <div class="favorite-thumb">
+                <img src="${store.imageUrl || '/assets/store_default.png'}" alt="${store.storeName}" onerror="this.src='/assets/store_default.png'" />
+              </div>
+              <div class="favorite-info">
+                <h3 class="favorite-name">${store.storeName}</h3>
+                <p class="favorite-category">${store.category || '기타'}</p>
+              </div>
+            </div>
+          `).join('')}
         </div>
       </section>
     `;
@@ -1065,6 +1103,81 @@ export const regularPageView = {
         .empty-btn:active {
           transform: translateY(-1px);
           box-shadow: 0 4px 16px rgba(255, 138, 0, 0.3);
+        }
+
+        /* ===== 즐겨찾기 매장 ===== */
+        .favorite-section {
+          padding: 16px 20px 0 20px;
+          background: white;
+          border-radius: 20px 20px 0 0;
+          margin-top: 12px;
+          box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.03);
+        }
+
+        .favorite-scroll {
+          display: flex;
+          overflow-x: auto;
+          gap: 12px;
+          padding-bottom: 16px;
+          margin-top: 8px;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+        }
+
+        .favorite-scroll::-webkit-scrollbar {
+          display: none;
+        }
+
+        .favorite-card {
+          min-width: 110px;
+          flex-shrink: 0;
+          background: #f9fafb;
+          border-radius: 12px;
+          padding: 10px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+          transition: all 0.2s;
+          cursor: pointer;
+        }
+
+        .favorite-card:active {
+          transform: scale(0.97);
+          background: #f3f4f6;
+        }
+
+        .favorite-thumb {
+          width: 100%;
+          height: 70px;
+          border-radius: 10px;
+          overflow: hidden;
+          background: #e5e7eb;
+          margin-bottom: 8px;
+        }
+
+        .favorite-thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .favorite-info {
+          text-align: center;
+        }
+
+        .favorite-name {
+          margin: 0;
+          font-size: 13px;
+          font-weight: 700;
+          color: #1f2937;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .favorite-category {
+          margin: 2px 0 0 0;
+          font-size: 11px;
+          color: #9ca3af;
+          font-weight: 500;
         }
 
         /* ===== Footer CTA ===== */

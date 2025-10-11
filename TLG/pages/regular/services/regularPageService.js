@@ -12,17 +12,19 @@ export const regularPageService = {
    */
   async getRegularStoresData(userId) {
     try {
-      const [stores, summary, posts] = await Promise.all([
+      const [stores, summary, posts, favoriteStores] = await Promise.all([
         regularPageRepository.getUserRegularStores(userId),
         regularPageRepository.getUserRegularSummary(userId),
-        regularPageRepository.getStorePosts(userId)
+        regularPageRepository.getStorePosts(userId),
+        regularPageRepository.getUserFavoriteStores(userId)
       ]);
 
       return {
         success: true,
         stores,
         summary,
-        posts
+        posts,
+        favoriteStores
       };
     } catch (error) {
       console.error('❌ 단골매장 데이터 조회 실패:', error);
@@ -31,6 +33,7 @@ export const regularPageService = {
         stores: [],
         summary: null,
         posts: [],
+        favoriteStores: [],
         error: error.message
       };
     }

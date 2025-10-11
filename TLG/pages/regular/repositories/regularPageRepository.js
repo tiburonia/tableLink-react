@@ -1,4 +1,3 @@
-
 /**
  * 단골매장 페이지 Repository
  * 더미 데이터 제공
@@ -11,7 +10,7 @@ export const regularPageRepository = {
   async getUserRegularStores(userId) {
     // 더미 데이터 시뮬레이션
     await new Promise(resolve => setTimeout(resolve, 300));
-    
+
     return [
       {
         id: 1,
@@ -96,7 +95,7 @@ export const regularPageRepository = {
    */
   async getUserRegularSummary(userId) {
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+
     return {
       totalStores: 8,
       topLevel: 'PLATINUM',
@@ -109,11 +108,30 @@ export const regularPageRepository = {
   },
 
   /**
-   * 단골 매장 소식 피드 조회 (더미)
+   * 즐겨찾기 매장 가져오기
+   */
+  async getUserFavoriteStores(userId) {
+    try {
+      const response = await fetch(`/api/users/${userId}/favorites`);
+      if (!response.ok) {
+        console.warn('즐겨찾기 조회 실패');
+        return [];
+      }
+
+      const data = await response.json();
+      return data.favorites || [];
+    } catch (error) {
+      console.error('즐겨찾기 조회 오류:', error);
+      return [];
+    }
+  },
+
+  /**
+   * 매장 소식 가져오기
    */
   async getStorePosts(userId) {
     await new Promise(resolve => setTimeout(resolve, 250));
-    
+
     return [
       {
         id: 1,
