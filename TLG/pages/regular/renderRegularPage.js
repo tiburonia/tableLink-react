@@ -37,20 +37,30 @@ async function renderRegularPage() {
   }
 }
 
-// 탭 전환 함수
+// Content Carousel 탭 전환 함수 (양방향)
 async function switchRegularTab(tab) {
-  console.log('🔄 탭 전환:', tab);
+  console.log('🔄 Content Carousel 탭 전환:', tab);
 
   const regularContainer = document.querySelector('.regular-page-container');
   if (!regularContainer) return;
+
+  // 현재 활성 탭 확인
+  const currentActiveBtn = document.querySelector('.tab-nav-btn.active');
+  const currentTab = currentActiveBtn ? currentActiveBtn.dataset.tab : 'regular';
+
+  // 같은 탭 클릭 시 무시
+  if (currentTab === tab) return;
 
   // 탭 버튼 활성화 상태 변경
   document.querySelectorAll('.tab-nav-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
 
+  // 슬라이드 방향 결정 (regular -> favorite: 왼쪽으로, favorite -> regular: 오른쪽으로)
+  const isMovingRight = (currentTab === 'regular' && tab === 'favorite');
+  
   if (tab === 'favorite') {
-    // 즐겨찾기 페이지 표시
+    // 즐겨찾기 페이지로 전환
     const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : window.userInfo;
     if (!userInfo) return;
 
@@ -58,10 +68,32 @@ async function switchRegularTab(tab) {
     const result = await regularPageService.getRegularStoresData(userInfo.userId);
     
     const { regularPageView } = await import('/TLG/pages/regular/views/regularPageView.js');
-    regularContainer.innerHTML = regularPageView.renderFavoriteListPage(result.favoriteStores);
+    
+    // Carousel 애니메이션 적용
+    regularContainer.style.transform = isMovingRight ? 'translateX(-100%)' : 'translateX(100%)';
+    regularContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    setTimeout(() => {
+      regularContainer.innerHTML = regularPageView.renderFavoriteListPage(result.favoriteStores);
+      regularContainer.style.transform = 'translateX(0)';
+      
+      setTimeout(() => {
+        regularContainer.style.transition = '';
+      }, 300);
+    }, 300);
   } else {
-    // 단골 매장 페이지로 돌아가기
-    renderRegularPage();
+    // 단골 매장 페이지로 전환
+    regularContainer.style.transform = isMovingRight ? 'translateX(-100%)' : 'translateX(100%)';
+    regularContainer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+    
+    setTimeout(async () => {
+      await renderRegularPage();
+      regularContainer.style.transform = 'translateX(0)';
+      
+      setTimeout(() => {
+        regularContainer.style.transition = '';
+      }, 300);
+    }, 300);
   }
 }
 

@@ -447,20 +447,31 @@ export const regularPageView = {
   },
 
   /**
-   * 탭 네비게이션 (footer-cta-v2 대체)
+   * Content Carousel 탭 네비게이션 (footer-cta-v2)
    */
   renderFooterCTA() {
     return `
-      <footer class="footer-tab-nav">
-        <button class="tab-nav-btn active" data-tab="regular" onclick="switchRegularTab('regular')">
-          <span class="tab-icon">❤️</span>
-          <span class="tab-label">단골 매장</span>
-        </button>
-        <button class="tab-nav-btn" data-tab="favorite" onclick="switchRegularTab('favorite')">
-          <span class="tab-icon">⭐</span>
-          <span class="tab-label">즐겨찾기</span>
-        </button>
-      </footer>
+      <div class="content-carousel-wrapper">
+        <div class="content-carousel-container" id="contentCarousel">
+          <div class="carousel-page active" data-page="regular">
+            <!-- 단골 페이지 컨텐츠는 메인 컨테이너에 렌더링됨 -->
+          </div>
+          <div class="carousel-page" data-page="favorite">
+            <!-- 즐겨찾기 페이지 컨텐츠는 동적으로 렌더링됨 -->
+          </div>
+        </div>
+        
+        <footer class="footer-tab-nav">
+          <button class="tab-nav-btn active" data-tab="regular" onclick="switchRegularTab('regular')">
+            <span class="tab-icon">❤️</span>
+            <span class="tab-label">단골 매장</span>
+          </button>
+          <button class="tab-nav-btn" data-tab="favorite" onclick="switchRegularTab('favorite')">
+            <span class="tab-icon">⭐</span>
+            <span class="tab-label">즐겨찾기</span>
+          </button>
+        </footer>
+      </div>
     `;
   },
 
@@ -1230,6 +1241,54 @@ export const regularPageView = {
           font-size: 11px;
           color: #9ca3af;
           font-weight: 500;
+        }
+
+        /* ===== Content Carousel Wrapper ===== */
+        .content-carousel-wrapper {
+          position: relative;
+        }
+
+        .content-carousel-container {
+          position: relative;
+          width: 100%;
+          overflow: hidden;
+        }
+
+        .carousel-page {
+          position: absolute;
+          top: 0;
+          left: 100%;
+          width: 100%;
+          height: 100%;
+          transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          opacity: 0;
+        }
+
+        .carousel-page.active {
+          position: relative;
+          left: 0;
+          transform: translateX(0);
+          opacity: 1;
+        }
+
+        .carousel-page.slide-out-left {
+          transform: translateX(-100%);
+          opacity: 0;
+        }
+
+        .carousel-page.slide-in-right {
+          transform: translateX(0);
+          opacity: 1;
+        }
+
+        .carousel-page.slide-out-right {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+
+        .carousel-page.slide-in-left {
+          transform: translateX(0);
+          opacity: 1;
         }
 
         /* ===== Footer Tab Navigation ===== */
