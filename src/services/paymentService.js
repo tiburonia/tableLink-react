@@ -31,8 +31,11 @@ class PaymentService {
       await client.query('BEGIN');
 
       // 1. 기존 OPEN 주문 확인 또는 새 주문 생성
+      // orderId가 null이거나 숫자가 아니면 새 주문 생성 필요
       const orderResult = await this.getOrCreateOrder(client, orderData);
       const { orderIdToUse, isNewOrder } = orderResult;
+      
+      console.log(`📝 TLL 주문 처리: ${isNewOrder ? '새 주문 생성' : '기존 주문 활용'} - orderId: ${orderIdToUse}`);
 
       // 2. 배치 번호 계산
       const batchNo = await orderRepository.getNextBatchNo(client, orderIdToUse);
@@ -343,8 +346,9 @@ class PaymentService {
         itemCount: orderData.items?.length
       });
 
+      // TLL 주문 처리 (새 주문 생성 또는 기존 주문 활용)
       const result = await this.processTLLOrder({
-        orderId: pendingPayment.order_id,
+        orderId: null, // pending_payment의 order_id는 임시 ID이므로 null로 전달
         amount: pendingPayment.amount,
         paymentKey,
         tossResult,
@@ -355,8 +359,17 @@ class PaymentService {
       // pending_payments 상태를 SUCCESS로 업데이트
       const updateClient = await pool.connect();
       try {
+        // 임시 orderId(pending_payment의 order_id)로 업데이트
         await paymentRepository.updatePendingPaymentStatus(updateClient, orderId, 'SUCCESS');
         console.log(`✅ pending_payments 상태 업데이트: ${orderId} -> SUCCESS`);
+        
+        // 실제 생성된 orders.id도 기록
+        await updateClient.query(`
+          UPDATE pending_payments 
+          SET order_data = order_data || jsonb_build_object('actual_order_id', $1)
+          WHERE order_id = $2
+        `, [result.orderId, orderId]);
+        console.log(`✅ 실제 주문 ID ${result.orderId}를 pending_payments에 기록`);
       } finally {
         updateClient.release();
       }
