@@ -21,6 +21,8 @@ const TableMapDataProcessor = {
 
             // API 응답 데이터를 테이블맵 형식으로 변환
             const tablesWithDetails = tables.map(table => {
+                // orders 배열로 점유 여부 판단
+                const hasOrders = table.orders && table.orders.length > 0;
                 const hasCrossOrders = table.orders.length > 1;
                 const isTLLMixed = hasCrossOrders && 
                     table.orders.some(o => o.source === 'TLL') && 
@@ -38,7 +40,8 @@ const TableMapDataProcessor = {
                         allOrderItems.push({
                             menu_name: menuName,
                             quantity: quantity,
-                            order_type: order.source.toLowerCase()
+                            order_type: order.source.toLowerCase(),
+                            unit_price: 0 // API에서 제공하지 않으므로 0으로 설정
                         });
                         totalItemCount += quantity;
                     });
@@ -70,7 +73,7 @@ const TableMapDataProcessor = {
                     id: table.id,
                     capacity: table.capacity,
                     isActive: table.status !== 'INACTIVE',
-                    isOccupied: table.isOccupied,
+                    isOccupied: hasOrders, // orders 배열로 점유 여부 판단
                     totalAmount: totalAmount,
                     orderCount: totalItemCount,
                     isFromTLG: primaryOrder?.source === 'TLL',
@@ -102,14 +105,15 @@ const TableMapDataProcessor = {
         const consolidated = {};
 
         orderItems.forEach((item) => {
-            const key = `${item.menu_name}_${item.unit_price}`;
+            const unitPrice = item.unit_price || 0;
+            const key = `${item.menu_name}_${unitPrice}`;
 
             if (consolidated[key]) {
                 consolidated[key].quantity += item.quantity;
             } else {
                 consolidated[key] = {
                     menuName: item.menu_name,
-                    price: item.unit_price,
+                    price: unitPrice,
                     quantity: item.quantity,
                     cookStation: item.cook_station || "KITCHEN",
                 };
@@ -126,14 +130,15 @@ const TableMapDataProcessor = {
         const consolidated = {};
 
         orderItems.forEach((item) => {
-            const key = `${item.menu_name}_${item.unit_price}_${item.order_type || 'main'}`;
+            const unitPrice = item.unit_price || 0;
+            const key = `${item.menu_name}_${unitPrice}_${item.order_type || 'main'}`;
 
             if (consolidated[key]) {
                 consolidated[key].quantity += item.quantity;
             } else {
                 consolidated[key] = {
                     menuName: item.menu_name,
-                    price: item.unit_price,
+                    price: unitPrice,
                     quantity: item.quantity,
                     cookStation: item.cook_station || "KITCHEN",
                     orderType: item.order_type || 'main'
