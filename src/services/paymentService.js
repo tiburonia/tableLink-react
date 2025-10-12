@@ -366,7 +366,7 @@ class PaymentService {
         // 실제 생성된 orders.id도 기록
         await updateClient.query(`
           UPDATE pending_payments 
-          SET order_data = order_data || jsonb_build_object('actual_order_id', $1)
+          SET order_data = order_data || jsonb_build_object('actual_order_id', $1::integer)
           WHERE order_id = $2
         `, [result.orderId, orderId]);
         console.log(`✅ 실제 주문 ID ${result.orderId}를 pending_payments에 기록`);
