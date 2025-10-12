@@ -223,10 +223,10 @@ class PaymentService {
 
       // table_orders 레코드 생성
       await tableRepository.createTableOrder(client, orderId, tableNumber);
-      
+
       // 테이블 상태를 OCCUPIED로 변경
       await tableRepository.setTableOccupied(client, storeId, tableNumber);
-      
+
       console.log(`✅ TLL 주문 ${orderId}을 테이블 ${tableNumber}에 연결`);
 
     } catch (error) {
@@ -269,19 +269,19 @@ class PaymentService {
 
       // 유저 정보 조회 (userPK가 실제로는 user.id이므로 그대로 사용)
       const user = await userRepository.getUserById(userPK);
-      
+
       if (!user) {
         throw new Error('사용자를 찾을 수 없습니다');
       }
 
       // pending_payments에 저장
       await paymentRepository.createPendingPayment(client, {
-        orderId, 
-        userId: user.id, 
-        userPK: userPK, 
-        storeId, 
-        tableNumber, 
-        orderData, 
+        orderId,
+        userId: user.id,
+        userPK: userPK,
+        storeId,
+        tableNumber,
+        orderData,
         amount
       });
 
@@ -352,10 +352,11 @@ class PaymentService {
         notificationMetadata: {}
       });
 
-      // pending_payments 상태 업데이트
+      // pending_payments 상태를 SUCCESS로 업데이트
       const updateClient = await pool.connect();
       try {
-        await paymentRepository.updatePendingPaymentStatus(updateClient, orderId, 'COMPLETED');
+        await paymentRepository.updatePendingPaymentStatus(updateClient, orderId, 'SUCCESS');
+        console.log(`✅ pending_payments 상태 업데이트: ${orderId} -> SUCCESS`);
       } finally {
         updateClient.release();
       }
@@ -473,34 +474,18 @@ class PaymentService {
       await paymentRepository.createPaymentDetailsForTickets(client, paymentId, orderId, unpaidTickets);
 
       // 5. 티켓 상태 업데이트
-      const updatedTickets = await paymentRepository.updateTicketsToPaid(client, orderId, 'POS');
+      const paidTickets = await paymentRepository.updateTicketsToPaid(client, orderId, 'POS');
+      const totalAmount = unpaidTickets.reduce((sum, ticket) => sum + parseInt(ticket.ticket_amount || 0), 0);
 
       // 6. 주문 상태 및 테이블 처리
       const orderFullyPaid = await this.handleOrderCompletion(client, orderId, storeId, tableNumber);
 
-      await client.query('COMMIT');
-
-      return {
-        success: true,
-        paymentId,
-        orderId,
-        paymentMethod,
-        amount,
-        customerType,
-        guestPhone,
-        memberPhone,
-        paidTickets: updatedTickets,
-        totalTicketsPaid: updatedTickets.length,
-        orderFullyPaid,
-        message: `${customerType === 'member' ? '회원' : '비회원'} ${paymentMethod} 결제가 완료되었습니다 (${updatedTickets.length}개 티켓)`
-      };
-
-    // 8. table_orders 연결 해제 및 테이블 상태 업데이트
+      // 7. table_orders 연결 해제 및 테이블 상태 업데이트
       await tableRepository.unlinkTableOrder(client, orderId, tableNumber);
-      
-      // 9. 해당 테이블에 다른 활성 주문이 있는지 확인
+
+      // 8. 해당 테이블에 다른 활성 주문이 있는지 확인
       const hasOtherOrders = await tableRepository.hasActiveOrders(client, storeId, tableNumber);
-      
+
       let tableReleased = false;
       if (!hasOtherOrders) {
         // 다른 활성 주문이 없으면 테이블 상태를 AVAILABLE로 변경
