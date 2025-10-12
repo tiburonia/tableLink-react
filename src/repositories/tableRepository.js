@@ -38,7 +38,7 @@ class TableRepository {
   /**
    * table_orders 레코드 생성
    */
-  async createTableOrder(client,storeId, orderId, tableId) {
+  async createTableOrder(client, orderId, storeId,  tableId) {
     const result = await client.query(`
       INSERT INTO table_orders (order_id, table_id, linked_at,store_id)
       VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
