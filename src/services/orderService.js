@@ -800,7 +800,7 @@ class OrderService {
 
       console.log(`✅ 새 POS 주문 생성: orderId=${orderId}, 매장=${storeId}, 테이블=${tableNumber}`);
 
-      // store_tables 업데이트
+      // table_orders 레코드 생성 및 테이블 상태 업데이트
       await this.updateStoreTable(client, storeId, tableNumber, orderId);
 
       return parseInt(orderId);
@@ -892,25 +892,16 @@ class OrderService {
   }
 
   /**
-   * store_tables 업데이트
+   * store_tables 업데이트 (table_orders 기반)
    */
   async updateStoreTable(client, storeId, tableNumber, orderId) {
-    const currentTable = await tableRepository.getTableByNumber(storeId, tableNumber);
-
-    if (currentTable) {
-      const hasMainOrder = currentTable.processing_order_id !== null;
-      const hasSpareOrder = currentTable.spare_processing_order_id !== null;
-
-      if (!hasMainOrder) {
-        await tableRepository.setMainOrder(client, storeId, tableNumber, orderId);
-      } else if (!hasSpareOrder) {
-        await tableRepository.setSpareOrder(client, storeId, tableNumber, orderId);
-      } else {
-        throw new Error('해당 테이블에 이미 2개의 활성 주문이 존재합니다. 더 이상 주문을 받을 수 없습니다.');
-      }
-    } else {
-      throw new Error('테이블을 찾을 수 없습니다');
-    }
+    // table_orders 레코드 생성
+    await tableRepository.createTableOrder(client, orderId, tableNumber);
+    
+    // 테이블 상태를 OCCUPIED로 업데이트
+    await tableRepository.setTableOccupied(client, storeId, tableNumber);
+    
+    console.log(`✅ 테이블 ${tableNumber}에 주문 ${orderId} 연결 완료 (table_orders 레코드 생성)`);
   }
 
   /**
