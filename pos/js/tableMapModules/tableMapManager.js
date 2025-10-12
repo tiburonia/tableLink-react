@@ -11,35 +11,13 @@ const TableMapManager = {
     async selectTable(tableNumber) {
         try {
             console.log(`🪑 테이블 ${tableNumber} 선택`);
-
-            const hasTLLIntegration = await TableMapDataProcessor.checkTLLIntegration(
-                POSCore.storeId,
-                tableNumber,
-            );
-
-            if (!hasTLLIntegration) {
-                console.log(`📱 테이블 ${tableNumber}은 TLL 미연동 - 비회원 POS 주문 모드`);
-                POSCore.showOrderScreen(tableNumber);
-                return;
-            }
-
-            const response = await fetch(
-                `/api/pos/stores/${POSCore.storeId}/table/${tableNumber}/session-status`,
-            );
-            const data = await response.json();
-
-            if (data.success && data.hasActiveSession) {
-                POSCore.showOrderScreen(tableNumber);
-            } else {
-                await this.startNewSession(tableNumber);
-            }
+            POSCore.showOrderScreen(tableNumber);
         } catch (error) {
             console.error("❌ 테이블 선택 실패:", error);
             alert("테이블 정보를 불러올 수 없습니다.");
         }
     },
 
-   
 
     /**
      * 실시간 업데이트 시작 (SSE 방식)
