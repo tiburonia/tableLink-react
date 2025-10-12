@@ -9,7 +9,7 @@ async function setAllTablesOccupied() {
     
     const result = await client.query(`
       UPDATE store_tables 
-      SET status = 'OCCUPIED', updated_at = CURRENT_TIMESTAMP
+      SET status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP
       RETURNING id, store_id, table_name, status
     `);
     
