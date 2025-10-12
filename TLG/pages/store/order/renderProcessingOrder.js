@@ -47,6 +47,9 @@ async function renderProcessingOrder(orderId) {
       return;
     }
 
+    // 현재 주문 데이터 전역 저장 (addNewOrder에서 접근 가능하도록)
+    window.currentOrderData = orderData;
+
     // 세션이 종료된 주문인지 확인 (여러 조건 체크)
     const sessionStatus = orderData.session_status || 'OPEN';
     const sessionEnded = orderData.session_ended === true || orderData.session_ended === 'true';
@@ -315,8 +318,8 @@ function renderTicketsGrid(tickets, type, paymentStatus = null) {
   });
 
   if (!tickets || tickets.length === 0) {
-    const emptyMessage = type === 'TLL' ? 
-      '온라인 주문이 없습니다' : 
+    const emptyMessage = type === 'TLL' ?
+      '온라인 주문이 없습니다' :
       paymentStatus === 'UNPAID' ? '결제 대기 중인 주문이 없습니다' : '결제 완료된 주문이 없습니다';
 
     console.log(`🎫 (${type}) 티켓이 없어서 빈 상태 표시`);
@@ -686,22 +689,14 @@ async function addNewOrder(storeId, tableId) {
   try {
     console.log(`➕ 추가 주문 요청 - 매장 ID: ${storeId}, 테이블 ID: ${tableId}`);
 
-    // 매장 정보 조회
-    const storeInfo = await fetchStoreInfo(storeId);
-    if (!storeInfo) {
-      throw new Error('매장 정보를 조회할 수 없습니다');
-    }
-
-    console.log('🏪 매장 정보 조회 성공:', storeInfo.name);
-
     // renderOrderScreen 스크립트 로드 확인
-    if (typeof renderOrderScreen !== 'function') {
+    if (typeof window.renderOrderScreen !== 'function') {
       console.log('🔄 renderOrderScreen 스크립트 로드 시도...');
 
       try {
         const script = document.createElement('script');
-        script.src = '/TLG/pages/store/renderOrderScreen.js';
-        script.async = false;
+        script.src = '/TLG/pages/pay/renderOrderScreen.js';
+        script.type = 'module';
 
         await new Promise((resolve, reject) => {
           script.onload = resolve;
@@ -712,7 +707,7 @@ async function addNewOrder(storeId, tableId) {
         // 로드 후 잠시 대기
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        if (typeof renderOrderScreen !== 'function') {
+        if (typeof window.renderOrderScreen !== 'function') {
           throw new Error('renderOrderScreen 함수를 로드할 수 없습니다');
         }
 
@@ -724,13 +719,19 @@ async function addNewOrder(storeId, tableId) {
       }
     }
 
+    // 기존 orderData에서 매장 정보 추출 (불필요한 API 호출 제거)
+    const storeInfo = {
+      id: storeId,
+      name: window.currentOrderData?.storeName || '매장'
+    };
+
     // 이전 화면 정보 저장 (처리 중인 주문 화면으로 돌아오기 위해)
     window.previousScreen = 'renderProcessingOrder';
     window.previousScreenParams = { orderId: window.currentOrderId };
 
     // renderOrderScreen으로 이동 (기존 세션 유지)
     console.log('🔄 주문 화면으로 이동 중...');
-    await renderOrderScreen(storeInfo, `${tableId}번 테이블`, tableId);
+    await window.renderOrderScreen(storeInfo, `${tableId}번 테이블`, tableId);
 
   } catch (error) {
     console.error('❌ 추가 주문 실패:', error);
@@ -780,8 +781,8 @@ function startRealTimeUpdates(orderId) {
         const sessionEnded = orderData.session_ended === true || orderData.session_ended === 'true';
 
         // 세션이 활성 상태인지 확인
-        const isSessionActive = sessionStatus !== 'CLOSED' && 
-                              !sessionEnded && 
+        const isSessionActive = sessionStatus !== 'CLOSED' &&
+                              !sessionEnded &&
                               !orderData.session_ended_at;
 
         if (isSessionActive) {
@@ -1499,10 +1500,10 @@ function getProcessingOrderStyles() {
       }
 
       @keyframes payment-attention {
-        0%, 100% { 
+        0%, 100% {
           box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.1);
         }
-        50% { 
+        50% {
           box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
         }
       }
