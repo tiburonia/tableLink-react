@@ -867,36 +867,28 @@ class OrderService {
   }
 
   /**
+   * 테이블에 주문 연결
+   */
+  async linkOrderToTable(client, orderId, storeId, tableNumber) {
+    // table_orders 레코드 생성
+    await tableRepository.createTableOrder(client, orderId, tableNumber);
+    
+    // 테이블 상태를 OCCUPIED로 변경
+    await tableRepository.setTableOccupied(client, storeId, tableNumber);
+    
+    console.log(`✅ 주문 ${orderId}을 테이블 ${tableNumber}에 연결`);
+  }
+
+  /**
    * 주문 취소 처리
    */
   async handleOrderCancellation(client, orderId, storeId, tableNumber) {
     await orderRepository.cancelAllTickets(client, orderId);
     await orderRepository.cancelOrder(client, orderId);
 
-    const hasOtherOrders = await orderRepository.hasOtherActiveOrders(client, storeId, tableNumber, orderId);
-
-    if (hasOtherOrders) {
-      await this.updateTableAfterCancellation(client, storeId, tableNumber, orderId);
-    } else {
-      await tableRepository.clearTable(client, storeId, tableNumber);
-    }
-  }
-
-  /**
-   * 테이블 상태 업데이트 (주문 취소 후)
-   */
-  async updateTableAfterCancellation(client, storeId, tableNumber, cancelledOrderId) {
-    const currentTable = await tableRepository.getTableByNumber(storeId, tableNumber);
-
-    if (currentTable) {
-      const processingOrderId = parseInt(currentTable.processing_order_id);
-      const spareOrderId = parseInt(currentTable.spare_processing_order_id);
-      const currentOrderId = parseInt(cancelledOrderId);
-
-      if (spareOrderId === currentOrderId) {
-        await tableRepository.clearSpareOrder(client, storeId, tableNumber);
-      } else if (processingOrderId === currentOrderId) {
-        if (currentTable.spare_processing_order_id !== null) {
+    // table_orders 연결 해제 및 테이블 상태 업데이트
+    await tableRepository.removeOrderFromTable(client, storeId, tableNumber, orderId);
+  }_order_id !== null) {
           await tableRepository.moveSpareToMain(client, storeId, tableNumber);
         } else {
           await tableRepository.clearTable(client, storeId, tableNumber);

@@ -13,8 +13,6 @@ class TableRepository {
       SELECT
         id,
         table_name,
-        processing_order_id,
-        spare_processing_order_id,
         status,
         updated_at
       FROM store_tables
@@ -29,7 +27,7 @@ class TableRepository {
    */
   async getTableById(storeId, tableId) {
     const result = await pool.query(`
-      SELECT processing_order_id, spare_processing_order_id, status
+      SELECT id, table_name, status, updated_at
       FROM store_tables
       WHERE store_id = $1 AND id = $2
     `, [storeId, tableId]);
@@ -38,163 +36,113 @@ class TableRepository {
   }
 
   /**
-   * spare_processing_order_id 업데이트
+   * table_orders 레코드 생성
    */
-  async updateSpareProcessingOrder(client, orderId) {
-    await client.query(`
-      UPDATE store_tables
-      SET spare_processing_order_id = $1, updated_at = NOW()
-      WHERE processing_order_id = $1
-    `, [orderId]);
+  async createTableOrder(client, orderId, tableId) {
+    const result = await client.query(`
+      INSERT INTO table_orders (order_id, table_id, linked_at)
+      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      RETURNING id
+    `, [orderId, tableId]);
+
+    console.log(`✅ table_orders 레코드 생성: 주문 ${orderId}, 테이블 ${tableId}`);
+    return result.rows[0].id;
   }
 
   /**
-   * 메인 주문 설정
+   * table_orders 레코드 연결 해제 (unlinked_at 설정)
    */
-  async setMainOrder(client, storeId, tableNumber, orderId) {
+  async unlinkTableOrder(client, orderId, tableId) {
     await client.query(`
-      UPDATE store_tables
-      SET processing_order_id = $1,
-          status = 'OCCUPIED',
-          updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = $2 AND id = $3
-    `, [orderId, storeId, tableNumber]);
+      UPDATE table_orders
+      SET unlinked_at = CURRENT_TIMESTAMP
+      WHERE order_id = $1 AND table_id = $2 AND unlinked_at IS NULL
+    `, [orderId, tableId]);
+
+    console.log(`✅ table_orders 연결 해제: 주문 ${orderId}, 테이블 ${tableId}`);
   }
 
   /**
-   * 보조 주문 설정
+   * 테이블 상태를 OCCUPIED로 설정
    */
-  async setSpareOrder(client, storeId, tableNumber, orderId) {
+  async setTableOccupied(client, storeId, tableNumber) {
     await client.query(`
-      UPDATE store_tables
-      SET spare_processing_order_id = $1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = $2 AND id = $3 
-    `, [orderId, storeId, tableNumber]);
-  }
-
-  /**
-   * 보조 주문 해제
-   */
-  async clearSpareOrder(client, storeId, tableNumber) {
-    await client.query(`
-      UPDATE store_tables
-      SET
-        spare_processing_order_id = NULL,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = $1 AND id = $2 
-    `, [storeId, tableNumber]);
-  }
-
-  /**
-   * 보조 주문을 메인으로 이동
-   */
-  async moveSpareToMain(client, storeId, tableNumber) {
-    await client.query(`
-      UPDATE store_tables
-      SET
-        processing_order_id = spare_processing_order_id,
-        spare_processing_order_id = NULL,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = $1 AND id = $2
-    `, [storeId, tableNumber]);
-  }
-
-  /**
-   * 테이블 완전 해제
-   */
-  async clearTable(client, storeId, tableNumber) {
-    await client.query(`
-      UPDATE store_tables
-      SET
-        processing_order_id = NULL,
-        spare_processing_order_id = NULL,
-        status = 'AVAILABLE',
-        updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = $1 AND id = $2
-    `, [storeId, tableNumber]);
-  }
-
-  /**
-   * 테이블 상태 OCCUPIED 반복 설정
-   */
-  async setTableOccupied(storeId, tableNumber){
-    await pool.query(`
       UPDATE store_tables
       SET status = 'OCCUPIED', updated_at = CURRENT_TIMESTAMP
       WHERE store_id = $1 AND id = $2
-    `, [storeId, tableNumber])
-  }
-/**
-   * 테이블에서 특정 주문 제거
-   */
-  async removeOrderFromTable(client, storeId, tableNumber, orderId) {
-    // 현재 테이블 상태 조회
-    const currentTable = await this.getTableByNumber(storeId, tableNumber);
+    `, [storeId, tableNumber]);
 
-    if (!currentTable) {
-      console.warn(`⚠️ 테이블을 찾을 수 없음: 매장 ${storeId}, 테이블 ${tableNumber}`);
-      return;
-    }
-
-    const processingOrderId = parseInt(currentTable.processing_order_id);
-    const spareOrderId = parseInt(currentTable.spare_processing_order_id);
-    const targetOrderId = parseInt(orderId);
-
-    if (spareOrderId === targetOrderId) {
-      // 보조 주문인 경우 - 보조 슬롯만 비움
-      await client.query(`
-        UPDATE store_tables
-        SET spare_processing_order_id = NULL,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE store_id = $1 AND id = $2
-      `, [storeId, tableNumber]);
-
-      console.log(`✅ 보조 주문 제거: 테이블 ${tableNumber}, 주문 ${orderId}`);
-
-    } else if (processingOrderId === targetOrderId) {
-      // 메인 주문인 경우
-      if (currentTable.spare_processing_order_id !== null) {
-        // 보조가 있으면 보조를 메인으로 이동
-        await client.query(`
-          UPDATE store_tables
-          SET processing_order_id = spare_processing_order_id,
-              spare_processing_order_id = NULL,
-              updated_at = CURRENT_TIMESTAMP
-          WHERE store_id = $1 AND id = $2
-        `, [storeId, tableNumber]);
-
-        console.log(`✅ 메인 주문 제거 후 보조 승격: 테이블 ${tableNumber}, 완료된 주문 ${orderId}`);
-      } else {
-        // 보조가 없으면 테이블 완전 해제
-        await this.releaseTable(client, storeId, tableNumber);
-      }
-    }
+    console.log(`🍽️ 테이블 OCCUPIED 설정: 매장 ${storeId}, 테이블 ${tableNumber}`);
   }
 
   /**
-   * 테이블 완전 해제
+   * 테이블 상태를 AVAILABLE로 설정
    */
-  async releaseTable(client, storeId, tableNumber) {
+  async setTableAvailable(client, storeId, tableNumber) {
     await client.query(`
       UPDATE store_tables
-      SET processing_order_id = NULL,
-          spare_processing_order_id = NULL,
-          status = 'AVAILABLE',
-          updated_at = CURRENT_TIMESTAMP
+      SET status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP
       WHERE store_id = $1 AND id = $2
     `, [storeId, tableNumber]);
 
-    console.log(`🍽️ 테이블 완전 해제: 매장 ${storeId}, 테이블 ${tableNumber}`);
+    console.log(`🍽️ 테이블 AVAILABLE 설정: 매장 ${storeId}, 테이블 ${tableNumber}`);
   }
+
   /**
-   * table_orders 레코드 생성 
+   * 테이블의 활성 주문 확인
    */
-  async createTableOrder(client, orderId, tableId){
+  async hasActiveOrders(client, storeId, tableNumber) {
+    const result = await client.query(`
+      SELECT COUNT(*) as count
+      FROM table_orders tbo
+      JOIN orders o ON tbo.order_id = o.id
+      WHERE tbo.table_id = $1 
+        AND tbo.unlinked_at IS NULL
+        AND o.session_status = 'OPEN'
+        AND o.store_id = $2
+    `, [tableNumber, storeId]);
+
+    return parseInt(result.rows[0].count) > 0;
+  }
+
+  /**
+   * 테이블에서 특정 주문 제거
+   */
+  async removeOrderFromTable(client, storeId, tableNumber, orderId) {
+    // table_orders 연결 해제
+    await this.unlinkTableOrder(client, orderId, tableNumber);
+
+    // 해당 테이블에 다른 활성 주문이 있는지 확인
+    const hasOtherOrders = await this.hasActiveOrders(client, storeId, tableNumber);
+
+    if (!hasOtherOrders) {
+      // 다른 활성 주문이 없으면 테이블 상태를 AVAILABLE로 변경
+      await this.setTableAvailable(client, storeId, tableNumber);
+      console.log(`🍽️ 테이블 완전 해제: 매장 ${storeId}, 테이블 ${tableNumber}`);
+    } else {
+      console.log(`ℹ️ 테이블 ${tableNumber}에 다른 활성 주문 존재, 상태 유지`);
+    }
+  }
+
+  /**
+   * 테이블 완전 해제 (모든 주문 연결 해제)
+   */
+  async releaseTable(client, storeId, tableNumber) {
+    // 해당 테이블의 모든 활성 table_orders 연결 해제
     await client.query(`
-      INSERT INTO table_orders (order_id, table_id, linked_at)
-      VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-    `, [orderId, tableId, storeId])
+      UPDATE table_orders
+      SET unlinked_at = CURRENT_TIMESTAMP
+      WHERE table_id = $1 
+        AND unlinked_at IS NULL
+        AND order_id IN (
+          SELECT id FROM orders WHERE store_id = $2
+        )
+    `, [tableNumber, storeId]);
+
+    // 테이블 상태를 AVAILABLE로 변경
+    await this.setTableAvailable(client, storeId, tableNumber);
+
+    console.log(`🍽️ 테이블 완전 해제 완료: 매장 ${storeId}, 테이블 ${tableNumber}`);
   }
   /**
    * store_id로 테이블 조회

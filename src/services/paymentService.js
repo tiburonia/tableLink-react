@@ -209,32 +209,28 @@ class PaymentService {
   }
 
   /**
-   * 테이블 처리 주문 업데이트
+   * 테이블에 주문 연결 (TLL용)
    */
-  async updateTableProcessingOrder(client, storeId, tableNumber, orderId) {
+  async linkOrderToTable(client, storeId, tableNumber, orderId) {
     try {
-      // 현재 테이블 상태 확인
-      const currentTable = await tableRepository.getTableByNumber(storeId, tableNumber);
+      // table_orders 레코드가 이미 존재하는지 확인
+      const existingLink = await client.query(`
+        SELECT id FROM table_orders
+        WHERE order_id = $1 AND table_id = $2 AND unlinked_at IS NULL
+      `, [orderId, tableNumber]);
 
-      if (!currentTable) {
-        console.warn(`⚠️ 테이블 정보 없음: 매장 ${storeId}, 테이블 ${tableNumber}`);
+      if (existingLink.rows.length > 0) {
+        console.log(`ℹ️ 주문 ${orderId}은 이미 테이블 ${tableNumber}에 연결되어 있음`);
         return;
       }
 
-      const hasMainOrder = currentTable.processing_order_id !== null;
-      const hasSpareOrder = currentTable.spare_processing_order_id !== null;
-
-      // 현재 주문이 이미 테이블에 등록되어 있는지 확인
-      const isAlreadyRegistered = (
-        parseInt(currentTable.processing_order_id) === parseInt(orderId) ||
-        parseInt(currentTable.spare_processing_order_id) === parseInt(orderId)
-      );
-
-      if (!isAlreadyRegistered) {
-        if (!hasMainOrder) {
-          // 메인 주문으로 설정
-          await tableRepository.setMainOrder(client, storeId, tableNumber, orderId);
-          console.log(`🍽️ TLL 주문 - 메인 슬롯 설정: 매장 ${storeId}, 테이블 ${tableNumber}, 주문 ${orderId}`);
+      // table_orders 레코드 생성
+      await tableRepository.createTableOrder(client, orderId, tableNumber);
+      
+      // 테이블 상태를 OCCUPIED로 변경
+      await tableRepository.setTableOccupied(client, storeId, tableNumber);
+      
+      console.log(`✅ TLL 주문 ${orderId}을 테이블 ${tableNumber}에 연결`d}`);
         } else if (!hasSpareOrder) {
           // 보조 주문으로 설정
           await tableRepository.setSpareOrder(client, storeId, tableNumber, orderId);

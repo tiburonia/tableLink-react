@@ -9,7 +9,7 @@ const pool = require('../db/pool');
  */
 class TableService {
   /**
-   * 테이블 상태 조회 (TLL 연동 교차주문 확인용)
+   * 테이블 상태 조회 (활성 주문 포함)
    */
   async getTableStatus(storeId, tableNumber) {
     const table = await tableRepository.getTableByNumber(storeId, tableNumber);
@@ -18,39 +18,39 @@ class TableService {
       throw new Error('테이블을 찾을 수 없습니다');
     }
 
-    // TLL 연동 교차주문 여부 판단 (POI = SPOI이고 둘 다 null이 아님)
-    const isTLLMixedOrder = (
-      table.processing_order_id !== null &&
-      table.spare_processing_order_id !== null &&
-      parseInt(table.processing_order_id) === parseInt(table.spare_processing_order_id)
-    );
+    // 해당 테이블의 활성 주문 조회
+    const activeOrdersResult = await pool.query(`
+      SELECT 
+        o.id,
+        o.source,
+        o.is_mixed,
+        o.session_status
+      FROM table_orders tbo
+      JOIN orders o ON tbo.order_id = o.id
+      WHERE tbo.table_id = $1 
+        AND tbo.unlinked_at IS NULL
+        AND o.session_status = 'OPEN'
+        AND o.store_id = $2
+    `, [tableNumber, storeId]);
 
-    // 추가 검증: 해당 주문이 실제로 is_mixed = true인지 확인
-    let isActuallyMixed = false;
-    if (isTLLMixedOrder && table.processing_order_id) {
-      try {
-        const order = await orderRepository.getOrderById(null, table.processing_order_id);
-        if (order) {
-          isActuallyMixed = (
-            order.is_mixed === true &&
-            order.source === 'TLL' &&
-            order.session_status === 'OPEN'
-          );
-        }
-      } catch (error) {
-        console.warn(`⚠️ 주문 is_mixed 상태 확인 실패: ${table.processing_order_id}`, error);
-      }
-    }
+    const activeOrders = activeOrdersResult.rows;
 
-    const finalTLLMixedStatus = isTLLMixedOrder && isActuallyMixed;
+    // TLL 연동 교차주문 여부 판단
+    const hasTLLOrder = activeOrders.some(o => o.source === 'TLL');
+    const hasPOSOrder = activeOrders.some(o => o.source === 'POS');
+    const isTLLMixedOrder = hasTLLOrder && hasPOSOrder;
 
     return {
       id: table.id,
-      processing_order_id: table.processing_order_id,
-      spare_processing_order_id: table.spare_processing_order_id,
       status: table.status,
       updated_at: table.updated_at,
-      isTLLMixedOrder: finalTLLMixedStatus
+      activeOrders: activeOrders.map(o => ({
+        id: o.id,
+        source: o.source,
+        isMixed: o.is_mixed
+      })),
+      isTLLMixedOrder: isTLLMixedOrder,
+      isOccupied: activeOrders.length > 0
     };
   }
 
