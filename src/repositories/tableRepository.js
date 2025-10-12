@@ -38,12 +38,12 @@ class TableRepository {
   /**
    * table_orders 레코드 생성
    */
-  async createTableOrder(client, orderId, tableId) {
+  async createTableOrder(client,storeId, orderId, tableId) {
     const result = await client.query(`
-      INSERT INTO table_orders (order_id, table_id, linked_at)
-      VALUES ($1, $2, CURRENT_TIMESTAMP)
+      INSERT INTO table_orders (order_id, table_id, linked_at,store_id)
+      VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
       RETURNING id
-    `, [orderId, tableId]);
+    `, [orderId, tableId, storeId]);
 
     console.log(`✅ table_orders 레코드 생성: 주문 ${orderId}, 테이블 ${tableId}`);
     return result.rows[0].id;

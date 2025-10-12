@@ -896,7 +896,7 @@ class OrderService {
    */
   async updateStoreTable(client, storeId, tableNumber, orderId) {
     // table_orders 레코드 생성
-    await tableRepository.createTableOrder(client, orderId, tableNumber);
+    await tableRepository.createTableOrder(client,storeId, orderId, tableNumber);
     
     // 테이블 상태를 OCCUPIED로 업데이트
     await tableRepository.setTableOccupied(client, storeId, tableNumber);
