@@ -230,7 +230,7 @@ class PaymentService {
       // 테이블 상태를 OCCUPIED로 변경
       await tableRepository.setTableOccupied(client, storeId, tableNumber);
       
-      console.log(`✅ TLL 주문 ${orderId}을 테이블 ${tableNumber}에 연결`d}`);
+      console.log(`✅ TLL 주문 ${orderId}을 테이블 ${tableNumber}에 연결`);
         } else if (!hasSpareOrder) {
           // 보조 주문으로 설정
           await tableRepository.setSpareOrder(client, storeId, tableNumber, orderId);
