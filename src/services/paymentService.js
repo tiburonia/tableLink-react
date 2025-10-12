@@ -316,13 +316,36 @@ class PaymentService {
         throw new Error('대기 중인 결제를 찾을 수 없습니다');
       }
 
+      console.log('📦 pending_payment 데이터:', {
+        store_id: pendingPayment.store_id,
+        table_number: pendingPayment.table_number,
+        user_pk: pendingPayment.user_pk,
+        order_data: pendingPayment.order_data
+      });
+
       // 토스페이먼츠 API 승인 요청
       const tossResult = await this.requestTossPaymentConfirm(paymentKey, orderId, amount);
 
       console.log('✅ 토스페이먼츠 승인 성공:', tossResult);
 
-      // 주문 및 결제 처리
-      const orderData = pendingPayment.order_data;
+      // pending_payments 테이블의 컬럼값과 order_data JSON을 합쳐서 orderData 구성
+      const orderData = {
+        storeId: pendingPayment.store_id,
+        tableNumber: pendingPayment.table_number,
+        userPk: pendingPayment.user_pk,
+        ...(pendingPayment.order_data || {}),
+        storeName: pendingPayment.order_data?.storeName,
+        items: pendingPayment.order_data?.items || [],
+        finalTotal: pendingPayment.amount
+      };
+
+      console.log('🔧 구성된 orderData:', {
+        storeId: orderData.storeId,
+        tableNumber: orderData.tableNumber,
+        userPk: orderData.userPk,
+        itemCount: orderData.items?.length
+      });
+
       const result = await this.processTLLOrder({
         orderId: pendingPayment.order_id,
         amount: pendingPayment.amount,
