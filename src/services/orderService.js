@@ -167,6 +167,10 @@ class OrderService {
 
       return { tableReleased };
 
+
+
+      
+
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
@@ -791,7 +795,7 @@ class OrderService {
       console.log(`✅ 새 POS 주문 생성: orderId=${orderId}, 매장=${storeId}, 테이블=${tableNumber}`);
 
       // table_orders 레코드 생성 및 테이블 상태 업데이트
-      await this.updateStoreTable(client, storeId, tableNumber, orderId);
+      await this.updateStoreTable(client, orderId, storeId, tableNumber);
 
       return parseInt(orderId);
     } catch (error) {

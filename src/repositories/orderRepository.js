@@ -388,15 +388,13 @@ class OrderRepository {
    * 주문 정보 조회
    */
   async getOrderById(client, orderId) {
-    const query = `
-      SELECT id, source, session_status, is_mixed, created_at, updated_at
+    const result = await pool.query(`
+      SELECT
+      id, store_id, table_num, source, session_status, is_mixed, created_at, updated_at
       FROM orders
       WHERE id = $1
-    `;
+    `, [orderId]) 
 
-    const result = client ?
-      await client.query(query, [orderId]) :
-      await pool.query(query, [orderId]);
 
     return result.rows.length > 0 ? result.rows[0] : null;
   }
