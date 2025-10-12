@@ -70,7 +70,7 @@ const TableMapRenderer = {
      */
     renderOrderContent(table) {
         const { orders } = table;
-        
+
         // 교차주문 여부 확인
         const hasTLLOrder = orders.some(o => o.source === 'TLL');
         const hasPOSOrder = orders.some(o => o.source === 'POS');
@@ -100,7 +100,6 @@ const TableMapRenderer = {
             <div class="receipt-card tll-mixed-order">
                 <div class="receipt-header">
                     <div class="receipt-header-left">
-                        <div class="receipt-subtitle">🔗 TLL+POS 교차주문</div>
                     </div>
                     <div class="receipt-time">${time}</div>
                 </div>
@@ -200,7 +199,7 @@ const TableMapRenderer = {
 
         // 일반 주문과 교차주문에서 다른 스타일 적용
         const isCrossOrder = maxItems === 2;
-        
+
         if (isCrossOrder) {
             const itemsHTML = displayItems
                 .map(item => {
