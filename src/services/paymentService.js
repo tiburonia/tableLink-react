@@ -74,11 +74,7 @@ class PaymentService {
       // 8. TLL 주문 시 테이블 연결 및 table_orders 레코드 생성
       await this.linkOrderToTable(client, orderData.storeId, orderData.tableNumber, orderIdToUse);
 
-      await client.query('COMMIT');
-
-      console.log(`✅ 결제 서비스: TLL 주문 처리 완료 - 주문 ${orderIdToUse}, 새 주문: ${isNewOrder}`);
-
-      // 새 주문인 경우 알림 생성
+      // 9. 새 주문인 경우 알림 생성 (COMMIT 전에 실행)
       if (isNewOrder) {
         await this.createOrderNotification(client, {
           userId: orderData.userPk,
@@ -92,6 +88,10 @@ class PaymentService {
           additionalMetadata: notificationMetadata || {}
         });
       }
+
+      await client.query('COMMIT');
+
+      console.log(`✅ 결제 서비스: TLL 주문 처리 완료 - 주문 ${orderIdToUse}, 새 주문: ${isNewOrder}`);
 
       // 이벤트 발생: 새 주문 생성됨
       eventBus.emit('order.created', {
@@ -526,7 +526,7 @@ class PaymentService {
           ticketId: row.id,
           batchNo: row.batch_no
         })),
-        totalTicketsPaid: paidTickets.length,
+         totalTicketsPaid: paidTickets.length,
         sessionClosed: true,
         tableReleased: tableReleased,
         message: `${customerType === 'member' ? '회원' : '비회원'} ${paymentMethod} 결제 완료 (${paidTickets.length}개 티켓)`
