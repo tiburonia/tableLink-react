@@ -113,20 +113,28 @@ const CrossOrderRenderer = {
         let mainOrder = table.mainOrder;
         let spareOrder = table.spareOrder;
 
-        // orderItems를 ticket_source 또는 orderType으로 분리
+        // orderItems를 ticket_source로 분리 (TLL/POS 구분)
         let mainItems = [];
         let spareItems = [];
 
         if (isTLLMixed) {
-            // TLL + POS 혼합 주문
+            // TLL + POS 혼합 주문 - ticket_source로 명확하게 구분
             mainItems = table.orderItems.filter(item => 
-                item.ticket_source === 'TLL' || item.orderType === 'main'
+                item.ticket_source === 'TLL'
             );
             spareItems = table.orderItems.filter(item => 
-                item.ticket_source === 'POS' || item.orderType === 'spare'
+                item.ticket_source === 'POS'
             );
+            
+            console.log(`🔗 TLL/POS 혼합 주문 분리:`, {
+                tableNumber: table.tableNumber,
+                tllItems: mainItems.length,
+                posItems: spareItems.length,
+                mainItems: mainItems,
+                spareItems: spareItems
+            });
         } else {
-            // 일반 교차주문 (같은 소스에서 여러 주문)
+            // 일반 교차주문 (같은 소스에서 여러 주문) - orderType으로 구분
             mainItems = table.orderItems.filter(item => 
                 item.orderType === 'main' || item.order_type === 'main'
             );

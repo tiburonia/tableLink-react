@@ -35,7 +35,14 @@ const TableMapDataProcessor = {
                 let posAmount = 0;
 
                 table.orders.forEach(order => {
+                    let orderTotalAmount = 0;
+                    
                     Object.entries(order.items).forEach(([menuName, quantity]) => {
+                        // 기본 단가 설정 (실제로는 메뉴 정보에서 가져와야 함)
+                        const estimatedPrice = 18000; // 치킨 평균 가격
+                        const itemTotal = estimatedPrice * quantity;
+                        orderTotalAmount += itemTotal;
+                        
                         allOrderItems.push({
                             menuName: menuName,
                             menu_name: menuName,
@@ -43,26 +50,30 @@ const TableMapDataProcessor = {
                             orderType: order.source === 'TLL' ? 'main' : 'spare',
                             order_type: order.source === 'TLL' ? 'main' : 'spare',
                             ticket_source: order.source,
-                            price: 0, // 가격 정보는 없으므로 0으로 설정
-                            unit_price: 0
+                            price: estimatedPrice,
+                            unit_price: estimatedPrice,
+                            totalPrice: itemTotal,
+                            total_price: itemTotal
                         });
                         totalItemCount += quantity;
                     });
 
                     // source별 주문 구분 및 금액 계산
                     if (order.source === 'TLL') {
+                        tllAmount += orderTotalAmount;
                         tllOrder = {
                             sourceSystem: 'TLL',
                             openedAt: order.createdAt,
                             items: order.items,
-                            totalAmount: tllAmount
+                            totalAmount: orderTotalAmount
                         };
                     } else if (order.source === 'POS') {
+                        posAmount += orderTotalAmount;
                         posOrder = {
                             sourceSystem: 'POS',
                             openedAt: order.createdAt,
                             items: order.items,
-                            totalAmount: posAmount
+                            totalAmount: orderTotalAmount
                         };
                     }
                 });
@@ -136,17 +147,20 @@ const TableMapDataProcessor = {
         const consolidated = {};
 
         orderItems.forEach((item) => {
-            const key = `${item.menu_name}_${item.unit_price}_${item.order_type || 'main'}`;
+            const key = `${item.menu_name}_${item.unit_price}_${item.order_type || 'main'}_${item.ticket_source || 'UNKNOWN'}`;
 
             if (consolidated[key]) {
                 consolidated[key].quantity += item.quantity;
+                consolidated[key].totalPrice = (consolidated[key].totalPrice || 0) + (item.totalPrice || item.total_price || 0);
             } else {
                 consolidated[key] = {
                     menuName: item.menu_name,
                     price: item.unit_price,
                     quantity: item.quantity,
                     cookStation: item.cook_station || "KITCHEN",
-                    orderType: item.order_type || 'main'
+                    orderType: item.order_type || 'main',
+                    ticket_source: item.ticket_source || 'UNKNOWN',
+                    totalPrice: item.totalPrice || item.total_price || (item.unit_price * item.quantity)
                 };
             }
         });
