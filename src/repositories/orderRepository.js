@@ -344,18 +344,17 @@ class OrderRepository {
   }
 
   /**
-   * 다른 활성 주문 존재 여부 확인
+   * 다른 활성 주문 존재 여부 확인 (table_orders 기반)
    */
   async hasOtherActiveOrders(client, storeId, tableNumber, excludeOrderId) {
     const result = await client.query(`
       SELECT COUNT(*) as count
-      FROM orders o
-      JOIN order_tickets ot ON o.id = ot.order_id
-      WHERE o.store_id = $1
-        AND o.table_num = $2
-        AND o.session_status = 'OPEN'
-        AND o.id != $3
-    `, [storeId, tableNumber, excludeOrderId]);
+      FROM table_orders tbo
+      WHERE tbo.table_id = $1
+        AND tbo.store_id = $2
+        AND tbo.unlinked_at IS NULL
+        AND tbo.order_id != $3
+    `, [tableNumber, storeId, excludeOrderId]);
 
     return parseInt(result.rows[0].count) > 0;
   }
@@ -704,8 +703,8 @@ class OrderRepository {
               'total_price', oi.total_price
             )
           ) FILTER (
-            WHERE oi.id IS NOT NULL 
-            AND ot_paid.paid_status = 'PAID' 
+            WHERE oi.id IS NOT NULL
+            AND ot_paid.paid_status = 'PAID'
             AND oi.item_status != 'CANCELED'
           ),
           '[]'::json

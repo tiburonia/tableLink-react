@@ -139,18 +139,31 @@ class OrderService {
       // 주문 세션 종료 처리
       await orderRepository.endOrderSession(client, orderId);
 
-      // 테이블 상태 관리
-      const hasOtherOrders = await orderRepository.hasOtherActiveOrders(client, order.store_id, order.table_num, orderId);
-      let tableReleased = false;
+      // 1. 해당 주문의 table_orders 연결 해제
+      await tableRepository.unlinkTableOrder(client, orderId, order.table_num);
 
-      if (hasOtherOrders) {
-        await this.updateTableAfterSessionEnd(client, order.store_id, order.table_num, orderId);
-      } else {
-        await tableRepository.clearTable(client, order.store_id, order.table_num);
+      // 2. 다른 활성 주문 확인 (table_orders 기반)
+      const hasOtherOrders = await orderRepository.hasOtherActiveOrders(
+        client, 
+        order.store_id, 
+        order.table_num, 
+        orderId
+      );
+
+      // 3. 테이블 상태 업데이트
+      let tableReleased = false;
+      if (!hasOtherOrders) {
+        // 다른 활성 주문이 없으면 테이블을 AVAILABLE로 변경
+        await tableRepository.setTableAvailable(client, order.store_id, order.table_num);
         tableReleased = true;
+        console.log(`🍽️ 테이블 완전 해제: 매장 ${order.store_id}, 테이블 ${order.table_num}`);
+      } else {
+        console.log(`ℹ️ 테이블 ${order.table_num}에 다른 활성 주문 존재, 상태 유지`);
       }
 
       await client.query('COMMIT');
+
+      console.log(`✅ 세션 종료 완료: 주문 ${orderId}, 테이블 해제: ${tableReleased}`);
 
       return { tableReleased };
 
@@ -250,29 +263,6 @@ class OrderService {
   }
 
   // ============ 프라이빗 메서드들 ============
-
-  /**
-   * 세션 종료 후 테이블 상태 업데이트
-   */
-  async updateTableAfterSessionEnd(client, storeId, tableNumber, endedOrderId) {
-    const currentTable = await tableRepository.getTableByNumber(storeId, tableNumber);
-
-    if (currentTable) {
-      const processingOrderId = parseInt(currentTable.processing_order_id);
-      const spareOrderId = parseInt(currentTable.spare_processing_order_id);
-      const currentOrderId = parseInt(endedOrderId);
-
-      if (spareOrderId === currentOrderId) {
-        await tableRepository.clearSpareOrder(client, storeId, tableNumber);
-      } else if (processingOrderId === currentOrderId) {
-        if (currentTable.spare_processing_order_id !== null) {
-          await tableRepository.moveSpareToMain(client, storeId, tableNumber);
-        } else {
-          await tableRepository.clearTable(client, storeId, tableNumber);
-        }
-      }
-    }
-  }
 
   /**
    * 매장 메뉴 조회
