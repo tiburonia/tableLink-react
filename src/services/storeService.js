@@ -151,12 +151,17 @@ class StoreService {
           table.orders.push(sourceOrder);
         }
         
-        // 아이템 집계 (메뉴명 기준)
+        // 아이템 집계 (메뉴명 기준, 단가와 전체 가격 포함)
         const menuName = row.menu_name;
         if (sourceOrder.items[menuName]) {
-          sourceOrder.items[menuName] += row.quantity;
+          sourceOrder.items[menuName].quantity += row.quantity;
+          sourceOrder.items[menuName].totalPrice += row.total_price || 0;
         } else {
-          sourceOrder.items[menuName] = row.quantity;
+          sourceOrder.items[menuName] = {
+            quantity: row.quantity,
+            unitPrice: row.unit_price || 0,
+            totalPrice: row.total_price || 0
+          };
         }
       }
     });

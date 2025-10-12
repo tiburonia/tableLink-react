@@ -37,10 +37,11 @@ const TableMapDataProcessor = {
                 table.orders.forEach(order => {
                     let orderTotalAmount = 0;
                     
-                    Object.entries(order.items).forEach(([menuName, quantity]) => {
-                        // 기본 단가 설정 (실제로는 메뉴 정보에서 가져와야 함)
-                        const estimatedPrice = 18000; // 치킨 평균 가격
-                        const itemTotal = estimatedPrice * quantity;
+                    Object.entries(order.items).forEach(([menuName, item]) => {
+                        // API에서 받은 단가와 전체 가격 사용
+                        const quantity = typeof item === 'number' ? item : item.quantity;
+                        const unitPrice = typeof item === 'object' ? item.unitPrice : 18000;
+                        const itemTotal = typeof item === 'object' ? item.totalPrice : (unitPrice * quantity);
                         orderTotalAmount += itemTotal;
                         
                         allOrderItems.push({
@@ -50,8 +51,8 @@ const TableMapDataProcessor = {
                             orderType: order.source === 'TLL' ? 'main' : 'spare',
                             order_type: order.source === 'TLL' ? 'main' : 'spare',
                             ticket_source: order.source,
-                            price: estimatedPrice,
-                            unit_price: estimatedPrice,
+                            price: unitPrice,
+                            unit_price: unitPrice,
                             totalPrice: itemTotal,
                             total_price: itemTotal
                         });
