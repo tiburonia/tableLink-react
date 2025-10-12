@@ -229,7 +229,6 @@ class TableRepository {
         st.table_name,
         st.capacity,
         st.status,
-        st.is_occupied,
         o.id as order_id,
         o.source as source_system,
         o.created_at as order_created_at,
@@ -241,7 +240,7 @@ class TableRepository {
         oi.cook_station
       FROM store_tables st
       LEFT JOIN table_orders tbo ON st.id = tbo.table_id AND tbo.unlinked_at IS NULL
-      LEFT JOIN orders o ON tbo.to_order_id = o.id AND o.session_status = 'OPEN'
+      LEFT JOIN orders o ON tbo.order_id = o.id AND o.session_status = 'OPEN'
       LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status NOT IN ('CANCELED', 'REFUNDED')
       WHERE st.store_id = $1
       ORDER BY st.id, o.source, oi.id
