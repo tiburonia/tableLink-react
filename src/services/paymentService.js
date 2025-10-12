@@ -231,19 +231,6 @@ class PaymentService {
       await tableRepository.setTableOccupied(client, storeId, tableNumber);
       
       console.log(`✅ TLL 주문 ${orderId}을 테이블 ${tableNumber}에 연결`);
-        } else if (!hasSpareOrder) {
-          // 보조 주문으로 설정
-          await tableRepository.setSpareOrder(client, storeId, tableNumber, orderId);
-          console.log(`🍽️ TLL 주문 - 보조 슬롯 설정: 매장 ${storeId}, 테이블 ${tableNumber}, 주문 ${orderId}`);
-        } else {
-          console.warn(`⚠️ TLL 주문 - 테이블에 이미 2개 주문 존재: 매장 ${storeId}, 테이블 ${tableNumber}`);
-        }
-      } else {
-        console.log(`ℹ️ TLL 주문 - 이미 테이블에 등록된 주문: 매장 ${storeId}, 테이블 ${tableNumber}, 주문 ${orderId}`);
-        // 테이블 상태를 OCCUPIED로 확실히 설정
-        await tableRepository.setTableOccupied(storeId, tableNumber);
-        ;
-      }
 
     } catch (error) {
       console.error(`❌ 테이블 업데이트 실패: 매장 ${storeId}, 테이블 ${tableNumber}, 주문 ${orderId}`, error);

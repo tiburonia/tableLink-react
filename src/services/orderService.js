@@ -889,13 +889,6 @@ class OrderService {
 
     // table_orders 연결 해제 및 테이블 상태 업데이트
     await tableRepository.removeOrderFromTable(client, storeId, tableNumber, orderId);
-  }_order_id !== null) {
-          await tableRepository.moveSpareToMain(client, storeId, tableNumber);
-        } else {
-          await tableRepository.clearTable(client, storeId, tableNumber);
-        }
-      }
-    }
   }
 
   /**
