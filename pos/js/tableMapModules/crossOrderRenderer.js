@@ -109,48 +109,26 @@ const CrossOrderRenderer = {
 
         const isTLLMixed = table.isTLLMixed || false;
 
+        // API 응답에서 이미 mainOrder, spareOrder가 설정됨
         let mainOrder = table.mainOrder;
         let spareOrder = table.spareOrder;
 
-        if (!mainOrder || !spareOrder) {
-            if (isTLLMixed) {
-                const tllItems = table.orderItems.filter(item => item.ticket_source === 'TLL');
-                const posItems = table.orderItems.filter(item => item.ticket_source === 'POS');
-                
-                const tllAmount = tllItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
-                const posAmount = posItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
-                
-                mainOrder = { sourceSystem: 'TLL', totalAmount: tllAmount, openedAt: table.occupiedSince };
-                spareOrder = { sourceSystem: 'POS', totalAmount: posAmount, openedAt: table.occupiedSince };
-            } else {
-                const mainItems = table.orderItems.filter(item => 
-                    item.orderType === 'main' || item.order_type === 'main' || (!item.orderType && !item.order_type)
-                );
-                const spareItems = table.orderItems.filter(item => 
-                    item.orderType === 'spare' || item.order_type === 'spare'
-                );
-                
-                const mainAmount = mainItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
-                const spareAmount = spareItems.reduce((sum, item) => sum + (item.totalPrice || item.price * item.quantity || 0), 0);
-                
-                mainOrder = { sourceSystem: 'POS', totalAmount: mainAmount, openedAt: table.occupiedSince };
-                spareOrder = { sourceSystem: 'POS', totalAmount: spareAmount, openedAt: table.occupiedSince };
-            }
-        }
-
+        // orderItems를 ticket_source 또는 orderType으로 분리
         let mainItems = [];
         let spareItems = [];
 
         if (isTLLMixed) {
+            // TLL + POS 혼합 주문
             mainItems = table.orderItems.filter(item => 
-                item.orderType === 'main' || item.ticket_source === 'TLL'
+                item.ticket_source === 'TLL' || item.orderType === 'main'
             );
             spareItems = table.orderItems.filter(item => 
-                item.orderType === 'spare' || item.ticket_source === 'POS'
+                item.ticket_source === 'POS' || item.orderType === 'spare'
             );
         } else {
+            // 일반 교차주문 (같은 소스에서 여러 주문)
             mainItems = table.orderItems.filter(item => 
-                item.orderType === 'main' || item.order_type === 'main' || (!item.orderType && !item.order_type)
+                item.orderType === 'main' || item.order_type === 'main'
             );
             spareItems = table.orderItems.filter(item => 
                 item.orderType === 'spare' || item.order_type === 'spare'

@@ -28,42 +28,52 @@ const TableMapDataProcessor = {
 
                 // orders 배열을 orderItems 형식으로 변환
                 const allOrderItems = [];
-                let totalAmount = 0;
                 let totalItemCount = 0;
-                let mainOrder = null;
-                let spareOrder = null;
+                let tllOrder = null;
+                let posOrder = null;
+                let tllAmount = 0;
+                let posAmount = 0;
 
                 table.orders.forEach(order => {
                     Object.entries(order.items).forEach(([menuName, quantity]) => {
                         allOrderItems.push({
+                            menuName: menuName,
                             menu_name: menuName,
                             quantity: quantity,
-                            order_type: order.source.toLowerCase()
+                            orderType: order.source === 'TLL' ? 'main' : 'spare',
+                            order_type: order.source === 'TLL' ? 'main' : 'spare',
+                            ticket_source: order.source,
+                            price: 0, // 가격 정보는 없으므로 0으로 설정
+                            unit_price: 0
                         });
                         totalItemCount += quantity;
                     });
 
-                    // source별 주문 구분
+                    // source별 주문 구분 및 금액 계산
                     if (order.source === 'TLL') {
-                        mainOrder = {
+                        tllOrder = {
                             sourceSystem: 'TLL',
                             openedAt: order.createdAt,
-                            items: order.items
+                            items: order.items,
+                            totalAmount: tllAmount
                         };
                     } else if (order.source === 'POS') {
-                        spareOrder = {
+                        posOrder = {
                             sourceSystem: 'POS',
                             openedAt: order.createdAt,
-                            items: order.items
+                            items: order.items,
+                            totalAmount: posAmount
                         };
                     }
                 });
 
+                // 교차주문인 경우 타입별로 통합
                 const consolidatedItems = hasCrossOrders 
                     ? this.consolidateOrderItemsWithType(allOrderItems)
                     : this.consolidateOrderItems(allOrderItems);
 
                 const primaryOrder = table.orders[0];
+                const totalAmount = tllAmount + posAmount;
 
                 return {
                     tableNumber: table.tableNumber,
@@ -78,8 +88,8 @@ const TableMapDataProcessor = {
                     orderItems: consolidatedItems,
                     hasCrossOrders: hasCrossOrders,
                     isSharedOrder: isTLLMixed,
-                    mainOrder: mainOrder,
-                    spareOrder: spareOrder,
+                    mainOrder: tllOrder || posOrder, // TLL 우선, 없으면 POS
+                    spareOrder: tllOrder && posOrder ? posOrder : null, // 양쪽 다 있을 때만 설정
                     allOrders: table.orders,
                     isTLLMixed: isTLLMixed
                 };
