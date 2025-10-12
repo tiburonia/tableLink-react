@@ -1897,8 +1897,9 @@ body {
 }
 
 .receipt-card.tll-mixed-order {
-    background : #eec08b;
-    border: 1px solid #f59e0b;
+    background: linear-gradient(145deg, #fff7ed, #fed7aa) !important;
+    border: 2px solid #fb923c !important;
+    box-shadow: 0 8px 25px rgba(251, 146, 60, 0.15) !important;
 }
 
 /* 교차 주문 카드 */
@@ -1931,7 +1932,8 @@ body {
 }
 
 .receipt-total.tll-mixed-total {
-    color: black;
+    color: #c2410c !important;
+    background: rgba(251, 146, 60, 0.1);
     border-radius: 6px;
     padding: 8px;
     font-weight: 700;
