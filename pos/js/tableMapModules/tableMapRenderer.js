@@ -1,4 +1,3 @@
-
 /**
  * 테이블 렌더링 담당 모듈
  */
@@ -22,12 +21,8 @@ const TableMapRenderer = {
                 </div>
 
                 <div class="top-bar-right">
-                    <button class="top-btn" onclick="POSTableMap.showOrderStatus()">
-                        📊 주문현황
-                    </button>
-                    <button class="top-btn" onclick="POSTableMap.showSalesStatus()">
-                        💰 매출현황
-                    </button>
+                    <button class="top-btn" onclick="POSTableMap.showOrderStatus()">📊 주문현황</button>
+                    <button class="top-btn" onclick="POSTableMap.showSalesStatus()">💰 매출현황</button>
                     <button class="top-btn notification-btn" onclick="POSTableMap.showNotifications()">
                         🔔 <span class="notification-count">3</span>
                     </button>
@@ -43,8 +38,8 @@ const TableMapRenderer = {
         return `
             <div class="pos-main-content" style="display: flex; height: calc(100vh - 70px); padding: 20px; gap: 20px; align-items: center;">
                 <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
-                    <div class="table-grid" id="tableGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); gap: 16px; width: 100%;  aspect-ratio: 1;">
-                        ${tables.map((table) => this.renderTableCard(table)).join("")}
+                    <div class="table-grid" id="tableGrid" style="display: grid; grid-template-columns: repeat(5, 1fr); grid-template-rows: repeat(4, 1fr); gap: 16px; width: 100%; aspect-ratio: 1;">
+                        ${tables.map(table => this.renderTableCard(table)).join("")}
                     </div>
                 </div>
                 ${this.renderSidePanel()}
@@ -62,13 +57,8 @@ const TableMapRenderer = {
             <div class="table-card ${statusClass}" 
                  data-table-number="${table.tableNumber}"
                  onclick="POSTableMap.selectTable(${table.tableNumber})">
-
-                <!-- 좌측 상단 테이블 번호 -->
                 <div class="table-number-small">${table.tableNumber}</div>
-
-                <!-- 중앙 아이콘 및 상태 텍스트 -->
-                ${table.isOccupied ? this.renderOccupiedContent(table) : this.renderEmptyContent()}
-
+                ${table.isOccupied ? this.renderOccupiedContent(table) : ''}
             </div>
         `;
     },
@@ -77,42 +67,36 @@ const TableMapRenderer = {
      * 점유된 테이블 내용 렌더링
      */
     renderOccupiedContent(table) {
-        if (table.hasCrossOrders) {
+        // TLL+POS 교차주문
+        if (table.isTLLMixed) {
             return CrossOrderRenderer.renderCrossOrderContent(table);
-        } else {
-            const orderItemsHTML = this.renderReceiptOrderItems(table.orderItems || []);
-            const sourceText = table.isFromTLG ? "TLL 주문" : "POS 주문";
-            const occupiedTime = this.formatOccupiedTime(table.occupiedSince);
-            const orderSourceClass = table.isFromTLG ? "tll-order" : "pos-order";
+        }
 
-            return `
-                <div class="receipt-card ${orderSourceClass}">
-                    <div class="receipt-header">
-                        <div class="receipt-header-left">
-                            <div class="receipt-subtitle">${sourceText}</div>
-                        </div>
-                        <div class="receipt-time">${occupiedTime}</div>
+        // 일반 주문
+        const source = table.isFromTLG ? "TLL 주문" : "POS 주문";
+        const time = this.formatOccupiedTime(table.occupiedSince);
+        const orderClass = table.isFromTLG ? "tll-order" : "pos-order";
+
+        return `
+            <div class="receipt-card ${orderClass}">
+                <div class="receipt-header">
+                    <div class="receipt-header-left">
+                        <div class="receipt-subtitle">${source}</div>
                     </div>
+                    <div class="receipt-time">${time}</div>
+                </div>
 
-                    <div class="receipt-body">
-                        ${orderItemsHTML}
-                    </div>
+                <div class="receipt-body">
+                    ${this.renderReceiptOrderItems(table.orderItems)}
+                </div>
 
-                    <div class="receipt-footer">
-                        <div class="receipt-total">
-                            ${(table.totalAmount || 0).toLocaleString()}원
-                        </div>
+                <div class="receipt-footer">
+                    <div class="receipt-total">
+                        ${table.totalAmount.toLocaleString()}원
                     </div>
                 </div>
-            `;
-        }
-    },
-
-    /**
-     * 빈 테이블 내용 렌더링
-     */
-    renderEmptyContent() {
-        return ``;
+            </div>
+        `;
     },
 
     /**
@@ -153,41 +137,33 @@ const TableMapRenderer = {
      */
     renderReceiptOrderItems(orderItems) {
         if (!orderItems || orderItems.length === 0) {
-            return `
-                <div class="receipt-empty">
-                    <div class="receipt-empty-text">주문 없음</div>
-                </div>
-            `;
+            return `<div class="receipt-empty"><div class="receipt-empty-text">주문 없음</div></div>`;
         }
 
-        const displayItems = orderItems.slice(0, 3);
-        const hasMore = orderItems.length > 3;
+        const consolidated = TableMapDataProcessor.consolidateOrderItems(orderItems);
+        const displayItems = consolidated.slice(0, 3);
+        const hasMore = consolidated.length > 3;
 
         const itemsHTML = displayItems
-            .map((item) => {
-                const truncatedName = this.truncateMenuName(item.menuName, 8);
+            .map(item => {
+                const name = this.truncateMenuName(item.menuName, 8);
                 return `
-                <div class="receipt-item">
-                    <div class="receipt-item-name">${truncatedName}</div>
-                    <div class="receipt-item-qty">× ${item.quantity}</div>
-                </div>
-            `;
+                    <div class="receipt-item">
+                        <div class="receipt-item-name">${name}</div>
+                        <div class="receipt-item-qty">× ${item.quantity}</div>
+                    </div>
+                `;
             })
             .join("");
 
         const moreHTML = hasMore
             ? `<div class="receipt-item receipt-more">
-                <div class="receipt-item-name">외 ${orderItems.length - 3}개</div>
+                <div class="receipt-item-name">외 ${consolidated.length - 3}개</div>
                 <div class="receipt-item-qty"></div>
             </div>`
             : "";
 
-        return `
-            <div class="receipt-items">
-                ${itemsHTML}
-                ${moreHTML}
-            </div>
-        `;
+        return `<div class="receipt-items">${itemsHTML}${moreHTML}</div>`;
     },
 
     /**
@@ -223,13 +199,7 @@ const TableMapRenderer = {
      */
     getTableStatusClass(table) {
         if (!table.isOccupied) return "status-empty";
-        
-        const isTLLMixedOrder = table.orderItems && table.orderItems.some(item => 
-            item.order_type === 'tll_mixed' || item.order_type === 'pos_mixed'
-        );
-        
-        if (isTLLMixedOrder) return "status-tll-mixed-order";
-        if (table.hasCrossOrders) return "status-cross-order";
+        if (table.isTLLMixed) return "status-tll-mixed-order";
         if (table.isFromTLG) return "status-tlg";
         return "status-occupied";
     }

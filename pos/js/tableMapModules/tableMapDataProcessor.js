@@ -1,4 +1,3 @@
-
 /**
  * 데이터 처리 및 로딩 담당 모듈
  */
@@ -8,7 +7,6 @@ const TableMapDataProcessor = {
      */
     async loadTables(storeId) {
         try {
-            // 단일 API로 모든 테이블과 주문 정보 조회
             const response = await fetch(`/api/pos/store/${storeId}/tables`);
             const data = await response.json();
 
@@ -17,100 +15,54 @@ const TableMapDataProcessor = {
                 return [];
             }
 
-            const tables = data.tables;
-
-            // API 응답 데이터를 테이블맵 형식으로 변환
-            const tablesWithDetails = tables.map(table => {
-                const hasCrossOrders = table.orders.length > 1;
-                const isTLLMixed = hasCrossOrders && 
-                    table.orders.some(o => o.source === 'TLL') && 
-                    table.orders.some(o => o.source === 'POS');
-
-                // orders 배열을 orderItems 형식으로 변환
-                const allOrderItems = [];
-                let totalItemCount = 0;
-                let tllOrder = null;
-                let posOrder = null;
-                let tllAmount = 0;
-                let posAmount = 0;
+            // API 응답을 테이블맵 형식으로 변환
+            const tables = data.tables.map(table => {
+                // 주문 아이템 파싱
+                const orderItems = [];
+                let totalAmount = 0;
 
                 table.orders.forEach(order => {
-                    let orderTotalAmount = 0;
-                    
                     Object.entries(order.items).forEach(([menuName, item]) => {
-                        // API에서 받은 단가와 전체 가격 사용
                         const quantity = typeof item === 'number' ? item : item.quantity;
-                        const unitPrice = typeof item === 'object' ? item.unitPrice : 18000;
-                        const itemTotal = typeof item === 'object' ? item.totalPrice : (unitPrice * quantity);
-                        orderTotalAmount += itemTotal;
-                        
-                        allOrderItems.push({
-                            menuName: menuName,
-                            menu_name: menuName,
-                            quantity: quantity,
-                            orderType: order.source === 'TLL' ? 'main' : 'spare',
-                            order_type: order.source === 'TLL' ? 'main' : 'spare',
-                            ticket_source: order.source,
-                            price: unitPrice,
-                            unit_price: unitPrice,
-                            totalPrice: itemTotal,
-                            total_price: itemTotal
-                        });
-                        totalItemCount += quantity;
-                    });
+                        const unitPrice = typeof item === 'object' ? item.unitPrice : 0;
+                        const itemTotal = typeof item === 'object' ? item.totalPrice : 0;
 
-                    // source별 주문 구분 및 금액 계산
-                    if (order.source === 'TLL') {
-                        tllAmount += orderTotalAmount;
-                        tllOrder = {
-                            sourceSystem: 'TLL',
-                            openedAt: order.createdAt,
-                            items: order.items,
-                            totalAmount: orderTotalAmount
-                        };
-                    } else if (order.source === 'POS') {
-                        posAmount += orderTotalAmount;
-                        posOrder = {
-                            sourceSystem: 'POS',
-                            openedAt: order.createdAt,
-                            items: order.items,
-                            totalAmount: orderTotalAmount
-                        };
-                    }
+                        orderItems.push({
+                            menuName,
+                            quantity,
+                            price: unitPrice,
+                            totalPrice: itemTotal,
+                            source: order.source
+                        });
+
+                        totalAmount += itemTotal;
+                    });
                 });
 
-                // 교차주문인 경우 타입별로 통합
-                const consolidatedItems = hasCrossOrders 
-                    ? this.consolidateOrderItemsWithType(allOrderItems)
-                    : this.consolidateOrderItems(allOrderItems);
-
-                const primaryOrder = table.orders[0];
-                const totalAmount = tllAmount + posAmount;
+                // 교차주문 여부 확인
+                const hasCrossOrders = table.orders.length > 1;
+                const tllOrder = table.orders.find(o => o.source === 'TLL');
+                const posOrder = table.orders.find(o => o.source === 'POS');
+                const isTLLMixed = hasCrossOrders && tllOrder && posOrder;
 
                 return {
                     tableNumber: table.tableNumber,
                     id: table.id,
-                    capacity: table.capacity,
-                    isActive: table.status !== 'INACTIVE',
                     isOccupied: table.isOccupied,
-                    totalAmount: totalAmount,
-                    orderCount: totalItemCount,
-                    isFromTLG: primaryOrder?.source === 'TLL',
-                    occupiedSince: primaryOrder?.createdAt,
-                    orderItems: consolidatedItems,
-                    hasCrossOrders: hasCrossOrders,
-                    isSharedOrder: isTLLMixed,
-                    mainOrder: tllOrder || posOrder, // TLL 우선, 없으면 POS
-                    spareOrder: tllOrder && posOrder ? posOrder : null, // 양쪽 다 있을 때만 설정
-                    allOrders: table.orders,
-                    isTLLMixed: isTLLMixed
+                    totalAmount,
+                    orderItems,
+                    hasCrossOrders,
+                    isTLLMixed,
+                    isFromTLG: table.orders[0]?.source === 'TLL',
+                    occupiedSince: table.orders[0]?.createdAt,
+                    tllOrder,
+                    posOrder
                 };
             });
 
-            tablesWithDetails.sort((a, b) => a.tableNumber - b.tableNumber);
-
-            console.log(`✅ 통합 API로 테이블 ${tablesWithDetails.length}개 로드 완료 (단일 요청)`);
-            return tablesWithDetails;
+            tables.sort((a, b) => a.tableNumber - b.tableNumber);
+            console.log(`✅ 테이블 ${tables.length}개 로드 완료`);
+            return tables;
         } catch (error) {
             console.error("❌ 테이블 정보 로드 실패:", error);
             return [];
@@ -118,100 +70,24 @@ const TableMapDataProcessor = {
     },
 
     /**
-     * 주문 아이템 통합 (메뉴명과 단가로 그룹화)
+     * 주문 아이템 통합 (같은 메뉴 합치기)
      */
-    consolidateOrderItems(orderItems) {
-        const consolidated = {};
+    consolidateOrderItems(items) {
+        const map = new Map();
 
-        orderItems.forEach((item) => {
-            const key = `${item.menu_name}_${item.unit_price}`;
-
-            if (consolidated[key]) {
-                consolidated[key].quantity += item.quantity;
-            } else {
-                consolidated[key] = {
-                    menuName: item.menu_name,
-                    price: item.unit_price,
-                    quantity: item.quantity,
-                    cookStation: item.cook_station || "KITCHEN",
-                };
-            }
-        });
-
-        return Object.values(consolidated);
-    },
-
-    /**
-     * 교차 주문용 아이템 통합 (주문 타입별로 구분)
-     */
-    consolidateOrderItemsWithType(orderItems) {
-        const consolidated = {};
-
-        orderItems.forEach((item) => {
-            const key = `${item.menu_name}_${item.unit_price}_${item.order_type || 'main'}_${item.ticket_source || 'UNKNOWN'}`;
-
-            if (consolidated[key]) {
-                consolidated[key].quantity += item.quantity;
-                consolidated[key].totalPrice = (consolidated[key].totalPrice || 0) + (item.totalPrice || item.total_price || 0);
-            } else {
-                consolidated[key] = {
-                    menuName: item.menu_name,
-                    price: item.unit_price,
-                    quantity: item.quantity,
-                    cookStation: item.cook_station || "KITCHEN",
-                    orderType: item.order_type || 'main',
-                    ticket_source: item.ticket_source || 'UNKNOWN',
-                    totalPrice: item.totalPrice || item.total_price || (item.unit_price * item.quantity)
-                };
-            }
-        });
-
-        return Object.values(consolidated);
-    },
-
-    /**
-     * 티켓별 아이템 그룹핑
-     */
-    groupItemsByTicket(items, source) {
-        const ticketGroups = {};
-        
         items.forEach(item => {
-            const ticketId = item.ticket_id;
-            
-            if (!ticketGroups[ticketId]) {
-                ticketGroups[ticketId] = {
-                    ticketId: ticketId,
-                    source: source,
-                    items: [],
-                    totalAmount: 0,
-                    itemCount: 0,
-                    createdAt: item.created_at
-                };
+            const key = `${item.menuName}_${item.source || 'UNKNOWN'}`;
+
+            if (map.has(key)) {
+                const existing = map.get(key);
+                existing.quantity += item.quantity;
+                existing.totalPrice += item.totalPrice;
+            } else {
+                map.set(key, { ...item });
             }
-            
-            ticketGroups[ticketId].items.push(item);
-            ticketGroups[ticketId].totalAmount += item.total_price || 0;
-            ticketGroups[ticketId].itemCount += 1;
         });
-        
-        return Object.values(ticketGroups);
-    },
 
-    /**
-     * TLL 연동 여부 확인
-     */
-    async checkTLLIntegration(storeId, tableNumber) {
-        try {
-            const response = await fetch(
-                `/api/tables/stores/${storeId}/table/${tableNumber}/tll-status`
-            );
-            const data = await response.json();
-
-            return data.success ? data.hasTLLIntegration : false;
-        } catch (error) {
-            console.error("❌ TLL 연동 상태 확인 실패:", error);
-            return false;
-        }
+        return Array.from(map.values());
     }
 };
 
