@@ -218,6 +218,37 @@ class TableRepository {
       status: table.status
     }))
   }
+
+  /**
+   * 매장의 모든 테이블과 진행 중인 주문 정보를 한 번에 조회
+   */
+  async getStoreTablesWithOrders(storeId) {
+    const result = await pool.query(`
+      SELECT 
+        st.id as table_id,
+        st.table_name,
+        st.capacity,
+        st.status,
+        st.is_occupied,
+        o.id as order_id,
+        o.source as source_system,
+        o.created_at as order_created_at,
+        oi.id as item_id,
+        oi.menu_name,
+        oi.quantity,
+        oi.unit_price,
+        oi.total_price,
+        oi.cook_station
+      FROM store_tables st
+      LEFT JOIN table_orders tbo ON st.id = tbo.table_id AND tbo.unlinked_at IS NULL
+      LEFT JOIN orders o ON tbo.to_order_id = o.id AND o.session_status = 'OPEN'
+      LEFT JOIN order_items oi ON o.id = oi.order_id AND oi.item_status NOT IN ('CANCELED', 'REFUNDED')
+      WHERE st.store_id = $1
+      ORDER BY st.id, o.source, oi.id
+    `, [storeId]);
+
+    return result.rows;
+  }
 }
 
 

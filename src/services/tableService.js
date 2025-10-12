@@ -173,6 +173,59 @@ class TableService {
   }
 
   /**
+   * 매장의 모든 테이블과 진행 중인 주문 정보를 통합 조회
+   */
+  async getStoreTablesWithOrders(storeId) {
+    const rawData = await tableRepository.getStoreTablesWithOrders(storeId);
+    
+    // 테이블별로 그룹화
+    const tablesMap = new Map();
+    
+    rawData.forEach(row => {
+      const tableId = row.table_id;
+      
+      if (!tablesMap.has(tableId)) {
+        tablesMap.set(tableId, {
+          id: tableId,
+          tableNumber: tableId,
+          tableName: row.table_name || `${tableId}번`,
+          capacity: row.capacity || 4,
+          status: row.status,
+          isOccupied: row.is_occupied || false,
+          orders: []
+        });
+      }
+      
+      const table = tablesMap.get(tableId);
+      
+      // 주문이 있는 경우에만 처리
+      if (row.order_id && row.item_id) {
+        // source별로 주문 찾기
+        let sourceOrder = table.orders.find(order => order.source === row.source_system);
+        
+        if (!sourceOrder) {
+          sourceOrder = {
+            source: row.source_system,
+            items: {},
+            createdAt: row.order_created_at
+          };
+          table.orders.push(sourceOrder);
+        }
+        
+        // 아이템 집계 (메뉴명 기준)
+        const menuName = row.menu_name;
+        if (sourceOrder.items[menuName]) {
+          sourceOrder.items[menuName] += row.quantity;
+        } else {
+          sourceOrder.items[menuName] = row.quantity;
+        }
+      }
+    });
+    
+    return Array.from(tablesMap.values()).sort((a, b) => a.tableNumber - b.tableNumber);
+  }
+
+  /**
    * 테이블 점유 처리
    */
   async occupyTable({ storeId, tableNumber, userId, guestPhone, duration }) {

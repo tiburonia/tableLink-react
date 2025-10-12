@@ -4,306 +4,90 @@
  */
 const TableMapDataProcessor = {
     /**
-     * 테이블 정보 로드 (교차 주문 지원)
+     * 테이블 정보 로드 (통합 API 사용)
      */
     async loadTables(storeId) {
         try {
-            const tablesResponse = await fetch(`/api/tables/stores/${storeId}`);
-            const tablesData = await tablesResponse.json();
+            // 단일 API로 모든 테이블과 주문 정보 조회
+            const response = await fetch(`/api/pos/store/${storeId}/tables`);
+            const data = await response.json();
 
-            if (!tablesData.success || !tablesData.tables || tablesData.tables.length === 0) {
+            if (!data.success || !data.tables || data.tables.length === 0) {
                 console.log("❌ 등록된 테이블이 없습니다.");
                 return [];
             }
 
-            const ordersResponse = await fetch(`/api/pos/stores/${storeId}/orders/active`);
-            const ordersData = await ordersResponse.json();
+            const tables = data.tables;
 
-            const tablesWithDetails = await Promise.all(
-                tablesData.tables.map(async (dbTable) => {
-                    const tableOrders = ordersData.success
-                        ? ordersData.activeOrders.filter((order) => order.tableNumber === dbTable.tableNumber)
-                        : [];
+            // API 응답 데이터를 테이블맵 형식으로 변환
+            const tablesWithDetails = tables.map(table => {
+                const hasCrossOrders = table.orders.length > 1;
+                const isTLLMixed = hasCrossOrders && 
+                    table.orders.some(o => o.source === 'TLL') && 
+                    table.orders.some(o => o.source === 'POS');
 
-                    const hasPhysicalCrossOrders = tableOrders.length > 1;
-                    const hasLogicalMixedOrder = tableOrders.some(order => order.is_mixed === true);
+                // orders 배열을 orderItems 형식으로 변환
+                const allOrderItems = [];
+                let totalAmount = 0;
+                let totalItemCount = 0;
+                let mainOrder = null;
+                let spareOrder = null;
 
-                    let hasTLLMixedOrder = false;
-                    let tableStatusData = null;
-                    
-                    try {
-                        const tableStatusResponse = await fetch(`/api/pos/stores/${storeId}/table/${dbTable.id}/status`);
-                        if (tableStatusResponse.ok) {
-                            tableStatusData = await tableStatusResponse.json();
-                            if (tableStatusData.success && tableStatusData.table) {
-                                const { processing_order_id, spare_processing_order_id, isTLLMixedOrder } = tableStatusData.table;
-                                
-                                // POI = SPOI이고 둘 다 null이 아닌 경우만 TLL 연동으로 판단
-                                hasTLLMixedOrder = (
-                                    processing_order_id !== null && 
-                                    spare_processing_order_id !== null &&
-                                    parseInt(processing_order_id) === parseInt(spare_processing_order_id) &&
-                                    isTLLMixedOrder === true // API에서 제공하는 플래그도 확인
-                                );
-                                
-                                console.log(`🔍 테이블 ${dbTable.tableNumber} TLL 연동 상태:`, {
-                                    processing_order_id,
-                                    spare_processing_order_id,
-                                    isTLLMixedOrder,
-                                    hasTLLMixedOrder
-                                });
-                            }
-                        }
-                    } catch (error) {
-                        console.warn(`⚠️ 테이블 ${dbTable.tableNumber} TLL 연동 상태 확인 실패:`, error.message);
+                table.orders.forEach(order => {
+                    Object.entries(order.items).forEach(([menuName, quantity]) => {
+                        allOrderItems.push({
+                            menu_name: menuName,
+                            quantity: quantity,
+                            order_type: order.source.toLowerCase()
+                        });
+                        totalItemCount += quantity;
+                    });
+
+                    // source별 주문 구분
+                    if (order.source === 'TLL') {
+                        mainOrder = {
+                            sourceSystem: 'TLL',
+                            openedAt: order.createdAt,
+                            items: order.items
+                        };
+                    } else if (order.source === 'POS') {
+                        spareOrder = {
+                            sourceSystem: 'POS',
+                            openedAt: order.createdAt,
+                            items: order.items
+                        };
                     }
+                });
 
-                    const hasCrossOrders = hasPhysicalCrossOrders || hasLogicalMixedOrder || hasTLLMixedOrder;
+                const consolidatedItems = hasCrossOrders 
+                    ? this.consolidateOrderItemsWithType(allOrderItems)
+                    : this.consolidateOrderItems(allOrderItems);
 
-                    const mainOrder = tableOrders.find(order => order.orderType === 'main');
-                    const spareOrder = tableOrders.find(order => order.orderType === 'spare');
+                const primaryOrder = table.orders[0];
 
-                    let processedMainOrder = mainOrder;
-                    let processedSpareOrder = spareOrder;
-
-                    if (hasPhysicalCrossOrders && !hasTLLMixedOrder) {
-                        if (mainOrder) {
-                            processedMainOrder = {
-                                ...mainOrder,
-                                sourceSystem: mainOrder.sourceSystem || 'POS',
-                                totalAmount: mainOrder.totalAmount || 0,
-                                openedAt: mainOrder.openedAt || new Date().toISOString()
-                            };
-                        }
-                        if (spareOrder) {
-                            processedSpareOrder = {
-                                ...spareOrder,
-                                sourceSystem: spareOrder.sourceSystem || 'POS',
-                                totalAmount: spareOrder.totalAmount || 0,
-                                openedAt: spareOrder.openedAt || new Date().toISOString()
-                            };
-                        }
-                    }
-
-                    const primaryOrder = mainOrder || tableOrders[0];
-
-                    let allOrderItems = [];
-                    let totalAmount = 0;
-                    let totalItemCount = 0;
-
-                    if (hasTLLMixedOrder) {
-                        console.log(`🔗 TLL 연동 교차주문 아이템 로드: 테이블 ${dbTable.tableNumber}, POI=SPOI`);
-                        try {
-                            // 새로운 shared-order API 사용 (POI=SPOI 감지 및 source별 그룹핑)
-                            const sharedOrderResponse = await fetch(
-                                `/api/pos/stores/${storeId}/table/${dbTable.id}/shared-order`
-                            );
-                            
-                            if (sharedOrderResponse.ok) {
-                                const sharedOrderData = await sharedOrderResponse.json();
-                                
-                                if (sharedOrderData.success && sharedOrderData.isSharedOrder && sharedOrderData.sourceGroups) {
-                                    console.log(`✅ POI=SPOI 확인됨: 테이블 ${dbTable.tableNumber}, 주문 ID ${sharedOrderData.sharedOrderId}`);
-                                    
-                                    // source별 그룹핑된 데이터를 orderItems로 변환
-                                    const allItems = [];
-                                    
-                                    // TLL source 그룹 처리
-                                    if (sharedOrderData.sourceGroups.TLL) {
-                                        const tllItems = sharedOrderData.sourceGroups.TLL.items.map(item => ({
-                                            id: item.id,
-                                            menuName: item.menuName,
-                                            menu_name: item.menuName, // 백엔드 호환성
-                                            price: item.unitPrice,
-                                            unit_price: item.unitPrice, // 백엔드 호환성
-                                            quantity: item.quantity,
-                                            totalPrice: item.totalPrice,
-                                            total_price: item.totalPrice, // 백엔드 호환성
-                                            cookStation: item.cookStation || 'KITCHEN',
-                                            cook_station: item.cookStation || 'KITCHEN', // 백엔드 호환성
-                                            orderType: 'tll_mixed',
-                                            order_type: 'tll_mixed', // 백엔드 호환성
-                                            ticket_source: 'TLL',
-                                            ticket_id: item.ticketId
-                                        }));
-                                        allItems.push(...tllItems);
-                                        
-                                        // TLL 티켓 그룹핑
-                                        const tllTickets = this.groupItemsByTicket(tllItems, 'TLL');
-                                        processedMainOrder = {
-                                            sourceSystem: 'TLL',
-                                            totalAmount: sharedOrderData.sourceGroups.TLL.totalAmount || 0,
-                                            openedAt: primaryOrder?.openedAt,
-                                            tickets: tllTickets
-                                        };
-                                    }
-                                    
-                                    // POS source 그룹 처리
-                                    if (sharedOrderData.sourceGroups.POS) {
-                                        const posItems = sharedOrderData.sourceGroups.POS.items.map(item => ({
-                                            id: item.id,
-                                            menuName: item.menuName,
-                                            menu_name: item.menuName, // 백엔드 호환성
-                                            price: item.unitPrice,
-                                            unit_price: item.unitPrice, // 백엔드 호환성
-                                            quantity: item.quantity,
-                                            totalPrice: item.totalPrice,
-                                            total_price: item.totalPrice, // 백엔드 호환성
-                                            cookStation: item.cookStation || 'KITCHEN',
-                                            cook_station: item.cookStation || 'KITCHEN', // 백엔드 호환성
-                                            orderType: 'pos_mixed',
-                                            order_type: 'pos_mixed', // 백엔드 호환성
-                                            ticket_source: 'POS',
-                                            ticket_id: item.ticketId
-                                        }));
-                                        allItems.push(...posItems);
-                                        
-                                        // POS 티켓 그룹핑
-                                        const posTickets = this.groupItemsByTicket(posItems, 'POS');
-                                        processedSpareOrder = {
-                                            sourceSystem: 'POS', 
-                                            totalAmount: sharedOrderData.sourceGroups.POS.totalAmount || 0,
-                                            openedAt: primaryOrder?.openedAt,
-                                            tickets: posTickets
-                                        };
-                                    }
-                                    
-                                    allOrderItems = allItems;
-                                    totalAmount = sharedOrderData.totalAmount || 0;
-                                    totalItemCount = sharedOrderData.totalItemCount || allItems.length;
-                                    
-                                    console.log(`✅ TLL 연동 교차주문 데이터 처리 완료: 테이블 ${dbTable.tableNumber}, 총 ${totalItemCount}개 아이템, ${totalAmount}원`);
-                                } else {
-                                    console.warn(`⚠️ 공유 주문이 아님: 테이블 ${dbTable.tableNumber}`);
-                                    allOrderItems = [];
-                                    totalAmount = 0;
-                                    totalItemCount = 0;
-                                }
-                            } else {
-                                console.error(`❌ shared-order API 호출 실패: 테이블 ${dbTable.tableNumber}`, sharedOrderResponse.status);
-                                allOrderItems = [];
-                                totalAmount = 0;
-                                totalItemCount = 0;
-                            }
-                        } catch (error) {
-                            console.error(`❌ TLL 연동 교차주문 아이템 로드 실패: 테이블 ${dbTable.tableNumber}`, error);
-                            allOrderItems = [];
-                            totalAmount = 0;
-                            totalItemCount = 0;
-                        }
-                    } else {
-                        // 일반 교차주문 처리
-
-
-                        ///////////////////////////////////////////////
-                        for (const order of tableOrders) {
-                            try {
-                                let orderItems = [];
-                                let orderTickets = [];
-
-                                if (order.sourceSystem === 'TLL') {
-                                    const tllItemsResponse = await fetch(
-                                        `/api/pos/stores/${storeId}/table/${dbTable.id}/tll-orders`
-                                    );
-                                    const tllItemsData = await tllItemsResponse.json();
-
-                                    if (tllItemsData.success && tllItemsData.tllOrders) {
-                                        const orderSpecificItems = tllItemsData.tllOrders.filter(item => 
-                                            item.order_id === order.checkId
-                                        );
-
-                                        const convertedItems = orderSpecificItems.map(item => ({
-                                            id: item.id,
-                                            menu_id: item.menu_id || item.id,
-                                            menu_name: item.menu_name,
-                                            unit_price: item.unit_price,
-                                            quantity: item.quantity,
-                                            total_price: item.total_price,
-                                            cook_station: item.cook_station || 'KITCHEN',
-                                            item_status: item.item_status || 'READY',
-                                            order_type: order.orderType,
-                                            ticket_id: item.ticket_id
-                                        }));
-
-                                        orderItems = convertedItems;
-                                        orderTickets = this.groupItemsByTicket(orderSpecificItems, 'TLL');
-                                    }
-                                } else {
-                                    const itemsResponse = await fetch(
-                                        `/api/pos/stores/${storeId}/table/${dbTable.id}/order-items`
-                                    );
-                                    const itemsData = await itemsResponse.json();
-
-                                    if (itemsData.success && itemsData.orderItems) {
-                                        const orderSpecificItems = itemsData.orderItems.filter(item => 
-                                            item.order_id === order.checkId
-                                        );
-
-                                        orderItems = orderSpecificItems.map(item => ({
-                                            ...item,
-                                            order_type: order.orderType
-                                        }));
-                                        
-                                        orderTickets = this.groupItemsByTicket(orderSpecificItems, 'POS');
-                                    }
-                                }
-
-                                allOrderItems.push(...orderItems);
-                                totalAmount += order.totalAmount || 0;
-                                totalItemCount += order.itemCount || 0;
-
-                                // 주문별 티켓 정보 저장
-                                if (order.orderType === 'main') {
-                                    processedMainOrder = {
-                                        ...processedMainOrder,
-                                        tickets: orderTickets
-                                    };
-                                } else if (order.orderType === 'spare') {
-                                    processedSpareOrder = {
-                                        ...processedSpareOrder,
-                                        tickets: orderTickets
-                                    };
-                                }
-
-                            } catch (error) {
-                                console.error(
-                                    `❌ 테이블 ${dbTable.tableNumber} 주문 ${order.checkId} 아이템 로드 실패:`,
-                                    error
-                                );
-                            }
-                        }
-                    }
-
-                    const consolidatedItems = hasCrossOrders 
-                        ? this.consolidateOrderItemsWithType(allOrderItems)
-                        : this.consolidateOrderItems(allOrderItems);
-
-                    return {
-                        tableNumber: dbTable.tableNumber,
-                        id: dbTable.id,
-                        capacity: dbTable.capacity || 4,
-                        isActive: dbTable.isActive !== false,
-                        isOccupied: tableOrders.length > 0,
-                        totalAmount: totalAmount,
-                        orderCount: totalItemCount,
-                        isFromTLG: primaryOrder?.sourceSystem === "TLL",
-                        occupiedSince: primaryOrder?.openedAt,
-                        checkId: primaryOrder?.checkId,
-                        orderItems: consolidatedItems,
-                        hasCrossOrders: hasCrossOrders,
-                        // TLL 연동 교차주문 플래그 (POI=SPOI)
-                        isSharedOrder: hasTLLMixedOrder,
-                        mainOrder: processedMainOrder,
-                        spareOrder: processedSpareOrder,
-                        allOrders: tableOrders,
-                        isTLLMixed: hasTLLMixedOrder
-                    };
-                })
-            );
+                return {
+                    tableNumber: table.tableNumber,
+                    id: table.id,
+                    capacity: table.capacity,
+                    isActive: table.status !== 'INACTIVE',
+                    isOccupied: table.isOccupied,
+                    totalAmount: totalAmount,
+                    orderCount: totalItemCount,
+                    isFromTLG: primaryOrder?.source === 'TLL',
+                    occupiedSince: primaryOrder?.createdAt,
+                    orderItems: consolidatedItems,
+                    hasCrossOrders: hasCrossOrders,
+                    isSharedOrder: isTLLMixed,
+                    mainOrder: mainOrder,
+                    spareOrder: spareOrder,
+                    allOrders: table.orders,
+                    isTLLMixed: isTLLMixed
+                };
+            });
 
             tablesWithDetails.sort((a, b) => a.tableNumber - b.tableNumber);
 
-            console.log(`✅ 실제 테이블 ${tablesWithDetails.length}개 로드 완료 (교차 주문 지원)`);
+            console.log(`✅ 통합 API로 테이블 ${tablesWithDetails.length}개 로드 완료 (단일 요청)`);
             return tablesWithDetails;
         } catch (error) {
             console.error("❌ 테이블 정보 로드 실패:", error);

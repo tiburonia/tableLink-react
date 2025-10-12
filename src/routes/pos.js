@@ -8,9 +8,14 @@ const posController = require('../controllers/posController');
  */
 
 /**
- * [GET] /store/:storeId - POS 전용 매장 정보 조회
+ * [GET] /store/:storeId - POS 전용 매장 정보 조회 (기존)
  */
 router.get('/store/:storeId', posController.getPOSStoreInfo);
+
+/**
+ * [GET] /store/:storeId/tables - 매장의 모든 테이블과 진행 중인 주문 통합 조회 (테이블맵용)
+ */
+router.get('/store/:storeId/tables', posController.getStoreTablesWithOrders);
 
 /**
  * [GET] /stores/:storeId/menu - 매장 메뉴 조회

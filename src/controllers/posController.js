@@ -262,6 +262,24 @@ class POSController {
       next(error);
     }
   }
+
+  /**
+   * 매장의 모든 테이블과 진행 중인 주문 통합 조회 (테이블맵용)
+   */
+  async getStoreTablesWithOrders(req, res, next) {
+    try {
+      const { storeId } = req.params;
+      const tables = await tableService.getStoreTablesWithOrders(parseInt(storeId));
+
+      res.json({
+        success: true,
+        tables,
+        count: tables.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new POSController();
