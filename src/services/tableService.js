@@ -191,7 +191,7 @@ class TableService {
           tableName: row.table_name || `${tableId}번`,
           capacity: row.capacity || 4,
           status: row.status,
-          isOccupied: row.is_occupied || false,
+          isOccupied: row.status == 'AVAILABLE' ?  false : true,
           orders: []
         });
       }
