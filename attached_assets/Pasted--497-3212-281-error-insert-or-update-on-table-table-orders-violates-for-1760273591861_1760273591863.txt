@@ -1,0 +1,52 @@
+❌ 테이블 업데이트 실패: 매장 497, 테이블 3212, 주문 281 error: insert or update on table "table_orders" violates foreign key constraint "FK_order_id"
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async TableRepository.createTableOrder (/home/runner/workspace/src/repositories/tableRepository.js:42:20)
+    at async PaymentService.linkOrderToTable (/home/runner/workspace/src/services/paymentService.js:228:7)
+    at async PaymentService.processTLLOrder (/home/runner/workspace/src/services/paymentService.js:75:7)
+    at async PaymentService.confirmTossPayment (/home/runner/workspace/src/services/paymentService.js:350:22)
+    at async confirm (/home/runner/workspace/src/controllers/tossController.js:86:22) {
+  length: 246,
+  severity: 'ERROR',
+  code: '23503',
+  detail: 'Key (order_id)=(497) is not present in table "orders".',
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: 'public',
+  table: 'table_orders',
+  column: undefined,
+  dataType: undefined,
+  constraint: 'FK_order_id',
+  file: 'ri_triggers.c',
+  line: '2608',
+  routine: 'ri_ReportViolation'
+}
+⚠️ 결제 ID 조회 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 결제 서비스: 새 주문 알림 생성 실패: error: current transaction is aborted, commands ignored until end of transaction block
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async PaymentRepository.createOrderNotification (/home/runner/workspace/src/repositories/paymentRepository.js:161:20)
+    at async PaymentService.createOrderNotification (/home/runner/workspace/src/services/paymentService.js:245:30)
+    at async PaymentService.processTLLOrder (/home/runner/workspace/src/services/paymentService.js:79:9)
+    at async PaymentService.confirmTossPayment (/home/runner/workspace/src/services/paymentService.js:350:22)
+    at async confirm (/home/runner/workspace/src/controllers/tossController.js:86:22) {
+  length: 145,
+  severity: 'ERROR',
+  code: '25P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '1500',
+  routine: 'exec_parse_message'

@@ -795,7 +795,7 @@ class OrderService {
       console.log(`✅ 새 POS 주문 생성: orderId=${orderId}, 매장=${storeId}, 테이블=${tableNumber}`);
 
       // table_orders 레코드 생성 및 테이블 상태 업데이트
-      await this.updateStoreTable(client, orderId, storeId, tableNumber);
+      await this.updateStoreTable(client, storeId, tableNumber, orderId);
 
       return parseInt(orderId);
     } catch (error) {
@@ -866,7 +866,7 @@ class OrderService {
    */
   async linkOrderToTable(client, orderId, storeId, tableNumber) {
     // table_orders 레코드 생성
-    await tableRepository.createTableOrder(client, orderId, tableNumber);
+    await tableRepository.createTableOrder(client,storeId, orderId, tableNumber);
     
     // 테이블 상태를 OCCUPIED로 변경
     await tableRepository.setTableOccupied(client, storeId, tableNumber);
