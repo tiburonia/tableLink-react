@@ -475,6 +475,45 @@ class PaymentService {
         message: `${customerType === 'member' ? '회원' : '비회원'} ${paymentMethod} 결제가 완료되었습니다 (${updatedTickets.length}개 티켓)`
       };
 
+    // 8. table_orders 연결 해제 및 테이블 상태 업데이트
+      await tableRepository.unlinkTableOrder(client, orderId, tableNumber);
+      
+      // 9. 해당 테이블에 다른 활성 주문이 있는지 확인
+      const hasOtherOrders = await tableRepository.hasActiveOrders(client, storeId, tableNumber);
+      
+      let tableReleased = false;
+      if (!hasOtherOrders) {
+        // 다른 활성 주문이 없으면 테이블 상태를 AVAILABLE로 변경
+        await tableRepository.setTableAvailable(client, storeId, tableNumber);
+        console.log(`🍽️ 테이블 완전 해제: 매장 ${storeId}, 테이블 ${tableNumber}`);
+        tableReleased = true;
+      } else {
+        console.log(`ℹ️ 테이블 ${tableNumber}에 다른 활성 주문 존재, 상태 유지`);
+      }
+
+      await client.query('COMMIT');
+
+      console.log(`✅ POS 결제 처리 완료: payment_id ${paymentId}, ${paidTickets.length}개 티켓 결제`);
+
+      return {
+        success: true,
+        paymentId: paymentId,
+        orderId: orderId,
+        paymentMethod: paymentMethod,
+        amount: totalAmount,
+        customerType: customerType,
+        guestPhone: guestPhone,
+        memberPhone: memberPhone,
+        paidTickets: paidTickets.map(row => ({
+          ticketId: row.id,
+          batchNo: row.batch_no
+        })),
+        totalTicketsPaid: paidTickets.length,
+        sessionClosed: true,
+        tableReleased: tableReleased,
+        message: `${customerType === 'member' ? '회원' : '비회원'} ${paymentMethod} 결제 완료 (${paidTickets.length}개 티켓)`
+      };
+
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('❌ 결제 서비스: POS 결제 처리 실패:', error);

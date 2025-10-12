@@ -249,22 +249,41 @@ router.post('/process', async (req, res) => {
 
     console.log(`✅ TLL 연동 주문 세션 종료: 주문 ${orderId}`);
 
-    // 8. 완전 테이블 해제 (POI, SPOI 모두 NULL, status = AVAILABLE)
-    const tableUpdateResult = await client.query(`
-      UPDATE store_tables
-      SET
-        processing_order_id = NULL,
-        spare_processing_order_id = NULL,
-        status = 'AVAILABLE',
-        updated_at = CURRENT_TIMESTAMP
-      WHERE store_id = $1 AND id = $2
-      RETURNING processing_order_id, spare_processing_order_id, status
-    `, [storeId, tableNumber]);
+    // 8. table_orders 연결 해제
+    await client.query(`
+      UPDATE table_orders
+      SET unlinked_at = CURRENT_TIMESTAMP
+      WHERE order_id = $1 AND table_id = $2 AND unlinked_at IS NULL
+    `, [orderId, tableNumber]);
 
-    if (tableUpdateResult.rowCount > 0) {
+    console.log(`✅ TLL 연동 table_orders 연결 해제: 주문 ${orderId}, 테이블 ${tableNumber}`);
+
+    // 9. 해당 테이블에 다른 활성 주문이 있는지 확인
+    const otherOrdersResult = await client.query(`
+      SELECT COUNT(*) as count
+      FROM table_orders tbo
+      JOIN orders o ON tbo.order_id = o.id
+      WHERE tbo.table_id = $1 
+        AND tbo.unlinked_at IS NULL
+        AND o.session_status = 'OPEN'
+        AND o.store_id = $2
+    `, [tableNumber, storeId]);
+
+    const hasOtherOrders = parseInt(otherOrdersResult.rows[0].count) > 0;
+
+    let tableReleased = false;
+    if (!hasOtherOrders) {
+      // 다른 활성 주문이 없으면 테이블 상태를 AVAILABLE로 변경
+      await client.query(`
+        UPDATE store_tables
+        SET status = 'AVAILABLE', updated_at = CURRENT_TIMESTAMP
+        WHERE store_id = $1 AND id = $2
+      `, [storeId, tableNumber]);
+
       console.log(`🍽️ TLL 연동 완전 테이블 해제 완료: 매장 ${storeId}, 테이블 ${tableNumber}`);
+      tableReleased = true;
     } else {
-      console.warn(`⚠️ 테이블 해제 실패: 매장 ${storeId}, 테이블 ${tableNumber}`);
+      console.log(`ℹ️ 테이블 ${tableNumber}에 다른 활성 주문 존재, 상태 유지`);
     }
 
     await client.query('COMMIT');
@@ -285,9 +304,9 @@ router.post('/process', async (req, res) => {
       })),
       totalTicketsPaid: updateResult.rows.length,
       sessionClosed: true,
-      tableReleased: true,
+      tableReleased: tableReleased,
       isTLLIntegration: true,
-      message: `TLL 연동 ${customerType === 'member' ? '회원' : '비회원'} ${paymentMethod} 결제 완료 - 세션 종료 및 테이블 해제`
+      message: `TLL 연동 ${customerType === 'member' ? '회원' : '비회원'} ${paymentMethod} 결제 완료 - 세션 종료${tableReleased ? ' 및 테이블 해제' : ''}`
     };
 
     console.log(`✅ TLL 연동 POS 결제 처리 완료:`, responseData);
@@ -316,29 +335,26 @@ router.get('/validate/:orderId', async (req, res) => {
 
     console.log(`🔍 TLL 연동 주문 유효성 검증: 주문 ${orderId}`);
 
-    // 1. 테이블 상태 확인 (POI = SPOI 확인)
-    const tableStatusResult = await pool.query(`
-      SELECT processing_order_id, spare_processing_order_id, status
-      FROM store_tables
-      WHERE store_id = $1 AND id = $2
-    `, [storeId, tableNumber]);
+    // 1. 주문이 해당 테이블에 연결되어 있는지 확인
+    const tableOrderResult = await pool.query(`
+      SELECT tbo.id, o.source, o.is_mixed
+      FROM table_orders tbo
+      JOIN orders o ON tbo.order_id = o.id
+      WHERE tbo.order_id = $1 
+        AND tbo.table_id = $2 
+        AND tbo.unlinked_at IS NULL
+        AND o.store_id = $3
+    `, [orderId, tableNumber, storeId]);
 
-    if (tableStatusResult.rows.length === 0) {
+    if (tableOrderResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        error: '해당 테이블을 찾을 수 없습니다'
+        error: '해당 테이블에 연결된 주문을 찾을 수 없습니다'
       });
     }
 
-    const tableStatus = tableStatusResult.rows[0];
-    const processingOrderId = parseInt(tableStatus.processing_order_id);
-    const spareOrderId = parseInt(tableStatus.spare_processing_order_id);
-    const currentOrderId = parseInt(orderId);
-
-    const isTLLIntegration = (
-      processingOrderId === spareOrderId &&
-      processingOrderId === currentOrderId
-    );
+    const orderInfo = tableOrderResult.rows[0];
+    const isTLLIntegration = (orderInfo.source === 'TLL' && orderInfo.is_mixed === true);
 
     // 2. POS 미지불 티켓 확인
     const unpaidPOSResult = await pool.query(`
@@ -419,12 +435,7 @@ router.get('/validate/:orderId', async (req, res) => {
       posUnpaidAmount: posUnpaidAmount,
       isOrderMixed: isOrderMixed,
       orderSource: orderSource,
-      canProcessPOSPayment: finalCanProcess,
-      tableStatus: {
-        processing_order_id: processingOrderId,
-        spare_processing_order_id: spareOrderId,
-        status: tableStatus.status
-      }
+      canProcessPOSPayment: finalCanProcess
     };
 
     console.log(`✅ TLL 연동 유효성 검증 완료:`, validationResult);
