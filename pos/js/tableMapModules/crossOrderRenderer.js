@@ -210,12 +210,29 @@ const CrossOrderRenderer = {
             return `<div class="cross-order-empty">주문 없음</div>`;
         }
 
-        const normalizedItems = orderItems.map(item => ({
-            menuName: item.menuName || item.menu_name || '메뉴명 없음',
-            quantity: item.quantity || 1,
-            price: item.price || item.unit_price || 0,
-            cookStation: item.cookStation || item.cook_station || 'KITCHEN'
-        }));
+        const normalizedItems = orderItems.map(item => {
+            // quantity와 price 추출 (새로운 API 형식 대응)
+            let quantity = item.quantity || 1;
+            let price = item.price || item.unit_price || 0;
+            
+            // item이 이미 정규화된 경우
+            if (typeof item.quantity === 'number' && typeof item.price === 'number') {
+                quantity = item.quantity;
+                price = item.price;
+            }
+            // orderType/ticket_source 정보가 있는 경우 (tableMapDataProcessor에서 이미 처리됨)
+            else if (item.totalPrice !== undefined) {
+                price = item.price || item.unit_price || 0;
+                quantity = item.quantity || 1;
+            }
+            
+            return {
+                menuName: item.menuName || item.menu_name || '메뉴명 없음',
+                quantity: quantity,
+                price: price,
+                cookStation: item.cookStation || item.cook_station || 'KITCHEN'
+            };
+        });
 
         const consolidatedItems = TableMapDataProcessor.consolidateOrderItems(normalizedItems);
         const displayItems = consolidatedItems.slice(0, maxItems);
