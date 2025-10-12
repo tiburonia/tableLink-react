@@ -68,11 +68,8 @@ class PaymentService {
       // 7. 결제 세부 정보 저장
       await paymentRepository.createPaymentDetails(client, paymentId, orderIdToUse);
 
-      // 8. TLL 주문 시 store_tables에 주문 ID 등록
-      await this.updateTableProcessingOrder(client, orderData.storeId, orderData.tableNumber, orderIdToUse);
-
-      //8. TLL 주문 시 talbe_orders에 레코드 생성 (점진적으로 하자)
-      await tableRepository.createTableOrder(client, orderData.storeId, orderData.tableNumber, orderIdToUse);
+      // 8. TLL 주문 시 테이블 연결 및 table_orders 레코드 생성
+      await this.linkOrderToTable(client, orderData.storeId, orderData.tableNumber, orderIdToUse);
 
       await client.query('COMMIT');
 
