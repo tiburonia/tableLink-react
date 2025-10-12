@@ -96,7 +96,7 @@ class StoreService {
 
 
   /**
-   * POS 전용 매장 정보 조회
+   * POS 전용 매장 정보 조회 (OCCUPIED 테이블의 주문 정보 포함)
    */
   async getPOSStoreInfo(storeId) {
     const numericStoreId = parseInt(storeId);
@@ -114,8 +114,54 @@ class StoreService {
       throw new Error('매장을 찾을 수 없습니다');
     }
 
-    // 테이블 정보 조회
-    const tables = await tableRepository.getStoreTable(numericStoreId);
+    // 테이블과 주문 정보 통합 조회
+    const rawData = await tableRepository.getStoreTablesWithOrders(numericStoreId);
+    
+    // 테이블별로 그룹화하여 구조화
+    const tablesMap = new Map();
+    
+    rawData.forEach(row => {
+      const tableId = row.table_id;
+      
+      if (!tablesMap.has(tableId)) {
+        tablesMap.set(tableId, {
+          id: tableId,
+          tableNumber: tableId,
+          tableName: row.table_name || `${tableId}번`,
+          capacity: row.capacity || 4,
+          status: row.status,
+          isOccupied: row.status === 'OCCUPIED',
+          orders: []
+        });
+      }
+      
+      const table = tablesMap.get(tableId);
+      
+      // OCCUPIED 상태이고 주문이 있는 경우에만 처리
+      if (row.status === 'OCCUPIED' && row.order_id && row.item_id) {
+        // source별로 주문 찾기
+        let sourceOrder = table.orders.find(order => order.source === row.source_system);
+        
+        if (!sourceOrder) {
+          sourceOrder = {
+            source: row.source_system,
+            items: {},
+            createdAt: row.order_created_at
+          };
+          table.orders.push(sourceOrder);
+        }
+        
+        // 아이템 집계 (메뉴명 기준)
+        const menuName = row.menu_name;
+        if (sourceOrder.items[menuName]) {
+          sourceOrder.items[menuName] += row.quantity;
+        } else {
+          sourceOrder.items[menuName] = row.quantity;
+        }
+      }
+    });
+    
+    const tables = Array.from(tablesMap.values()).sort((a, b) => a.tableNumber - b.tableNumber);
 
     const posStoreInfo = {
       id: store.id,
@@ -131,11 +177,11 @@ class StoreService {
       full_address: store.full_address,
       lng: store.lng,
       lat: store.lat,
-      tables: tables || [],
-      tableCount: tables ? tables.length : 0
+      tables: tables,
+      tableCount: tables.length
     };
 
-    console.log(`✅ [POS] 매장 ${storeId} 정보 조회 완료: ${store.name}`);
+    console.log(`✅ [POS] 매장 ${storeId} 정보 조회 완료: ${store.name} (테이블 ${tables.length}개)`);
     
     return posStoreInfo;
   }
