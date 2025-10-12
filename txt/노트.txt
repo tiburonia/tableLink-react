@@ -1,5 +1,5 @@
 {
-    "success": true,
+
     "tables": [
         {
             "id": 3206,
