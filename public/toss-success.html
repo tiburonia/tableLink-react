@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -13,9 +14,66 @@
         <p>잠시만 기다려주세요.</p>
     </div>
 
-    <script src="/TLG/pages/pay/TLL.js"></script>
     <script>
-        // TLL 결제 성공 처리 (안전한 버전)
+        // URL 파라미터 파싱 함수
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                paymentKey: urlParams.get('paymentKey'),
+                orderId: urlParams.get('orderId'),
+                amount: urlParams.get('amount')
+            };
+        }
+
+        // 상태 표시 함수
+        function showStatus(message) {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="status-icon">⏳</div>
+                    <h1>${message}</h1>
+                    <p>잠시만 기다려주세요.</p>
+                `;
+            }
+        }
+
+        // 성공 표시 함수
+        function showSuccess(data) {
+            const { orderId, amount } = data;
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="status-icon">✅</div>
+                    <h1>결제 완료!</h1>
+                    <div class="success-info">
+                        <p><strong>주문번호:</strong> ${orderId}</p>
+                        <p><strong>결제금액:</strong> ₩${parseInt(amount).toLocaleString()}</p>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn primary" onclick="goBack()">TableLink로 돌아가기</button>
+                    </div>
+                `;
+            }
+        }
+
+        // 에러 표시 함수
+        function showError(message) {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="status-icon">❌</div>
+                    <h1>결제 처리 실패</h1>
+                    <div class="error-info">
+                        <p>${message}</p>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn primary" onclick="goBack()">TableLink로 돌아가기</button>
+                    </div>
+                `;
+            }
+        }
+
+        // TLL 결제 성공 처리
         async function processTLLPaymentSuccess() {
             try {
                 const { paymentKey, orderId, amount } = getUrlParams();
