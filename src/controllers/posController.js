@@ -1,4 +1,3 @@
-
 const orderService = require('../services/orderService');
 const tableService = require('../services/tableService');
 const storeService = require('../services/storeService');
@@ -14,7 +13,7 @@ class POSController {
     try {
       const { storeId } = req.params;
       const store = await storeService.getPOSStoreInfo(storeId);
-      
+
       res.json({
         success: true,
         store: store
@@ -31,7 +30,7 @@ class POSController {
     try {
       const { storeId } = req.params;
       const menu = await orderService.getStoreMenu(storeId);
-      
+
       res.json({
         success: true,
         menu: menu
@@ -48,7 +47,7 @@ class POSController {
     try {
       const { storeId, tableNumber } = req.params;
       const result = await orderService.getTableOrderItems(parseInt(storeId), parseInt(tableNumber));
-      
+
       res.json({
         success: true,
         orderItems: result.orderItems,
@@ -65,14 +64,24 @@ class POSController {
   async getTLLOrders(req, res, next) {
     try {
       const { storeId, tableNumber } = req.params;
+
+      console.log(`🔍 POS TLL 주문 조회: 매장 ${storeId}, 테이블 ${tableNumber}`);
+
       const result = await orderService.getTLLOrders(parseInt(storeId), parseInt(tableNumber));
-      
+
+      // 각 tllOrder 그룹에 orderId 추가
+      const tllOrdersWithOrderId = result.tllOrders.map(group => ({
+        ...group,
+        orderId: group.orders && group.orders.length > 0 ? group.orders[0].order_id : null
+      }));
+
       res.json({
         success: true,
-        tllOrders: result.tllOrders,
-        userInfo: result.userInfo
+        tllOrders: tllOrdersWithOrderId,
+        groupCount: result.groupCount
       });
     } catch (error) {
+      console.error('❌ POS TLL 주문 조회 실패:', error);
       next(error);
     }
   }
