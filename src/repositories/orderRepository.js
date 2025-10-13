@@ -77,34 +77,43 @@ class OrderRepository {
   }
 
   /**
-   * TLL 주문 조회
+   * TLL 주문 조회 (table_orders 기반, 주문자별 그룹핑)
    */
   async getTLLOrders(storeId, tableNumber) {
     const result = await pool.query(`
       SELECT
-        oi.id,
-        oi.menu_name,
-        oi.quantity,
-        oi.unit_price,
-        oi.total_price,
-        oi.item_status,
-        oi.cook_station,
-        oi.order_id,
-        ot.paid_status,
-        ot.created_at as ticket_created_at,
         o.user_id,
         o.guest_phone,
-        o.created_at as order_created_at,
-        o.is_mixed
-      FROM order_items oi
-      JOIN order_tickets ot ON oi.ticket_id = ot.id
-      JOIN orders o ON ot.order_id = o.id
-      WHERE o.store_id = $1
-        AND o.table_num = $2
-        AND ot.source = 'TLL'
+        u.name as user_name,
+        json_agg(
+          json_build_object(
+            'id', oi.id,
+            'menu_name', oi.menu_name,
+            'quantity', oi.quantity,
+            'unit_price', oi.unit_price,
+            'total_price', oi.total_price,
+            'item_status', oi.item_status,
+            'cook_station', oi.cook_station,
+            'order_id', oi.order_id,
+            'paid_status', ot.paid_status,
+            'ticket_created_at', ot.created_at,
+            'guest_phone', o.guest_phone,
+            'order_created_at', o.created_at,
+            'is_mixed', o.is_mixed
+          ) ORDER BY oi.created_at DESC
+        ) as orders
+      FROM table_orders tbo
+      JOIN orders o ON tbo.order_id = o.id
+      JOIN order_tickets ot ON o.id = ot.order_id
+      JOIN order_items oi ON ot.id = oi.ticket_id
+      LEFT JOIN users u ON o.user_id = u.id
+      WHERE tbo.store_id = $1
+        AND tbo.table_id = $2
+        AND tbo.source = 'TLL'
+        AND tbo.unlinked_at IS NULL
         AND oi.item_status != 'CANCELED'
-        AND o.session_status = 'OPEN'
-      ORDER BY oi.created_at DESC
+      GROUP BY o.user_id, o.guest_phone, u.name
+      ORDER BY MIN(o.created_at) DESC
     `, [storeId, tableNumber]);
 
     return result.rows;

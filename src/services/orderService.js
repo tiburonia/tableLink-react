@@ -315,37 +315,32 @@ class OrderService {
   }
 
   /**
-   * 테이블별 TLL 주문 조회
+   * 테이블별 TLL 주문 조회 (주문자별 그룹핑)
    */
   async getTLLOrders(storeId, tableNumber) {
     if (isNaN(storeId) || isNaN(tableNumber)) {
       throw new Error(`유효하지 않은 파라미터: storeId=${storeId}, tableNumber=${tableNumber}`);
     }
 
-    const tllOrders = await orderRepository.getTLLOrders(storeId, tableNumber);
+    const tllOrderGroups = await orderRepository.getTLLOrders(storeId, tableNumber);
 
-    // 사용자 정보 조회
-    let userInfo = null;
-    if (tllOrders.length > 0) {
-      const firstOrder = tllOrders[0];
+    // 주문자별 데이터 포맷팅
+    const formattedGroups = tllOrderGroups.map(group => {
+      const userId = group.user_id || null;
+      const guestPhone = group.guest_phone || null;
+      const userName = group.user_name || (guestPhone ? '게스트' : '알 수 없음');
 
-      if (firstOrder.user_id) {
-        userInfo = await orderRepository.getUserById(firstOrder.user_id);
-      } else if (firstOrder.guest_phone) {
-        userInfo = {
-          id: null,
-          name: '게스트',
-          phone: firstOrder.guest_phone,
-          guest_phone: firstOrder.guest_phone,
-          point: 0,
-          created_at: null
-        };
-      }
-    }
+      return {
+        userId: userId,
+        userName: userName,
+        guestPhone: guestPhone,
+        orders: group.orders || []
+      };
+    });
 
     return {
-      tllOrders,
-      userInfo
+      tllOrders: formattedGroups,
+      groupCount: formattedGroups.length
     };
   }
 
