@@ -210,12 +210,12 @@ const OrderUIRenderer = {
     },
 
     /**
-     * TLL 주문 아이템 렌더링 (모던 카드 스타일)
+     * TLL 주문 아이템 렌더링 (주문자별 좌우 분할 레이아웃)
      */
     renderTLLOrderItemsModern() {
-        const tllOrders = window.POSOrderScreen?.tllOrders || [];
+        const tllOrderGroups = window.POSOrderScreen?.tllOrders || [];
 
-        if (!tllOrders || tllOrders.length === 0) {
+        if (!tllOrderGroups || tllOrderGroups.length === 0) {
             return `
                 <div class="empty-state">
                     <div class="empty-icon">📱</div>
@@ -225,71 +225,53 @@ const OrderUIRenderer = {
             `;
         }
 
-        // 메뉴별로 수량 통합
-        const consolidatedOrders = {};
+        // 주문자별 그룹 렌더링
+        return tllOrderGroups.map(group => {
+            const userName = group.userName || '게스트';
+            const userPhone = group.guestPhone || group.userId || '-';
+            const orders = group.orders || [];
+            
+            // 총 금액 계산
+            const totalAmount = orders.reduce((sum, order) => sum + (order.total_price || 0), 0);
 
-        tllOrders.forEach((order) => {
-            const key = `${order.menu_name}_${order.unit_price}`;
-            if (consolidatedOrders[key]) {
-                consolidatedOrders[key].quantity += order.quantity;
-                consolidatedOrders[key].total_price += order.total_price;
-            } else {
-                consolidatedOrders[key] = {
-                    menu_name: order.menu_name,
-                    unit_price: order.unit_price,
-                    quantity: order.quantity,
-                    total_price: order.total_price,
-                    item_status: order.item_status,
-                    cook_station: order.cook_station,
-                    order_id: order.order_id,
-                };
-            }
-        });
-
-        const consolidatedOrdersList = Object.values(consolidatedOrders);
-
-        return consolidatedOrdersList
-            .map(order => `
-            <div class="order-card tll-order-card" data-order-id="${order.order_id}">
-                <div class="order-card-header">
-                    <div class="menu-info">
-                        <h5 class="menu-name">${order.menu_name}</h5>
-                        <span class="menu-price">${order.unit_price.toLocaleString()}원</span>
+            return `
+                <div class="tll-order-group">
+                    <!-- 왼쪽: 메뉴 리스트 -->
+                    <div class="tll-order-items">
+                        ${orders.map(order => `
+                            <div class="tll-order-item">
+                                <div class="item-menu">
+                                    <span class="menu-name">${order.menu_name}</span>
+                                    <span class="menu-price">${(order.unit_price || 0).toLocaleString()}원</span>
+                                </div>
+                                <div class="item-qty">×${order.quantity || 0}</div>
+                                <div class="item-total">${(order.total_price || 0).toLocaleString()}원</div>
+                                <div class="item-status">
+                                    <span class="status-badge status-${(order.item_status || 'PENDING').toLowerCase()}">
+                                        ${this.getStatusText(order.item_status)}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                        <div class="tll-order-subtotal">
+                            <span class="subtotal-label">소계</span>
+                            <span class="subtotal-amount">${totalAmount.toLocaleString()}원</span>
+                        </div>
                     </div>
-                    <div class="order-status-group">
-                        <span class="cook-station-badge station-${order.cook_station?.toLowerCase() || "kitchen"}">
-                            ${this.getCookStationText(order.cook_station)}
-                        </span>
-                        <span class="status-badge status-${order.item_status?.toLowerCase() || "pending"}">
-                            ${this.getStatusText(order.item_status)}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="order-card-body">
-                    <div class="quantity-info">
-                        <span class="quantity-label">주문 수량</span>
-                        <span class="quantity-value">× ${order.quantity}</span>
-                    </div>
-
-                    <div class="total-info">
-                        <span class="total-label">주문 금액</span>
-                        <span class="total-value">${order.total_price.toLocaleString()}원</span>
+                    
+                    <!-- 오른쪽: 사용자 정보 (메뉴 리스트 높이만큼 자동 확장) -->
+                    <div class="tll-order-user">
+                        <div class="user-badge">📱 TLL</div>
+                        <div class="user-name">${userName}</div>
+                        <div class="user-phone">${userPhone}</div>
+                        <div class="user-total">
+                            <div class="total-label">주문 금액</div>
+                            <div class="total-amount">${totalAmount.toLocaleString()}원</div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="order-card-footer">
-                    <div class="tll-source-badge">
-                        <span class="source-icon">📱</span>
-                        <span>TLL 앱 주문</span>
-                    </div>
-                    <div class="order-time">
-                        ${new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
-                    </div>
-                </div>
-            </div>
-        `)
-            .join("");
+            `;
+        }).join('');
     },
 
     /**
