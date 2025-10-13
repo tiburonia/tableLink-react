@@ -865,8 +865,8 @@ class OrderService {
    * 테이블에 주문 연결
    */
   async linkOrderToTable(client, orderId, storeId, tableNumber) {
-    // table_orders 레코드 생성
-    await tableRepository.createTableOrder(client,storeId, orderId, tableNumber);
+    // table_orders 레코드 생성 (POS source)
+    await tableRepository.createTableOrder(client, storeId, orderId, tableNumber, 'POS');
     
     // 테이블 상태를 OCCUPIED로 변경
     await tableRepository.setTableOccupied(client, storeId, tableNumber);
@@ -889,8 +889,8 @@ class OrderService {
    * store_tables 업데이트 (table_orders 기반)
    */
   async updateStoreTable(client, storeId, tableNumber, orderId) {
-    // table_orders 레코드 생성
-    await tableRepository.createTableOrder(client,storeId, orderId, tableNumber);
+    // table_orders 레코드 생성 (POS source)
+    await tableRepository.createTableOrder(client, storeId, orderId, tableNumber, 'POS');
     
     // 테이블 상태를 OCCUPIED로 업데이트
     await tableRepository.setTableOccupied(client, storeId, tableNumber);

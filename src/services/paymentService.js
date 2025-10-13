@@ -224,8 +224,8 @@ class PaymentService {
         return;
       }
 
-      // table_orders 레코드 생성
-      await tableRepository.createTableOrder(client, storeId, orderId, tableNumber);
+      // table_orders 레코드 생성 (TLL source)
+      await tableRepository.createTableOrder(client, storeId, orderId, tableNumber, 'TLL');
 
       // 테이블 상태를 OCCUPIED로 변경
       await tableRepository.setTableOccupied(client, storeId, tableNumber);
