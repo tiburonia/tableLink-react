@@ -231,14 +231,17 @@ const OrderUIRenderer = {
             const userPhone = group.guestPhone || group.userId || '-';
             const orders = group.orders || [];
             
+            // 동일 메뉴 통합 처리 (메뉴명 + 단가 기준)
+            const consolidatedOrders = this.consolidateTLLOrders(orders);
+            
             // 총 금액 계산
-            const totalAmount = orders.reduce((sum, order) => sum + (order.total_price || 0), 0);
+            const totalAmount = consolidatedOrders.reduce((sum, order) => sum + (order.total_price || 0), 0);
 
             return `
                 <div class="tll-order-group">
                     <!-- 왼쪽: 메뉴 리스트 -->
                     <div class="tll-order-items">
-                        ${orders.map(order => `
+                        ${consolidatedOrders.map(order => `
                             <div class="tll-order-item">
                                 <div class="item-menu">
                                     <span class="menu-name">${order.menu_name}</span>
@@ -272,6 +275,42 @@ const OrderUIRenderer = {
                 </div>
             `;
         }).join('');
+    },
+
+    /**
+     * TLL 주문 아이템 통합 처리
+     * 동일 메뉴명 + 단가를 가진 아이템들을 하나로 합침
+     */
+    consolidateTLLOrders(orders) {
+        const consolidationMap = new Map();
+
+        orders.forEach(order => {
+            // 메뉴명 + 단가를 키로 사용
+            const key = `${order.menu_name}_${order.unit_price}`;
+
+            if (consolidationMap.has(key)) {
+                // 기존 아이템에 수량과 총액 누적
+                const existing = consolidationMap.get(key);
+                existing.quantity += (order.quantity || 0);
+                existing.total_price += (order.total_price || 0);
+            } else {
+                // 새로운 아이템 추가 (복사본 생성)
+                consolidationMap.set(key, {
+                    id: order.id,
+                    menu_name: order.menu_name,
+                    quantity: order.quantity || 0,
+                    unit_price: order.unit_price || 0,
+                    total_price: order.total_price || 0,
+                    item_status: order.item_status || 'PENDING',
+                    cook_station: order.cook_station,
+                    order_id: order.order_id,
+                    paid_status: order.paid_status
+                });
+            }
+        });
+
+        // Map을 배열로 변환하여 반환
+        return Array.from(consolidationMap.values());
     },
 
     /**
