@@ -2356,64 +2356,8 @@ body {
     }
 }
 
-/* TLL 사용자 정보 영역 스타일링 */
-.tll-user-info {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 16px;
-}
-
-.tll-user-header {
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
-
-.tll-user-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.user-detail-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-
-.detail-label {
-  color: #6c757d;
-  font-weight: 500;
-}
-
-.detail-value {
-  color: #212529;
-  font-weight: 600;
-}
-
-.no-tll-user {
-  text-align: center;
-  color: #6c757d;
-  font-style: italic;
-}
-
-/* TLL 액션 버튼 */
-.tll-action-buttons {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #e9ecef;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tll-action-btn {
-  width: 100%;
+/* 반응형 */
+@media (max-width: 1400px) {
   display: flex;
   align-items: center;
   justify-content: center;

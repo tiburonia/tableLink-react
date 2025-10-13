@@ -1,4 +1,3 @@
-
 /**
  * 주문 세션 관리 모듈
  * - 세션 생성/종료
@@ -77,79 +76,6 @@ const OrderSessionManager = {
             }
         } catch (error) {
             console.error("❌ 세션 종료 요청 실패:", error);
-        }
-    },
-
-    /**
-     * TLL 연동 활성화
-     */
-    async enableTLLConnection() {
-        try {
-            const posOrderScreen = window.POSOrderScreen;
-            if (!posOrderScreen?.tllOrders || posOrderScreen.tllOrders.length === 0) {
-                alert('연동할 TLL 주문이 없습니다.');
-                return;
-            }
-
-            const currentMixedStatus = await posOrderScreen.refreshTLLOrderMixedStatus();
-            if (currentMixedStatus) {
-                alert('이미 연동이 활성화된 주문입니다.');
-                return;
-            }
-
-            const orderId = posOrderScreen.tllOrders[0].order_id;
-            if (!orderId) {
-                console.error('❌ TLL 주문 ID를 찾을 수 없습니다');
-                alert('TLL 주문 정보를 찾을 수 없습니다.');
-                return;
-            }
-
-            const confirmMessage = `TLL 연동을 활성화하시겠습니까?
-
-• 활성화 후 이 테이블에서 POS 주문을 추가하면
-• 기존 TLL 주문과 합쳐져서 하나의 계산서로 처리됩니다
-• 주문 ID: ${orderId}`;
-
-            if (!confirm(confirmMessage)) {
-                return;
-            }
-
-            console.log(`🔗 TLL 연동 활성화 요청: 주문 ID ${orderId}`);
-
-            const response = await fetch(`/api/pos/orders/${orderId}/enable-mixed`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'TLL 연동 활성화 실패');
-            }
-
-            const result = await response.json();
-            console.log('✅ TLL 연동 활성화 완료:', result);
-
-            alert(`✅ TLL 연동이 활성화되었습니다.\n주문 ID: ${orderId}`);
-
-            // TLL 주문 데이터 업데이트
-            if (posOrderScreen.tllOrders) {
-                posOrderScreen.tllOrders.forEach(order => {
-                    if (order.order_id === orderId) {
-                        order.is_mixed = true;
-                    }
-                });
-            }
-
-            posOrderScreen._cachedTLLMixedStatus = true;
-            posOrderScreen.updateTLLConnectionButton(true);
-
-            setTimeout(async () => {
-                await posOrderScreen.refreshOrders();
-            }, 200);
-
-        } catch (error) {
-            console.error('❌ TLL 연동 활성화 실패:', error);
-            alert(`TLL 연동 활성화 중 오류가 발생했습니다:\n${error.message}`);
         }
     },
 

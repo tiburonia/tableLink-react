@@ -509,30 +509,9 @@ const OrderUIRenderer = {
     },
 
     /**
-     * TLL 사용자 정보 렌더링
+     * 로딩 상태 HTML 생성
      */
-    renderTLLUserInfo() {
-        const tllUserInfo = window.POSOrderScreen?.tllUserInfo;
-
-        if (!tllUserInfo) {
-            return `
-                <div class="tll-user-info">
-                    <div class="tll-user-header">
-                        <span>📱 TLL 연동 정보</span>
-                    </div>
-                    <div class="no-tll-user">
-                        <span>연동된 TLL 사용자 없음</span>
-                    </div>
-                </div>
-            `;
-        }
-
-        return `
-            <div class="tll-user-info">
-                <div class="tll-user-header">
-                    <span>📱 TLL 연동 사용자</span>
-                </div>
-                <div class="tll-user-details">
+    getLoadingHTML() {details">
                     <div class="user-detail-row">
                         <span class="detail-label">이름:</span>
                         <span class="detail-value">${tllUserInfo.name || "게스트"}</span>
