@@ -113,15 +113,8 @@ const OrderSessionManager = {
 
             alert(`✅ ${userName}님의 TLL 세션이 종료되었습니다.\n주문 ID: ${orderId}`);
 
-            // TLL 주문 새로고침
+            // TLL 주문만 새로고침 (render()가 내부에서 모든 데이터를 로드하므로 중복 제거)
             await window.POSOrderScreen?.refreshTLLOrders();
-            await window.POSOrderScreen?.refreshOrders();
-
-            // UI 재렌더링
-            await window.POSOrderScreen?.render(
-                window.POSOrderScreen?.currentStoreId,
-                window.POSOrderScreen?.currentTableNumber
-            );
 
         } catch (error) {
             console.error("❌ 사용자별 TLL 세션 종료 실패:", error);
