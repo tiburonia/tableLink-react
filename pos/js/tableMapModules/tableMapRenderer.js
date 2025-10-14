@@ -71,9 +71,13 @@ const TableMapRenderer = {
     renderOrderContent(table) {
         const { orders } = table;
 
+        if (!orders || orders.length === 0) {
+            return '';
+        }
+
         // 교차주문 여부 확인
-        const hasTLLOrder = orders.some(o => o.source === 'TLL');
-        const hasPOSOrder = orders.some(o => o.source === 'POS');
+        const hasTLLOrder = orders.some(o => o && o.source === 'TLL');
+        const hasPOSOrder = orders.some(o => o && o.source === 'POS');
         const isCrossOrder = hasTLLOrder && hasPOSOrder;
 
         if (isCrossOrder) {
@@ -87,8 +91,12 @@ const TableMapRenderer = {
      * 교차주문 카드 렌더링 (TLL + POS)
      */
     renderCrossOrderCard(table) {
-        const tllOrders = table.orders.filter(o => o.source === 'TLL');
-        const posOrders = table.orders.filter(o => o.source === 'POS');
+        if (!table.orders || table.orders.length === 0) {
+            return '';
+        }
+
+        const tllOrders = table.orders.filter(o => o && o.source === 'TLL');
+        const posOrders = table.orders.filter(o => o && o.source === 'POS');
 
         const tllAmount = this.calculateTotalAmount(tllOrders);
         const posAmount = this.calculateTotalAmount(posOrders);
@@ -143,7 +151,15 @@ const TableMapRenderer = {
      * 일반 주문 카드 렌더링 (TLL 또는 POS)
      */
     renderSingleOrderCard(table) {
+        if (!table.orders || table.orders.length === 0) {
+            return '';
+        }
+
         const order = table.orders[0];
+        if (!order) {
+            return '';
+        }
+
         const source = order.source === 'TLL' ? 'TLL 주문' : 'POS 주문';
         const orderClass = order.source === 'TLL' ? 'tll-order' : 'pos-order';
         const time = this.formatOccupiedTime(order.createdAt);
