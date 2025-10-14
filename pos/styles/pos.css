@@ -2859,109 +2859,24 @@ body {
     overflow-y: auto;
 }
 
-/* TLL 사용자별 그룹 카드 */
+/* TLL 사용자별 그룹 카드 - 좌우 분할 구조 */
 .tll-order-user {
+    display: flex;
     background: white;
     border: 2px solid #e5e7eb;
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    min-height: 120px;
 }
 
-/* TLL 사용자 헤더 */
-.tll-user-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-}
-
-.user-identity {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.user-icon {
-    font-size: 20px;
-}
-
-.user-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.user-name {
-    font-weight: 600;
-    color: white;
-    font-size: 14px;
-}
-
-.guest-phone {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.user-actions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.user-total {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.user-total .total-label {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.8);
-    margin-bottom: 2px;
-}
-
-.user-total .total-amount {
-    font-size: 16px;
-    font-weight: 700;
-    color: white;
-}
-
-.tll-session-end-btn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
-    background: rgba(220, 53, 69, 0.9);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.tll-session-end-btn:hover {
-    background: #dc3545;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
-}
-
-.tll-session-end-btn .btn-icon {
-    font-size: 14px;
-}
-
-.tll-session-end-btn .btn-text {
-    font-size: 12px;
-}
-
-/* TLL 주문 아이템 리스트 */
+/* 왼쪽: 메뉴 아이템 영역 (행으로 쌓임) */
 .tll-order-items {
+    flex: 3;
     display: flex;
     flex-direction: column;
     background: #f9fafb;
+    border-right: 2px solid #e5e7eb;
 }
 
 .tll-order-item {
@@ -3005,4 +2920,110 @@ body {
     font-size: 14px;
     font-weight: 700;
     color: #059669;
+}
+
+/* 오른쪽: 사용자 정보 영역 (왼쪽 높이만큼 자동 확장) */
+.tll-user-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    min-width: 200px;
+}
+
+/* 사용자 헤더 */
+.tll-user-header {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.user-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-icon {
+    font-size: 24px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.user-name {
+    font-weight: 700;
+    color: white;
+    font-size: 16px;
+}
+
+.guest-phone {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* 사용자 액션 영역 */
+.user-actions {
+    margin-top: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.user-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.user-total .total-label {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 600;
+}
+
+.user-total .total-amount {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+}
+
+.tll-session-end-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: rgba(220, 53, 69, 0.9);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tll-session-end-btn:hover {
+    background: #dc3545;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.tll-session-end-btn .btn-icon {
+    font-size: 14px;
+}
+
+.tll-session-end-btn .btn-text {
+    font-size: 12px;
 }

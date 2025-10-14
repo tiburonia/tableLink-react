@@ -238,12 +238,30 @@ const OrderUIRenderer = {
 
                     return `
                         <div class="tll-order-user">
-                            <div class="tll-user-header">
-                                <div class="user-identity">
-                                    <span class="user-icon">${guestPhone ? '📞' : '👤'}</span>
-                                    <div class="user-info">
-                                        <span class="user-name">${userName}</span>
-                                        ${guestPhone ? `<span class="guest-phone">${guestPhone}</span>` : ''}
+                            <!-- 왼쪽: 메뉴 리스트 (행으로 쌓임) -->
+                            <div class="tll-order-items">
+                                ${userOrders.map(order => `
+                                    <div class="tll-order-item" data-order-id="${order.order_id}" data-item-id="${order.id}">
+                                        <div class="item-info">
+                                            <span class="item-name">${order.menu_name}</span>
+                                            <span class="item-quantity">x${order.quantity}</span>
+                                        </div>
+                                        <div class="item-price">
+                                            ₩${(order.total_price || 0).toLocaleString()}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+
+                            <!-- 오른쪽: 사용자 정보 (왼쪽 높이만큼 자동 확장) -->
+                            <div class="tll-user-section">
+                                <div class="tll-user-header">
+                                    <div class="user-identity">
+                                        <span class="user-icon">${guestPhone ? '📞' : '👤'}</span>
+                                        <div class="user-info">
+                                            <span class="user-name">${userName}</span>
+                                            ${guestPhone ? `<span class="guest-phone">${guestPhone}</span>` : ''}
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="user-actions">
@@ -258,19 +276,6 @@ const OrderUIRenderer = {
                                         <span class="btn-text">세션종료</span>
                                     </button>
                                 </div>
-                            </div>
-                            <div class="tll-order-items">
-                                ${userOrders.map(order => `
-                                    <div class="tll-order-item" data-order-id="${order.order_id}" data-item-id="${order.id}">
-                                        <div class="item-info">
-                                            <span class="item-name">${order.menu_name}</span>
-                                            <span class="item-quantity">x${order.quantity}</span>
-                                        </div>
-                                        <div class="item-price">
-                                            ₩${(order.total_price || 0).toLocaleString()}
-                                        </div>
-                                    </div>
-                                `).join('')}
                             </div>
                         </div>
                     `;
