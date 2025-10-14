@@ -2849,3 +2849,92 @@ body {
     font-size: 20px;
     font-weight: 700;
 }
+
+/* TLL 사용자별 세션 종료 버튼 스타일 추가 */
+.tll-user-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.user-identity {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-icon {
+    font-size: 20px;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-name {
+    font-weight: 600;
+    color: #212529;
+    font-size: 14px;
+}
+
+.guest-phone {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-total {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.total-label {
+    font-size: 11px;
+    color: #6c757d;
+    margin-bottom: 2px;
+}
+
+.total-amount {
+    font-size: 16px;
+    font-weight: 700;
+    color: #007bff;
+}
+
+.tll-session-end-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.tll-session-end-btn:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.tll-session-end-btn .btn-icon {
+    font-size: 14px;
+}
+
+.tll-session-end-btn .btn-text {
+    font-size: 12px;
+}

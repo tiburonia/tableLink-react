@@ -80,7 +80,62 @@ const OrderSessionManager = {
     },
 
     /**
-     * TLL 세션 종료
+     * 사용자별 TLL 세션 종료
+     */
+    async endTLLUserSession(orderId, userName) {
+        try {
+            if (!orderId) {
+                console.error("❌ 주문 ID가 없습니다");
+                alert("주문 정보를 찾을 수 없습니다.");
+                return;
+            }
+
+            const confirmMessage = `${userName}님의 TLL 세션을 종료하시겠습니까?
+
+• 주문 ID: ${orderId}
+• 세션 종료 시 테이블에서 해당 주문이 제거됩니다.`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            console.log(`🔚 TLL 사용자 세션 종료 요청: 주문 ID ${orderId}, 사용자 ${userName}`);
+
+            const response = await fetch(`/api/orders/${orderId}/end-session`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "TLL 세션 종료 실패");
+            }
+
+            const result = await response.json();
+            console.log("✅ TLL 사용자 세션 종료 완료:", result);
+
+            alert(`✅ ${userName}님의 TLL 세션이 종료되었습니다.`);
+
+            // 화면 새로고침
+            const posOrderScreen = window.POSOrderScreen;
+            await posOrderScreen.refreshTLLOrders();
+            await posOrderScreen.refreshOrders();
+
+            // TLL 주문이 모두 없어진 경우 테이블맵으로 이동
+            if (posOrderScreen.tllOrders.length === 0) {
+                setTimeout(() => {
+                    window.POSCore?.showTableMap();
+                }, 1500);
+            }
+
+        } catch (error) {
+            console.error("❌ TLL 사용자 세션 종료 실패:", error);
+            alert(`TLL 세션 종료 중 오류가 발생했습니다:\n${error.message}`);
+        }
+    },
+
+    /**
+     * TLL 세션 종료 (전체)
      */
     async endTLLSession() {
         try {
@@ -90,7 +145,7 @@ const OrderSessionManager = {
                 return;
             }
 
-            const orderId = posOrderScreen.tllOrders[0].order_id;
+            const orderId = posOrderScreen.tllOrders[0].orderId || posOrderScreen.tllOrders[0].order_id;
             if (!orderId) {
                 console.error("❌ TLL 주문 ID를 찾을 수 없습니다");
                 alert("TLL 주문 정보를 찾을 수 없습니다.");
