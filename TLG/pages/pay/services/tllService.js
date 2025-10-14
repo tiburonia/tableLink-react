@@ -86,16 +86,10 @@ export const tllService = {
         return this.getDefaultTables();
       }
 
-      // 사용 가능/점유중 테이블 분리
-      const availableTables = tables.filter(table => !table.isOccupied);
-      const occupiedTables = tables.filter(table => table.isOccupied);
-
-      console.log(`📊 테이블 현황 - 사용가능: ${availableTables.length}개, 사용중: ${occupiedTables.length}개`);
+      
 
       return {
-        available: availableTables,
-        occupied: occupiedTables,
-        all: tables
+        tables: tables
       };
     } catch (error) {
       console.error('❌ 테이블 정보 처리 실패:', error);
@@ -124,20 +118,13 @@ export const tllService = {
    * 테이블 옵션 HTML 생성
    */
   generateTableOptions(tables) {
-    const availableOptions = tables.available.map(table => 
+    const tableOptions = tables.tables.map(table => 
       `<option value="${table.tableNumber}">${table.tableName || table.tableNumber + '번'}</option>`
     );
 
-    const occupiedOptions = tables.occupied.map(table => {
-      const occupiedTime = table.occupiedSince ? 
-        ` (${new Date(table.occupiedSince).toLocaleTimeString()}부터)` : '';
-      return `<option value="${table.tableNumber}" disabled>${table.tableName || table.tableNumber + '번'} - 사용중${occupiedTime}</option>`;
-    });
-
     return [
       '<option value="">테이블을 선택하세요</option>',
-      ...availableOptions,
-      ...occupiedOptions
+      ...tableOptions
     ].join('');
   },
 
