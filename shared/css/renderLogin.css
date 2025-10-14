@@ -344,6 +344,36 @@
   line-height: 1.2;
 }
 
+.quick-btn.user-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.quick-btn.user-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+}
+
+.quick-btn.guest-btn {
+  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+  color: white;
+}
+
+.quick-btn.guest-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(253, 160, 133, 0.4);
+}
+
+.quick-btn.admin-btn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: white;
+}
+
+.quick-btn.admin-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(240, 147, 251, 0.4);
+}
+
 .system-buttons-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

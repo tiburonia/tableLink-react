@@ -113,7 +113,7 @@ export class TLLController {
       }
 
       const userInfo = getUserInfoSafely();
-      if (!userInfo || !userInfo.id) {
+      if (!userInfo || (!userInfo.id && !userInfo.isGuest)) {
         alert('로그인이 필요합니다.');
         if (typeof window.renderLogin === 'function') window.renderLogin();
         return;

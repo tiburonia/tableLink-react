@@ -17,6 +17,14 @@ export function createQuickAccess() {
           </div>
         </button>
 
+        <button id="guestTLLOrder" class="quick-btn guest-btn">
+          <div class="quick-btn-icon">🎫</div>
+          <div class="quick-btn-content">
+            <span class="quick-btn-title">비회원 주문</span>
+            <span class="quick-btn-desc">로그인 없이 TLL</span>
+          </div>
+        </button>
+
         <button id="adminLogin" class="quick-btn admin-btn">
           <div class="quick-btn-icon">🛠️</div>
           <div class="quick-btn-content">
@@ -65,6 +73,7 @@ export function createQuickAccess() {
 
 export function setupQuickAccessEvents() {
   const quickLoginBtn = document.querySelector('#quickLogin');
+  const guestTLLBtn = document.querySelector('#guestTLLOrder');
   const adminLogin = document.querySelector('#adminLogin');
   const goKDS = document.querySelector('#goKDS');
   const goPOS = document.querySelector('#goPOS');
@@ -76,6 +85,48 @@ export function setupQuickAccessEvents() {
     quickLoginBtn.addEventListener('click', () => {
       if (window.quickLogin) {
         window.quickLogin('tiburonia');
+      }
+    });
+  }
+
+  // 비회원 TLL 주문
+  if (guestTLLBtn) {
+    guestTLLBtn.addEventListener('click', async () => {
+      try {
+        // 임시 게스트 정보 설정
+        const guestInfo = {
+          id: `guest_${Date.now()}`,
+          name: '비회원',
+          isGuest: true,
+          userId: null
+        };
+
+        // 세션에 게스트 정보 저장
+        window.userInfo = guestInfo;
+        localStorage.setItem('userInfo', JSON.stringify(guestInfo));
+
+        console.log('🎫 비회원 모드로 TLL 진입');
+
+        // TLL 함수 동적 로드 및 실행
+        if (typeof window.TLL === 'function') {
+          await window.TLL();
+        } else {
+          const script = document.createElement('script');
+          script.src = '/TLG/pages/pay/TLL.js';
+          
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+
+          if (typeof window.TLL === 'function') {
+            await window.TLL();
+          }
+        }
+      } catch (error) {
+        console.error('❌ 비회원 TLL 진입 실패:', error);
+        alert('비회원 주문을 시작할 수 없습니다. 다시 시도해주세요.');
       }
     });
   }
