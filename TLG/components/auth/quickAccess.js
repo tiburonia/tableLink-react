@@ -18,10 +18,10 @@ export function createQuickAccess() {
         </button>
 
         <button id="guestTLLOrder" class="quick-btn guest-btn">
-          <div class="quick-btn-icon">🎫</div>
+          <div class="quick-btn-icon">📱</div>
           <div class="quick-btn-content">
-            <span class="quick-btn-title">비회원 주문</span>
-            <span class="quick-btn-desc">로그인 없이 TLL</span>
+            <span class="quick-btn-title">비회원 QR주문</span>
+            <span class="quick-btn-desc">QR 스캔하고 주문</span>
           </div>
         </button>
 
@@ -89,45 +89,11 @@ export function setupQuickAccessEvents() {
     });
   }
 
-  // 비회원 TLL 주문
+  // 비회원 TLL 주문 (QR 스캔 페이지로 이동)
   if (guestTLLBtn) {
-    guestTLLBtn.addEventListener('click', async () => {
-      try {
-        // 임시 게스트 정보 설정
-        const guestInfo = {
-          id: `guest_${Date.now()}`,
-          name: '비회원',
-          isGuest: true,
-          userId: null
-        };
-
-        // 세션에 게스트 정보 저장
-        window.userInfo = guestInfo;
-        localStorage.setItem('userInfo', JSON.stringify(guestInfo));
-
-        console.log('🎫 비회원 모드로 TLL 진입');
-
-        // TLL 함수 동적 로드 및 실행
-        if (typeof window.TLL === 'function') {
-          await window.TLL();
-        } else {
-          const script = document.createElement('script');
-          script.src = '/TLG/pages/pay/TLL.js';
-          
-          await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-          });
-
-          if (typeof window.TLL === 'function') {
-            await window.TLL();
-          }
-        }
-      } catch (error) {
-        console.error('❌ 비회원 TLL 진입 실패:', error);
-        alert('비회원 주문을 시작할 수 없습니다. 다시 시도해주세요.');
-      }
+    guestTLLBtn.addEventListener('click', () => {
+      console.log('🎫 비회원 QR 주문 시스템으로 이동');
+      window.location.href = '/TLG-guest/qr.html';
     });
   }
 
