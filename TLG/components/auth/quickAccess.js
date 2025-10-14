@@ -1,4 +1,3 @@
-
 /**
  * 빠른 액세스 컴포넌트
  */
@@ -71,6 +70,182 @@ export function createQuickAccess() {
   `;
 }
 
+export function renderQuickAccessSection() {
+    return `
+        <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e5e5e5;">
+            <button 
+                onclick="showQuickAccessModal()"
+                style="
+                    width: 100%;
+                    padding: 16px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 16px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 8px;
+                    transition: all 0.3s ease;
+                "
+            >
+                <span style="font-size: 20px;">⚡</span>
+                <span>비회원 TLL 빠른접근</span>
+            </button>
+            <p style="
+                margin-top: 8px;
+                font-size: 12px;
+                color: #666;
+                text-align: center;
+            ">
+                회원가입 없이 테이블에서 바로 주문하기
+            </p>
+        </div>
+    `;
+}
+
+// 빠른접근 모달 표시
+window.showQuickAccessModal = function() {
+    const modal = `
+        <div id="quickAccessModal" style="
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            padding: 20px;
+        " onclick="if(event.target.id === 'quickAccessModal') closeQuickAccessModal()">
+            <div style="
+                background: white;
+                border-radius: 24px;
+                padding: 32px 24px;
+                max-width: 400px;
+                width: 100%;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            " onclick="event.stopPropagation()">
+                <h2 style="
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #1d1d1f;
+                    margin-bottom: 8px;
+                    text-align: center;
+                ">비회원 주문</h2>
+                <p style="
+                    font-size: 14px;
+                    color: #666;
+                    text-align: center;
+                    margin-bottom: 24px;
+                ">매장과 테이블 번호를 입력해주세요</p>
+
+                <div style="margin-bottom: 16px;">
+                    <label style="
+                        display: block;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #1d1d1f;
+                        margin-bottom: 8px;
+                    ">매장 ID</label>
+                    <input 
+                        type="number" 
+                        id="quickStoreId"
+                        placeholder="예: 497"
+                        style="
+                            width: 100%;
+                            padding: 12px;
+                            border: 1px solid #e5e5e5;
+                            border-radius: 8px;
+                            font-size: 16px;
+                        "
+                    />
+                </div>
+
+                <div style="margin-bottom: 24px;">
+                    <label style="
+                        display: block;
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #1d1d1f;
+                        margin-bottom: 8px;
+                    ">테이블 번호</label>
+                    <input 
+                        type="number" 
+                        id="quickTableNumber"
+                        placeholder="예: 1"
+                        style="
+                            width: 100%;
+                            padding: 12px;
+                            border: 1px solid #e5e5e5;
+                            border-radius: 8px;
+                            font-size: 16px;
+                        "
+                    />
+                </div>
+
+                <button 
+                    onclick="confirmQuickAccess()"
+                    style="
+                        width: 100%;
+                        padding: 16px;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 12px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin-bottom: 12px;
+                    "
+                >확인</button>
+
+                <button 
+                    onclick="closeQuickAccessModal()"
+                    style="
+                        width: 100%;
+                        padding: 16px;
+                        background: #f5f5f7;
+                        color: #1d1d1f;
+                        border: none;
+                        border-radius: 12px;
+                        font-size: 16px;
+                        font-weight: 600;
+                        cursor: pointer;
+                    "
+                >취소</button>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modal);
+};
+
+// 빠른접근 모달 닫기
+window.closeQuickAccessModal = function() {
+    const modal = document.getElementById('quickAccessModal');
+    if (modal) modal.remove();
+};
+
+// 빠른접근 확인
+window.confirmQuickAccess = function() {
+    const storeId = document.getElementById('quickStoreId').value;
+    const tableNumber = document.getElementById('quickTableNumber').value;
+
+    if (!storeId || !tableNumber) {
+        alert('매장 ID와 테이블 번호를 모두 입력해주세요');
+        return;
+    }
+
+    window.location.href = `/TLG-guest/qr.html?storeId=${storeId}&tableNumber=${tableNumber}`;
+};
+
+
 export function setupQuickAccessEvents() {
   const quickLoginBtn = document.querySelector('#quickLogin');
   const guestTLLBtn = document.querySelector('#guestTLLOrder');
@@ -93,7 +268,8 @@ export function setupQuickAccessEvents() {
   if (guestTLLBtn) {
     guestTLLBtn.addEventListener('click', () => {
       console.log('🎫 비회원 QR 주문 시스템으로 이동');
-      window.location.href = '/TLG-guest/qr.html';
+      // window.location.href = '/TLG-guest/qr.html'; // This line is replaced by the modal logic
+      showQuickAccessModal(); // Call the modal to get storeId and tableNumber
     });
   }
 
