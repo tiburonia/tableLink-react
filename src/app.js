@@ -39,6 +39,9 @@ app.use('/admin', express.static(path.join(__dirname, '../admin')));
 app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
 app.use('/kds', express.static(path.join(__dirname, '../kds')));
 
+// 비회원 TLL 시스템 정적 파일 서빙
+app.use('/guest', express.static(path.join(__dirname, '../TLG-guest')));
+
 // 루트 경로를 레거시 index.html로 리다이렉트
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/index.html'));
@@ -100,6 +103,7 @@ try {
   const auditRoutes = require('./routes/audit');
   const usersRouter = require('./routes/users');
   const notificationsRoutes = require('./routes/notifications');
+  const guestRoutes = require('./routes/guestRoutes');
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
@@ -125,6 +129,9 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes);
+  
+  // 비회원 TLL API
+  app.use('/api/guest', guestRoutes);
 
   // SSE 라우트 추가
   const sseRoutes = require('./routes/sse');
