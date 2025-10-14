@@ -230,6 +230,7 @@ const OrderUIRenderer = {
             const userName = group.userName || '게스트';
             const userPhone = group.guestPhone || group.userId || '-';
             const orders = group.orders || [];
+            const orderId = group.orderId || (orders.length > 0 ? orders[0].order_id : null);
             
             // 동일 메뉴 통합 처리 (메뉴명 + 단가 기준)
             const consolidatedOrders = this.consolidateTLLOrders(orders);
@@ -271,6 +272,12 @@ const OrderUIRenderer = {
                             <div class="total-label">주문 금액</div>
                             <div class="total-amount">${totalAmount.toLocaleString()}원</div>
                         </div>
+                        ${orderId ? `
+                        <button class="tll-user-session-end-btn" onclick="OrderSessionManager.endUserTLLSession(${orderId}, '${userName}')">
+                            <span class="btn-icon">🔚</span>
+                            <span class="btn-text">세션 종료</span>
+                        </button>
+                        ` : ''}
                     </div>
                 </div>
             `;

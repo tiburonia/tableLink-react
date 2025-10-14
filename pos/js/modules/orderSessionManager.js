@@ -80,7 +80,57 @@ const OrderSessionManager = {
     },
 
     /**
-     * TLL 세션 종료
+     * 사용자별 TLL 세션 종료
+     */
+    async endUserTLLSession(orderId, userName) {
+        try {
+            if (!orderId) {
+                console.error("❌ TLL 주문 ID가 없습니다");
+                alert("주문 정보를 찾을 수 없습니다.");
+                return;
+            }
+
+            const confirmMessage = `${userName}님의 TLL 세션을 종료하시겠습니까?\n\n주문 ID: ${orderId}`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            console.log(`🔚 사용자별 TLL 세션 종료 요청: 주문 ID ${orderId}, 사용자: ${userName}`);
+
+            const response = await fetch(`/api/orders/${orderId}/end-session`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "TLL 세션 종료 실패");
+            }
+
+            const result = await response.json();
+            console.log("✅ 사용자별 TLL 세션 종료 완료:", result);
+
+            alert(`✅ ${userName}님의 TLL 세션이 종료되었습니다.\n주문 ID: ${orderId}`);
+
+            // TLL 주문 새로고침
+            await window.POSOrderScreen?.refreshTLLOrders();
+            await window.POSOrderScreen?.refreshOrders();
+
+            // UI 재렌더링
+            await window.POSOrderScreen?.render(
+                window.POSOrderScreen?.currentStoreId,
+                window.POSOrderScreen?.currentTableNumber
+            );
+
+        } catch (error) {
+            console.error("❌ 사용자별 TLL 세션 종료 실패:", error);
+            alert(`TLL 세션 종료 중 오류가 발생했습니다:\n${error.message}`);
+        }
+    },
+
+    /**
+     * TLL 세션 종료 (전체)
      */
     async endTLLSession() {
         try {

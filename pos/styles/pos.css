@@ -2849,3 +2849,43 @@ body {
     font-size: 20px;
     font-weight: 700;
 }
+
+/* 사용자별 TLL 세션 종료 버튼 */
+.tll-user-session-end-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.tll-user-session-end-btn:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.tll-user-session-end-btn .btn-icon {
+    font-size: 14px;
+}
+
+.tll-user-session-end-btn .btn-text {
+    font-size: 13px;
+}
+
+/* TLL 주문 아이템 리스트 */
+.tll-order-items {
+    display: flex;
+    flex-direction: column;
+    background: #f9fafb;
+}
