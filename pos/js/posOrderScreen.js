@@ -605,13 +605,6 @@ const POSOrderScreen = {
     },
 
     /**
-     * 사용자별 TLL 세션 종료
-     */
-    async endTLLUserSession(orderId, userName) {
-        return OrderSessionManager.endTLLUserSession(orderId, userName);
-    },
-
-    /**
      * 수정 관리 메서드들 - OrderModificationManager로 위임 (통합 상태 관리 기반)
      */
     toggleOrderRowSelection(orderId, menuName, quantity) {

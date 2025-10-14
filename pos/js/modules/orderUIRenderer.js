@@ -1,3 +1,4 @@
+
 /**
  * 주문 UI 렌더링 모듈
  * - 주문 목록 렌더링
@@ -212,76 +213,68 @@ const OrderUIRenderer = {
      * TLL 주문 아이템 렌더링 (주문자별 좌우 분할 레이아웃)
      */
     renderTLLOrderItemsModern() {
-        const tllOrders = window.POSOrderScreen?.tllOrders || [];
+        const tllOrderGroups = window.POSOrderScreen?.tllOrders || [];
 
-        if (tllOrders.length === 0) {
+        if (!tllOrderGroups || tllOrderGroups.length === 0) {
             return `
-                <div class="no-orders-state">
+                <div class="empty-state">
                     <div class="empty-icon">📱</div>
-                    <h3>TLL 주문 없음</h3>
-                    <p>현재 TLL 주문이 없습니다</p>
+                    <h4>TLL 주문이 없습니다</h4>
+                    <p>고객이 앱에서 주문하면 여기에 표시됩니다</p>
                 </div>
             `;
         }
 
-        const ordersByUser = tllOrders;
+        // 주문자별 그룹 렌더링
+        return tllOrderGroups.map(group => {
+            const userName = group.userName || '게스트';
+            const userPhone = group.guestPhone || group.userId || '-';
+            const orders = group.orders || [];
+            
+            // 동일 메뉴 통합 처리 (메뉴명 + 단가 기준)
+            const consolidatedOrders = this.consolidateTLLOrders(orders);
+            
+            // 총 금액 계산
+            const totalAmount = consolidatedOrders.reduce((sum, order) => sum + (order.total_price || 0), 0);
 
-        return `
-            <div class="tll-orders-wrapper">
-                ${ordersByUser.map(userGroup => {
-                    const userName = userGroup.userName || '게스트';
-                    const guestPhone = userGroup.guestPhone;
-                    const userOrders = userGroup.orders || [];
-                    const orderId = userGroup.orderId;
-
-                    const totalAmount = userOrders.reduce((sum, order) => sum + (parseFloat(order.total_price) || 0), 0);
-
-                    return `
-                        <div class="tll-order-user">
-                            <!-- 왼쪽: 메뉴 리스트 (행으로 쌓임) -->
-                            <div class="tll-order-items">
-                                ${userOrders.map(order => `
-                                    <div class="tll-order-item" data-order-id="${order.order_id}" data-item-id="${order.id}">
-                                        <div class="item-info">
-                                            <span class="item-name">${order.menu_name}</span>
-                                            <span class="item-quantity">x${order.quantity}</span>
-                                        </div>
-                                        <div class="item-price">
-                                            ₩${(order.total_price || 0).toLocaleString()}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-
-                            <!-- 오른쪽: 사용자 정보 (왼쪽 높이만큼 자동 확장) -->
-                            <div class="tll-user-section">
-                                <div class="tll-user-header">
-                                    <div class="user-identity">
-                                        <span class="user-icon">${guestPhone ? '📞' : '👤'}</span>
-                                        <div class="user-info">
-                                            <span class="user-name">${userName}</span>
-                                            ${guestPhone ? `<span class="guest-phone">${guestPhone}</span>` : ''}
-                                        </div>
-                                    </div>
+            return `
+                <div class="tll-order-group">
+                    <!-- 왼쪽: 메뉴 리스트 -->
+                    <div class="tll-order-items">
+                        ${consolidatedOrders.map(order => `
+                            <div class="tll-order-item">
+                                <div class="item-menu">
+                                    <span class="menu-name">${order.menu_name}</span>
+                                    <span class="menu-price">${(order.unit_price || 0).toLocaleString()}원</span>
                                 </div>
-                                <div class="user-actions">
-                                    <div class="user-total">
-                                        <span class="total-label">합계</span>
-                                        <span class="total-amount">₩${totalAmount.toLocaleString()}</span>
-                                    </div>
-                                    <button class="tll-session-end-btn" 
-                                            onclick="POSOrderScreen.endTLLUserSession(${orderId}, '${userName}')"
-                                            title="이 사용자의 TLL 세션 종료">
-                                        <span class="btn-icon">🔚</span>
-                                        <span class="btn-text">세션종료</span>
-                                    </button>
+                                <div class="item-qty">×${order.quantity || 0}</div>
+                                <div class="item-total">${(order.total_price || 0).toLocaleString()}원</div>
+                                <div class="item-status">
+                                    <span class="status-badge status-${(order.item_status || 'PENDING').toLowerCase()}">
+                                        ${this.getStatusText(order.item_status)}
+                                    </span>
                                 </div>
                             </div>
+                        `).join('')}
+                        <div class="tll-order-subtotal">
+                            <span class="subtotal-label">소계</span>
+                            <span class="subtotal-amount">${totalAmount.toLocaleString()}원</span>
                         </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
+                    </div>
+                    
+                    <!-- 오른쪽: 사용자 정보 (메뉴 리스트 높이만큼 자동 확장) -->
+                    <div class="tll-order-user">
+                        <div class="user-badge">📱 TLL</div>
+                        <div class="user-name">${userName}</div>
+                        <div class="user-phone">${userPhone}</div>
+                        <div class="user-total">
+                            <div class="total-label">주문 금액</div>
+                            <div class="total-amount">${totalAmount.toLocaleString()}원</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
     },
 
     /**
