@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -28,8 +27,14 @@ app.use('/api/', limiter);
 
 // Static file serving
 app.use(express.static('public'));
+app.use('/shared', express.static('shared'));
+app.use('/TLG', express.static('TLG'));
+app.use('/TLG-guest', express.static('TLG-guest'));
 app.use('/pos', express.static('pos'));
 app.use('/KDS', express.static('KDS'));
+app.use('/krp', express.static('krp'));
+app.use('/tlm-components', express.static('tlm-components'));
+app.use('/admin', express.static('admin'));
 
 // 레거시 TLG 시스템 정적 파일 서빙
 app.use('/shared', express.static(path.join(__dirname, '../shared')));
@@ -129,7 +134,7 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes);
-  
+
   // 비회원 TLL API
   app.use('/api/guest', guestRoutes);
 
