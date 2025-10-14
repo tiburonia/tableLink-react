@@ -274,6 +274,7 @@ class PaymentService {
       const user = await userRepository.getUserById(userPK);
 
       if (!user) {
+        //비회원 로직 생성. userPK가 null인 경우
         throw new Error('사용자를 찾을 수 없습니다');
       }
 
