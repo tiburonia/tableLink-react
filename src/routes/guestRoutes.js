@@ -5,7 +5,7 @@
 
 const { Router } = require('express');
 const { v4: uuidv4 } = require('uuid');
-const db = require('../db');
+const { pool } = require('../db/pool');
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.get('/stores/:storeId/tables/:tableNumber', async (req, res) => {
         const { storeId, tableNumber } = req.params;
 
         // 매장 정보 조회
-        const storeResult = await db.query(
+        const storeResult = await pool.query(
             'SELECT id, name, address FROM stores WHERE id = $1',
             [storeId]
         );
@@ -31,7 +31,7 @@ router.get('/stores/:storeId/tables/:tableNumber', async (req, res) => {
         }
 
         // 테이블 정보 조회
-        const tableResult = await db.query(
+        const tableResult = await pool.query(
             'SELECT id, table_number FROM tables WHERE store_id = $1 AND table_number = $2',
             [storeId, tableNumber]
         );
@@ -84,7 +84,7 @@ router.post('/sessions', async (req, res) => {
         const sessionId = uuidv4();
 
         // 세션 정보를 DB에 저장 (guest_sessions 테이블)
-        await db.query(
+        await pool.query(
             `INSERT INTO guest_sessions (session_id, store_id, table_number, created_at, expires_at)
              VALUES ($1, $2, $3, NOW(), NOW() + INTERVAL '4 hours')`,
             [sessionId, storeId, tableNumber]
@@ -112,7 +112,7 @@ router.get('/stores/:storeId', async (req, res) => {
     try {
         const { storeId } = req.params;
 
-        const result = await db.query(
+        const result = await pool.query(
             'SELECT id, name, address, phone FROM stores WHERE id = $1',
             [storeId]
         );
@@ -151,7 +151,7 @@ router.get('/stores/:storeId/menus', async (req, res) => {
     try {
         const { storeId } = req.params;
 
-        const result = await db.query(
+        const result = await pool.query(
             `SELECT id, name, category, price, description, image_url
              FROM menus
              WHERE store_id = $1 AND is_available = true
@@ -187,7 +187,7 @@ router.get('/stores/:storeId/menus', async (req, res) => {
  * 비회원 주문 생성
  */
 router.post('/orders', async (req, res) => {
-    const client = await db.pool.connect();
+    const client = await pool.connect();
 
     try {
         const { sessionId, storeId, tableNumber, items } = req.body;
@@ -270,7 +270,7 @@ router.post('/orders', async (req, res) => {
  * 결제 처리
  */
 router.post('/payments', async (req, res) => {
-    const client = await db.pool.connect();
+    const client = await pool.connect();
 
     try {
         const { orderId, amount, paymentMethod } = req.body;
