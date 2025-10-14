@@ -1,0 +1,157 @@
+{
+    "success": true,
+    "tllOrders": [
+        {
+            "userId": 1,
+            "userName": "최준혁",
+            "guestPhone": null,
+            "orders": [
+                {
+                    "id": 853,
+                    "menu_name": "콜라",
+                    "quantity": 1,
+                    "unit_price": 2000,
+                    "total_price": 2000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:30:34.274827",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                },
+                {
+                    "id": 849,
+                    "menu_name": "치킨무",
+                    "quantity": 1,
+                    "unit_price": 2000,
+                    "total_price": 2000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:30:34.274827",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                },
+                {
+                    "id": 850,
+                    "menu_name": "간장치킨",
+                    "quantity": 1,
+                    "unit_price": 17000,
+                    "total_price": 17000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:30:34.274827",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                },
+                {
+                    "id": 851,
+                    "menu_name": "양념치킨",
+                    "quantity": 1,
+                    "unit_price": 17000,
+                    "total_price": 17000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:30:34.274827",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                },
+                {
+                    "id": 852,
+                    "menu_name": "후라이드치킨",
+                    "quantity": 1,
+                    "unit_price": 16000,
+                    "total_price": 16000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:30:34.274827",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                },
+                {
+                    "id": 846,
+                    "menu_name": "간장치킨",
+                    "quantity": 2,
+                    "unit_price": 17000,
+                    "total_price": 34000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:29:07.080299",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                },
+                {
+                    "id": 847,
+                    "menu_name": "양념치킨",
+                    "quantity": 2,
+                    "unit_price": 17000,
+                    "total_price": 34000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:29:07.080299",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                },
+                {
+                    "id": 848,
+                    "menu_name": "후라이드치킨",
+                    "quantity": 1,
+                    "unit_price": 16000,
+                    "total_price": 16000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 291,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:29:07.080299",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:29:07.080299",
+                    "is_mixed": false
+                }
+            ],
+            "orderId": 291
+        },
+        {
+            "userId": 2,
+            "userName": "테스트",
+            "guestPhone": null,
+            "orders": [
+                {
+                    "id": 845,
+                    "menu_name": "간장치킨",
+                    "quantity": 2,
+                    "unit_price": 17000,
+                    "total_price": 34000,
+                    "item_status": "PENDING",
+                    "cook_station": "KITCHEN",
+                    "order_id": 290,
+                    "paid_status": "UNPAID",
+                    "ticket_created_at": "2025-10-13T13:07:00.974972",
+                    "guest_phone": null,
+                    "order_created_at": "2025-10-13T13:07:00.974972",
+                    "is_mixed": false
+                }
+            ],
+            "orderId": 290
+        }
+    ],
+    "groupCount": 2
+}
