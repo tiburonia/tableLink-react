@@ -93,18 +93,9 @@ export function setupQuickAccessEvents() {
   if (guestTLLBtn) {
     guestTLLBtn.addEventListener('click', async () => {
       try {
-        // 임시 게스트 정보 설정
-        const guestInfo = {
-          id: `guest_${Date.now()}`,
-          name: '비회원',
-          isGuest: true,
-          userId: null
-        };
+       
 
-        // 세션에 게스트 정보 저장
-        window.userInfo = guestInfo;
-        localStorage.setItem('userInfo', JSON.stringify(guestInfo));
-
+        
         console.log('🎫 비회원 모드로 TLL 진입');
 
         // 비회원 TLL 렌더링 함수 동적 로드

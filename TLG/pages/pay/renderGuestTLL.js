@@ -9,16 +9,7 @@ export async function renderGuestTLL() {
 
   console.log('🎫 비회원 TLL QR 주문 화면 렌더링 시작');
 
-  // 비회원 정보 확인
-  const guestInfo = window.userInfo;
-  if (!guestInfo || !guestInfo.isGuest) {
-    console.error('❌ 비회원 정보가 없습니다');
-    alert('비회원 정보를 찾을 수 없습니다. 다시 시도해주세요.');
-    if (typeof window.renderLogin === 'function') {
-      window.renderLogin();
-    }
-    return;
-  }
+ 
 
   main.innerHTML = `
     <div class="guest-tll-layout">
@@ -209,7 +200,7 @@ function setupEventListeners() {
     }
 
     try {
-      const response = await fetch(`/api/stores/search?keyword=${encodeURIComponent(keyword)}`);
+      const response = await fetch(`/api/stores/search?query=${encodeURIComponent(keyword)}`);
       const data = await response.json();
 
       if (data.success && data.stores) {
@@ -269,7 +260,7 @@ function setupEventListeners() {
     resultsContainer.style.display = 'block';
   }
 
-  /**
+  /**${selectedStoreId}
    * 매장 선택
    */
   async function selectStore(store) {
@@ -283,7 +274,12 @@ function setupEventListeners() {
 
     // 테이블 목록 로드
     try {
-      const response = await fetch(`/api/stores/${store.id}/tables`);
+          const response = await fetch(`/api/tables/stores/${selectedStoreId}?_t=${Date.now()}`, {
+            headers: {
+              'Cache-Control': 'no-cache',
+              'Pragma': 'no-cache'
+            }
+          })
       const data = await response.json();
 
       if (data.success && data.tables) {
@@ -305,7 +301,7 @@ function setupEventListeners() {
     let optionsHTML = '<option value="">테이블을 선택하세요</option>';
     
     tables.forEach(table => {
-      optionsHTML += `<option value="${table.id}">${table.table_name}</option>`;
+      optionsHTML += `<option value="${table.id}">${table.tableName}</option>`;
     });
 
     tableSelect.innerHTML = optionsHTML;
