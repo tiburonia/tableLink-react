@@ -158,12 +158,27 @@ function setupEventListeners() {
           </span>
         `;
 
-        // 주문 화면으로 이동
+        // 비회원 전용 주문 화면으로 이동
         const store = { id: selectedStoreId };
         const tableName = `${selectedTableNumber}번`;
 
-        if (typeof window.renderOrderScreen === 'function') {
-          await window.renderOrderScreen(store, tableName, selectedTableNumber);
+        if (typeof window.renderGuestOrderScreen === 'function') {
+          await window.renderGuestOrderScreen(store, tableName, selectedTableNumber);
+        } else {
+          // 비회원 주문 화면 모듈 동적 로드
+          const script = document.createElement('script');
+          script.type = 'module';
+          script.src = '/TLG/pages/pay/renderGuestOrderScreen.js';
+          
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+
+          if (typeof window.renderGuestOrderScreen === 'function') {
+            await window.renderGuestOrderScreen(store, tableName, selectedTableNumber);
+          }
         }
       } catch (error) {
         console.error('❌ 주문 시작 실패:', error);
