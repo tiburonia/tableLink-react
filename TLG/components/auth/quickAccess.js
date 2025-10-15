@@ -1,3 +1,4 @@
+
 /**
  * 빠른 액세스 컴포넌트
  */
@@ -90,9 +91,43 @@ export function setupQuickAccessEvents() {
 
   // 비회원 TLL 주문
   if (guestTLLBtn) {
-    guestTLLBtn.addEventListener('click', () => {
-      console.log('🎫 비회원 QR 주문 시스템으로 이동');
-      window.location.href = '/tll-guest/index.html';
+    guestTLLBtn.addEventListener('click', async () => {
+      try {
+        // 임시 게스트 정보 설정
+        const guestInfo = {
+          id: `guest_${Date.now()}`,
+          name: '비회원',
+          isGuest: true,
+          userId: null
+        };
+
+        // 세션에 게스트 정보 저장
+        window.userInfo = guestInfo;
+        localStorage.setItem('userInfo', JSON.stringify(guestInfo));
+
+        console.log('🎫 비회원 모드로 TLL 진입');
+
+        // TLL 함수 동적 로드 및 실행
+        if (typeof window.TLL === 'function') {
+          await window.TLL();
+        } else {
+          const script = document.createElement('script');
+          script.src = '/TLG/pages/pay/TLL.js';
+          
+          await new Promise((resolve, reject) => {
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+
+          if (typeof window.TLL === 'function') {
+            await window.TLL();
+          }
+        }
+      } catch (error) {
+        console.error('❌ 비회원 TLL 진입 실패:', error);
+        alert('비회원 주문을 시작할 수 없습니다. 다시 시도해주세요.');
+      }
     });
   }
 
