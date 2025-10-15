@@ -9,16 +9,17 @@ class PaymentRepository {
    * pending_payments에 결제 대기 정보 저장
    */
   async createPendingPayment(client, paymentData) {
-    const { orderId, userId, userPK, storeId, tableNumber, orderData, amount } = paymentData;
+    const { orderId,  userPK, storeId, tableNumber, orderData, amount } = paymentData;
+
+    
 
     await client.query(`
       INSERT INTO pending_payments (
-        order_id, user_id, user_pk, store_id, table_number, 
+        order_id, user_pk, store_id, table_number, 
         order_data, amount, status, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING', CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'PENDING', CURRENT_TIMESTAMP)
     `, [
       orderId,
-      userId,
       userPK,
       storeId,
       tableNumber,

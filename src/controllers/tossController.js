@@ -24,7 +24,7 @@ class TossController {
       const result = await paymentService.prepareTossPayment({
         storeId: parseInt(storeId),
         tableNumber: parseInt(tableNumber),
-        userPK: parseInt(userPK),
+        userPK: userPK ?  parseInt(userPK) : null,
         orderData,
         amount: parseInt(amount)
       });

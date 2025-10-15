@@ -180,7 +180,7 @@ export const paymentService = {
     }
 
     const prepareData = {
-      userPK: parseInt(userInfo.userId),
+      userPK: userInfo.userId ? parseInt(userInfo.userId) : null,
       storeId: orderData.storeId,
       storeName: orderData.storeName,
       tableNumber: orderData.tableNum || 1,

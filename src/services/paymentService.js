@@ -271,16 +271,12 @@ class PaymentService {
       const orderId = `toss_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       // 유저 정보 조회 (userPK가 실제로는 user.id이므로 그대로 사용)
-      const user = await userRepository.getUserById(userPK);
 
-      if (!user) {
-        throw new Error('사용자를 찾을 수 없습니다');
-      }
+      
 
       // pending_payments에 저장
       await paymentRepository.createPendingPayment(client, {
         orderId,
-        userId: user.id,
         userPK: userPK,
         storeId,
         tableNumber,
