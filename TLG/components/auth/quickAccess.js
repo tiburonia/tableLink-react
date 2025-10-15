@@ -107,12 +107,13 @@ export function setupQuickAccessEvents() {
 
         console.log('🎫 비회원 모드로 TLL 진입');
 
-        // TLL 함수 동적 로드 및 실행
-        if (typeof window.TLL === 'function') {
-          await window.TLL();
+        // 비회원 TLL 렌더링 함수 동적 로드
+        if (typeof window.renderGuestTLL === 'function') {
+          await window.renderGuestTLL();
         } else {
           const script = document.createElement('script');
-          script.src = '/TLG/pages/pay/TLL.js';
+          script.type = 'module';
+          script.src = '/TLG/pages/pay/renderGuestTLL.js';
           
           await new Promise((resolve, reject) => {
             script.onload = resolve;
@@ -120,8 +121,8 @@ export function setupQuickAccessEvents() {
             document.head.appendChild(script);
           });
 
-          if (typeof window.TLL === 'function') {
-            await window.TLL();
+          if (typeof window.renderGuestTLL === 'function') {
+            await window.renderGuestTLL();
           }
         }
       } catch (error) {
