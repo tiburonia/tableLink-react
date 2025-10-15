@@ -396,23 +396,39 @@ async function proceedToPayment() {
   }
 
   try {
-    const orderData = {
+    const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    const paymentData = {
       storeId: window.currentGuestOrder.storeId,
+      storeName: window.currentGuestOrder.storeName,
       tableNumber: window.currentGuestOrder.tableNumber,
-      items: cart.map(item => ({
-        menu_name: item.menuName,
-        unit_price: item.price,
-        quantity: item.quantity,
-        options: {},
-        notes: ''
-      })),
+      tableName: window.currentGuestOrder.tableName,
+      cart: cart,
+      totalAmount: totalAmount,
       isGuest: true
     };
 
-    console.log('💳 비회원 결제 진행:', orderData);
+    console.log('💳 비회원 결제 페이지로 이동:', paymentData);
 
-    // TODO: 비회원 결제 API 호출
-    alert('비회원 결제 기능은 곧 구현됩니다.');
+    // 비회원 결제 페이지로 이동
+    if (typeof window.renderGuestPayment === 'function') {
+      await window.renderGuestPayment(paymentData);
+    } else {
+      // 비회원 결제 화면 모듈 동적 로드
+      const script = document.createElement('script');
+      script.type = 'module';
+      script.src = '/TLG/pages/pay/renderGuestPayment.js';
+      
+      await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+
+      if (typeof window.renderGuestPayment === 'function') {
+        await window.renderGuestPayment(paymentData);
+      }
+    }
 
   } catch (error) {
     console.error('❌ 결제 진행 실패:', error);
