@@ -192,9 +192,21 @@ async function setupGuestPaymentEvents(orderData, finalAmount) {
 
   // 결제 컨트롤러 초기화
   guestPaymentController = new GuestPaymentController();
+  
+  // orderData에 items 추가
+  const enhancedOrderData = {
+    ...orderData,
+    items: cart.map(item => ({
+      menuId: item.menuId,
+      name: item.menuName,
+      quantity: item.quantity,
+      price: item.price
+    }))
+  };
+  
   await guestPaymentController.initialize(
     { name: orderData.storeName, id: orderData.storeId },
-    orderData,
+    enhancedOrderData,
     { name: orderData.storeName, id: orderData.storeId }
   );
 
@@ -288,6 +300,9 @@ async function setupGuestPaymentEvents(orderData, finalAmount) {
             <span>결제 처리 중...</span>
           </span>
         `;
+
+        // 고객 정보를 컨트롤러에 저장
+        guestPaymentController.guestInfo = { name, phone };
 
         await guestPaymentController.executePayment(finalAmount);
 
