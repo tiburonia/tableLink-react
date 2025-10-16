@@ -20,9 +20,9 @@ export const guestPaymentService = {
       guestPhone: phone,
       orderData: {
         storeName: storeData.name || '매장',
-        items: items.map(item => ({
+        items: (items || []).map(item => ({
           menuId: item.menuId,
-          name: item.name,
+          name: item.menuName || item.name,
           quantity: item.quantity,
           price: item.price
         })),
