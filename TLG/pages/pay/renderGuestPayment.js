@@ -323,11 +323,10 @@ function getGuestPaymentStyles() {
     <style>
       .guest-payment-screen {
         position: fixed;
-        top: 0;
         left: 0;
         width: 100%;
         max-width: 390px;
-        height: 100vh;
+        height: 794px;
         background: #f8fafc;
         display: flex;
         flex-direction: column;

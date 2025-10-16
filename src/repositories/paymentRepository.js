@@ -286,7 +286,7 @@ class PaymentRepository {
    */
   async findMemberById(client, memberId) {
     const result = await client.query(`
-      SELECT id, name, phone, point FROM users
+      SELECT id, name, phone FROM users
       WHERE id = $1
     `, [memberId]);
 
