@@ -1,24 +1,27 @@
-
 /**
  * 토스페이먼츠 결제 실패 페이지 처리
  */
 
 // URL 파라미터 파싱
 function getUrlParams() {
-  const params = new URLSearchParams(window.location.search);
-  return {
-    code: params.get('code'),
-    message: params.get('message'),
-    orderId: params.get('orderId')
+  const urlParams = new URLSearchParams(window.location.search);
+  const params = {
+    code: urlParams.get('code'),
+    message: urlParams.get('message'),
+    orderId: urlParams.get('orderId'),
+    isGuest: urlParams.get('isGuest') === 'true'
   };
+
+  console.log('🔍 실패 파라미터:', params);
+  return params;
 }
 
 // 실패 정보 표시
 function showFailure() {
-  const { code, message, orderId } = getUrlParams();
-  
-  console.log('❌ 결제 실패:', { code, message, orderId });
-  
+  const { code, message, orderId, isGuest } = getUrlParams();
+
+  console.log('❌ 결제 실패:', { code, message, orderId, isGuest });
+
   const container = document.querySelector('.container');
   container.innerHTML = `
     <div class="status-icon">❌</div>
@@ -29,28 +32,30 @@ function showFailure() {
       ${code ? `<p><strong>오류코드:</strong> ${code}</p>` : ''}
     </div>
     <div class="action-buttons">
-      <button class="btn primary" onclick="retryPayment()">다시 시도</button>
-      <button class="btn secondary" onclick="goBack()">TableLink로 돌아가기</button>
+      <button class="btn primary" onclick="retryPayment(${isGuest})">다시 시도</button>
+      <button class="btn secondary" onclick="goBack(${isGuest})">TableLink로 돌아가기</button>
     </div>
   `;
 }
 
 // 결제 재시도
-function retryPayment() {
+function retryPayment(isGuest) {
   try {
     if (window.opener && !window.opener.closed) {
       window.opener.focus();
+      // isGuest 파라미터에 따라 리다이렉트 URL 결정
+      window.opener.location.href = isGuest ? '/toss-payment-guest' : '/toss-payment';
       window.close();
     } else {
-      window.location.href = '/';
+      window.location.href = isGuest ? '/toss-payment-guest' : '/toss-payment';
     }
   } catch (e) {
-    window.location.href = '/';
+    window.location.href = isGuest ? '/toss-payment-guest' : '/toss-payment';
   }
 }
 
 // TableLink로 돌아가기
-function goBack() {
+function goBack(isGuest) {
   try {
     if (window.opener && !window.opener.closed) {
       window.opener.location.href = '/';

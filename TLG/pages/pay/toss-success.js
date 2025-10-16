@@ -10,7 +10,8 @@ function getUrlParams() {
   const params = {
     paymentKey: urlParams.get('paymentKey'),
     orderId: urlParams.get('orderId'),
-    amount: urlParams.get('amount')
+    amount: urlParams.get('amount'),
+    isGuest: urlParams.get('isGuest') === 'true'
   };
 
   console.log('🔍 URL 파라미터:', params);
@@ -111,19 +112,20 @@ async function handlePaymentSuccess() {
     console.log('🔄 새로운 결제 시스템 - 성공 처리 함수 시작');
 
     const urlParams = getUrlParams();
-    const { paymentKey, orderId, amount } = urlParams;
+    const { paymentKey, orderId, amount, isGuest } = urlParams;
 
-    console.log('📝 결제 성공 파라미터:', { paymentKey, orderId, amount });
+    console.log('📝 결제 성공 파라미터:', { paymentKey, orderId, amount, isGuest });
 
     // 필수 파라미터 검증
     if (!paymentKey || !orderId || !amount) {
       throw new Error('필수 결제 정보가 누락되었습니다.');
     }
 
-    // 서버에 결제 승인 요청
-    console.log('🔑 서버에 결제 승인 요청 시작');
+    // 비회원/회원에 따라 API 엔드포인트 선택
+    const apiEndpoint = isGuest ? '/api/toss/confirm-guest' : '/api/toss/confirm';
+    console.log(`🔑 ${isGuest ? '비회원' : '회원'} 결제 승인 요청 시작 - ${apiEndpoint}`);
 
-    const response = await fetch('/api/toss/confirm', {
+    const response = await fetch(apiEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

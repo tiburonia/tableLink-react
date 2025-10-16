@@ -73,8 +73,8 @@ export class GuestPaymentController {
         orderName: `${this.storeData.name} 주문`,
         customerName: this.guestInfo.name,
         customerEmail: 'guest@tablelink.com',
-        successUrl: `${window.location.origin}/toss-success.html`,
-        failUrl: `${window.location.origin}/toss-fail.html`
+        successUrl: `${window.location.origin}/toss-success.html?isGuest=true`,
+        failUrl: `${window.location.origin}/toss-fail.html?isGuest=true`
       };
 
       // 결제 수단 매핑
