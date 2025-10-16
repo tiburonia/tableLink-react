@@ -1,3 +1,4 @@
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -83,7 +84,6 @@ try {
   const posPaymentRoutes = require('./routes/pos-payment');
   const posPaymentTLLRoutes = require('./routes/pos-payment-tll');
   const tllRoutes = require('./routes/tll');
-  const tllGuestRoutes = require('./routes/tll-guest'); // TLL 비회원 라우트 추가
   const krpRoutes = require('./routes/krp');
   const kdsRoutes = require('./routes/kds');
   const tossRoutes = require('./routes/toss');
@@ -106,7 +106,6 @@ try {
   app.use('/api/pos-payment', posPaymentRoutes);
   app.use('/api/pos-payment-tll', posPaymentTLLRoutes);
   app.use('/api/tll', tllRoutes);
-  app.use('/api/tll-guest', tllGuestRoutes); // TLL 비회원 API 경로 추가
   app.use('/api/kds', kdsRoutes);
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes);
