@@ -702,19 +702,15 @@ class PaymentService {
       // 고유한 orderId 생성
       const orderId = `tll_guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // pending_payments에 저장 (guestId 포함)
-      await paymentRepository.createPendingPayment(client, {
+      // 비회원 전용 pending_payments 저장
+      await paymentRepository.createGuestPendingPayment(client, {
         orderId,
-        userPK: null,
         storeId,
         tableNumber,
-        orderData: {
-          ...orderData,
-          guestName,
-          guestPhone,
-          guestId,
-          isGuest: true
-        },
+        guestId,
+        guestName,
+        guestPhone,
+        orderData,
         amount
       });
 

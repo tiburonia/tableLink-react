@@ -440,6 +440,34 @@ class PaymentRepository {
 
     console.log(`✅ 주문 ${orderId}에 비회원 정보 업데이트: ${guestName}, ${guestPhone}${guestId ? `, guestId: ${guestId}` : ''}`);
   }
+
+  /**
+   * 비회원 전용 pending_payments 생성
+   */
+  async createGuestPendingPayment(client, paymentData) {
+    const { orderId, storeId, tableNumber, guestId, guestName, guestPhone, orderData, amount } = paymentData;
+
+    await client.query(`
+      INSERT INTO pending_payments (
+        order_id, user_pk, store_id, table_number, 
+        order_data, amount, status, created_at
+      ) VALUES ($1, NULL, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP)
+    `, [
+      orderId,
+      storeId,
+      tableNumber,
+      JSON.stringify({
+        ...orderData,
+        guestId,
+        guestName,
+        guestPhone,
+        isGuest: true
+      }),
+      parseInt(amount)
+    ]);
+
+    console.log(`✅ 비회원 pending_payment 생성: ${orderId}, guestId: ${guestId}`);
+  }
 }
 
 module.exports = new PaymentRepository();
