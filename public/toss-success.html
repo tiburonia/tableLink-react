@@ -76,17 +76,25 @@
         // TLL 결제 성공 처리
         async function processTLLPaymentSuccess() {
             try {
-                const { paymentKey, orderId, amount } = getUrlParams();
+                const urlParams = new URLSearchParams(window.location.search);
+                const paymentKey = urlParams.get('paymentKey');
+                const orderId = urlParams.get('orderId');
+                const amount = urlParams.get('amount');
+                const isGuest = urlParams.get('isGuest') === 'true';
 
                 if (!paymentKey || !orderId || !amount) {
                     throw new Error('결제 정보가 올바르지 않습니다.');
                 }
 
-                console.log('🔄 TLL 결제 성공 처리 시작:', { paymentKey, orderId, amount });
+                console.log('🔄 TLL 결제 성공 처리 시작:', { paymentKey, orderId, amount, isGuest });
                 showStatus('결제 승인 처리 중...');
 
+                // 비회원/회원에 따라 API 엔드포인트 선택
+                const apiEndpoint = isGuest ? '/api/toss/confirm-guest' : '/api/toss/confirm';
+                console.log(`📡 API 호출: ${apiEndpoint}`);
+
                 // 토스페이먼츠 결제 승인 직접 호출
-                const confirmResponse = await fetch('/api/toss/confirm', {
+                const confirmResponse = await fetch(apiEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) })
