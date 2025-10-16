@@ -693,7 +693,7 @@ class PaymentService {
       let guestId = await paymentRepository.findGuestByPhone(client, guestPhone);
 
       if (!guestId) {
-        guestId = await paymentRepository.createGuest(client, guestPhone);
+        guestId = await paymentRepository.createGuest(client, guestPhone, guestName);
         console.log(`✅ 새 게스트 생성: ID ${guestId}`);
       } else {
         console.log(`🔍 기존 게스트 발견: ID ${guestId}`);

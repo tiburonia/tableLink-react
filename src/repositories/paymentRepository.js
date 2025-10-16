@@ -271,12 +271,12 @@ class PaymentRepository {
   /**
    * 새 게스트 생성
    */
-  async createGuest(client, phone) {
+  async createGuest(client, phone, name) {
     const result = await client.query(`
-      INSERT INTO guests (phone, created_at)
-      VALUES ($1, CURRENT_TIMESTAMP)
+      INSERT INTO guests (phone, created_at, name)
+      VALUES ($1, CURRENT_TIMESTAMP, $2)
       RETURNING id
-    `, [phone]);
+    `, [phone, name]);
 
     return result.rows[0].id;
   }
