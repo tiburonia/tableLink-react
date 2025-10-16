@@ -687,10 +687,22 @@ class PaymentService {
         storeId, tableNumber, guestName, guestPhone, amount
       });
 
+      await client.query('BEGIN');
+
+      // 비회원 고객 처리 (기존 게스트 확인 또는 신규 생성)
+      let guestId = await paymentRepository.findGuestByPhone(client, guestPhone);
+
+      if (!guestId) {
+        guestId = await paymentRepository.createGuest(client, guestPhone);
+        console.log(`✅ 새 게스트 생성: ID ${guestId}`);
+      } else {
+        console.log(`🔍 기존 게스트 발견: ID ${guestId}`);
+      }
+
       // 고유한 orderId 생성
       const orderId = `tll_guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      // pending_payments에 저장 (userPK는 null)
+      // pending_payments에 저장 (guestId 포함)
       await paymentRepository.createPendingPayment(client, {
         orderId,
         userPK: null,
@@ -700,16 +712,20 @@ class PaymentService {
           ...orderData,
           guestName,
           guestPhone,
+          guestId,
           isGuest: true
         },
         amount
       });
 
-      console.log('✅ 비회원 TLL 결제 준비 완료 - pending_payments에 저장:', orderId);
+      await client.query('COMMIT');
 
-      return { orderId };
+      console.log('✅ 비회원 TLL 결제 준비 완료 - pending_payments에 저장:', orderId, 'guestId:', guestId);
+
+      return { orderId, guestId };
 
     } catch (error) {
+      await client.query('ROLLBACK');
       console.error('❌ 비회원 TLL 결제 준비 실패:', error);
       throw error;
     } finally {
