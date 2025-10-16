@@ -384,6 +384,52 @@ class PaymentRepository {
 
     return result.rows;
   }
+
+  /**
+   * 비회원 TLL 결제 레코드 생성
+   */
+  async createGuestTLLPayment(client, paymentData) {
+    const { orderId, amount, paymentKey, guestName, guestPhone, providerResponse } = paymentData;
+
+    const result = await client.query(`
+      INSERT INTO payments (
+        order_id,
+        method,
+        amount,
+        status,
+        paid_at,
+        transaction_id,
+        provider_response
+      ) VALUES ($1, 'TOSS', $2, 'COMPLETED', CURRENT_TIMESTAMP, $3, $4)
+      RETURNING id
+    `, [
+      orderId,
+      amount,
+      paymentKey,
+      JSON.stringify({
+        ...providerResponse,
+        guest_name: guestName,
+        guest_phone: guestPhone,
+        payment_type: 'GUEST_TLL'
+      })
+    ]);
+
+    return result.rows[0].id;
+  }
+
+  /**
+   * 비회원 정보로 주문 업데이트
+   */
+  async updateOrderWithGuestInfo(client, orderId, guestName, guestPhone) {
+    await client.query(`
+      UPDATE orders
+      SET guest_phone = $1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2
+    `, [guestPhone, orderId]);
+
+    console.log(`✅ 주문 ${orderId}에 비회원 정보 업데이트: ${guestName}, ${guestPhone}`);
+  }
 }
 
 module.exports = new PaymentRepository();

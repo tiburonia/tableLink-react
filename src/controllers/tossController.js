@@ -112,6 +112,89 @@ class TossController {
       });
     }
   }
+
+  /**
+   * 비회원 TLL 결제 준비
+   */
+  async prepareGuest(req, res) {
+    try {
+      const { storeId, tableNumber, guestName, guestPhone, orderData, amount } = req.body;
+
+      if (!storeId || !tableNumber || !guestName || !guestPhone || !orderData || !amount) {
+        return res.status(400).json({
+          success: false,
+          error: '필수 파라미터가 누락되었습니다 (storeId, tableNumber, guestName, guestPhone, orderData, amount 필요)'
+        });
+      }
+
+      const result = await paymentService.prepareGuestTLLPayment({
+        storeId: parseInt(storeId),
+        tableNumber: parseInt(tableNumber),
+        guestName,
+        guestPhone,
+        orderData,
+        amount: parseInt(amount)
+      });
+
+      res.json({
+        success: true,
+        orderId: result.orderId,
+        message: '비회원 TLL 결제 준비가 완료되었습니다'
+      });
+
+    } catch (error) {
+      console.error('❌ 비회원 TLL 결제 준비 실패:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 비회원 TLL 결제 승인
+   */
+  async confirmGuest(req, res) {
+    try {
+      const { paymentKey, orderId, amount } = req.body;
+
+      console.log('🔄 비회원 TLL 결제 승인 요청:', { paymentKey, orderId, amount });
+
+      if (!paymentKey || !orderId || !amount) {
+        return res.status(400).json({
+          success: false,
+          error: '필수 파라미터가 누락되었습니다'
+        });
+      }
+
+      const result = await paymentService.confirmGuestTLLPayment({
+        paymentKey,
+        orderId,
+        amount: parseInt(amount)
+      });
+
+      res.json({
+        success: true,
+        data: result
+      });
+
+    } catch (error) {
+      console.error('❌ 비회원 TLL 결제 승인 실패:', error);
+      
+      if (error.message && error.message.includes('이미 처리된 결제')) {
+        return res.json({
+          success: true,
+          message: '이미 처리된 결제입니다',
+          alreadyProcessed: true
+        });
+      }
+
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  }
 }
 
 module.exports = new TossController();

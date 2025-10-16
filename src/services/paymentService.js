@@ -673,6 +673,268 @@ class PaymentService {
       }
     };
   }
+
+  /**
+   * 비회원 TLL 결제 준비
+   */
+  async prepareGuestTLLPayment(prepareData) {
+    const client = await pool.connect();
+
+    try {
+      const { storeId, tableNumber, guestName, guestPhone, orderData, amount } = prepareData;
+
+      console.log('💳 결제 서비스: 비회원 TLL 결제 준비 시작', {
+        storeId, tableNumber, guestName, guestPhone, amount
+      });
+
+      // 고유한 orderId 생성
+      const orderId = `tll_guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+      // pending_payments에 저장 (userPK는 null)
+      await paymentRepository.createPendingPayment(client, {
+        orderId,
+        userPK: null,
+        storeId,
+        tableNumber,
+        orderData: {
+          ...orderData,
+          guestName,
+          guestPhone,
+          isGuest: true
+        },
+        amount
+      });
+
+      console.log('✅ 비회원 TLL 결제 준비 완료 - pending_payments에 저장:', orderId);
+
+      return { orderId };
+
+    } catch (error) {
+      console.error('❌ 비회원 TLL 결제 준비 실패:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * 비회원 TLL 결제 승인
+   */
+  async confirmGuestTLLPayment(confirmData) {
+    const { paymentKey, orderId, amount } = confirmData;
+
+    try {
+      console.log('🔄 결제 서비스: 비회원 TLL 결제 승인 시작', { paymentKey, orderId, amount });
+
+      // pending_payments에서 주문 데이터 조회
+      const pendingPayment = await paymentRepository.getPendingPayment(orderId);
+
+      if (!pendingPayment) {
+        throw new Error('대기 중인 결제를 찾을 수 없습니다');
+      }
+
+      console.log('📦 비회원 pending_payment 데이터:', {
+        store_id: pendingPayment.store_id,
+        table_number: pendingPayment.table_number,
+        order_data: pendingPayment.order_data
+      });
+
+      // 비회원 정보 추출
+      const guestName = pendingPayment.order_data?.guestName;
+      const guestPhone = pendingPayment.order_data?.guestPhone;
+
+      if (!guestName || !guestPhone) {
+        throw new Error('비회원 정보가 누락되었습니다');
+      }
+
+      // 토스페이먼츠 API 승인 요청
+      const tossResult = await this.requestTossPaymentConfirm(paymentKey, orderId, amount);
+
+      console.log('✅ 토스페이먼츠 승인 성공 (비회원):', tossResult);
+
+      // orderData 구성
+      const orderData = {
+        storeId: pendingPayment.store_id,
+        tableNumber: pendingPayment.table_number,
+        userPk: null,
+        guestName,
+        guestPhone,
+        ...(pendingPayment.order_data || {}),
+        storeName: pendingPayment.order_data?.storeName,
+        items: pendingPayment.order_data?.items || [],
+        finalTotal: pendingPayment.amount,
+        isGuest: true
+      };
+
+      console.log('🔧 구성된 비회원 orderData:', {
+        storeId: orderData.storeId,
+        tableNumber: orderData.tableNumber,
+        guestName: orderData.guestName,
+        guestPhone: orderData.guestPhone,
+        itemCount: orderData.items?.length
+      });
+
+      // 비회원 TLL 주문 처리
+      const result = await this.processGuestTLLOrder({
+        orderId: null,
+        amount: pendingPayment.amount,
+        paymentKey,
+        tossResult,
+        orderData,
+        guestName,
+        guestPhone
+      });
+
+      // pending_payments 상태 업데이트
+      const updateClient = await pool.connect();
+      try {
+        await paymentRepository.updatePendingPaymentStatus(updateClient, orderId, 'SUCCESS');
+        console.log(`✅ pending_payments 상태 업데이트: ${orderId} -> SUCCESS`);
+        
+        await updateClient.query(`
+          UPDATE pending_payments 
+          SET order_data = order_data || jsonb_build_object('actual_order_id', $1::integer)
+          WHERE order_id = $2
+        `, [result.orderId, orderId]);
+        console.log(`✅ 실제 주문 ID ${result.orderId}를 pending_payments에 기록`);
+      } finally {
+        updateClient.release();
+      }
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ 결제 서비스: 비회원 TLL 결제 승인 실패:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 비회원 TLL 주문 처리
+   */
+  async processGuestTLLOrder({ orderId, amount, paymentKey, tossResult, orderData, guestName, guestPhone }) {
+    const client = await pool.connect();
+
+    try {
+      console.log('💳 결제 서비스: 비회원 TLL 주문 처리 시작', {
+        orderId,
+        amount,
+        storeId: orderData.storeId,
+        guestName,
+        guestPhone,
+        itemCount: orderData.items?.length
+      });
+
+      await client.query('BEGIN');
+
+      // 1. 새 주문 생성
+      const newOrderId = await orderRepository.createOrder(client, {
+        storeId: orderData.storeId,
+        tableNumber: orderData.tableNumber,
+        source: 'TLL',
+        totalPrice: 0
+      });
+
+      // 비회원 정보 업데이트
+      await paymentRepository.updateOrderWithGuestInfo(client, newOrderId, guestName, guestPhone);
+
+      // TLL 주문 특수 속성 설정
+      await client.query(`
+        UPDATE orders 
+        SET payment_status = 'PAID', 
+            session_ended = false
+        WHERE id = $1
+      `, [newOrderId]);
+
+      console.log(`✅ 비회원 새 주문 생성: ${newOrderId}`);
+
+      // 2. 배치 번호 계산
+      const batchNo = await orderRepository.getNextBatchNo(client, newOrderId);
+
+      // 3. 티켓 생성
+      const ticketId = await orderRepository.createTicket(client, {
+        orderId: newOrderId,
+        storeId: orderData.storeId,
+        tableNumber: orderData.tableNumber,
+        batchNo,
+        source: 'TLL'
+      });
+
+      // 4. 주문 아이템 생성
+      await this.createOrderItems(client, {
+        orderId: newOrderId,
+        ticketId,
+        storeId: orderData.storeId,
+        items: orderData.items
+      });
+
+      // 5. 주문 총 금액 재계산
+      await orderRepository.updateOrderTotalAmount(client, newOrderId);
+
+      // 6. 비회원 결제 정보 저장
+      const paymentId = await paymentRepository.createGuestTLLPayment(client, {
+        orderId: newOrderId,
+        amount: orderData.finalTotal,
+        paymentKey,
+        guestName,
+        guestPhone,
+        providerResponse: tossResult
+      });
+
+      // 7. 결제 세부 정보 저장
+      await paymentRepository.createPaymentDetails(client, paymentId, newOrderId);
+
+      // 8. 테이블 연결
+      await this.linkOrderToTable(client, orderData.storeId, orderData.tableNumber, newOrderId);
+
+      await client.query('COMMIT');
+
+      console.log(`✅ 결제 서비스: 비회원 TLL 주문 처리 완료 - 주문 ${newOrderId}`);
+
+      // 이벤트 발생
+      eventBus.emit('order.created', {
+        orderId: newOrderId,
+        ticketId,
+        storeId: orderData.storeId,
+        tableNumber: orderData.tableNumber,
+        items: orderData.items,
+        batchNo,
+        isNewOrder: true,
+        isGuest: true,
+        guestName,
+        guestPhone
+      });
+
+      eventBus.emit('payment.completed', {
+        orderId: newOrderId,
+        ticketId,
+        storeId: orderData.storeId,
+        amount: orderData.finalTotal,
+        paymentKey: paymentKey,
+        isGuest: true
+      });
+
+      return {
+        success: true,
+        orderId: newOrderId,
+        ticketId,
+        batchNo,
+        amount: orderData.finalTotal,
+        isNewOrder: true,
+        paymentId,
+        isGuest: true,
+        guestName,
+        guestPhone
+      };
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('❌ 결제 서비스: 비회원 TLL 주문 처리 실패:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = new PaymentService();
