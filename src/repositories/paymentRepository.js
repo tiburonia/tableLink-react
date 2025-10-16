@@ -450,8 +450,8 @@ class PaymentRepository {
     await client.query(`
       INSERT INTO pending_payments (
         order_id, user_pk, store_id, table_number, 
-        order_data, amount, status, created_at
-      ) VALUES ($1, NULL, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP)
+        order_data, amount, status, created_at, guest_id
+      ) VALUES ($1, NULL, $2, $3, $4, $5, 'PENDING', CURRENT_TIMESTAMP, $6)
     `, [
       orderId,
       storeId,
@@ -463,7 +463,8 @@ class PaymentRepository {
         guestPhone,
         isGuest: true
       }),
-      parseInt(amount)
+      parseInt(amount),
+      guestId
     ]);
 
     console.log(`✅ 비회원 pending_payment 생성: ${orderId}, guestId: ${guestId}`);
