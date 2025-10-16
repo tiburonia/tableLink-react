@@ -153,18 +153,14 @@ export async function renderGuestPayment(orderData) {
  */
 function renderPaymentMethods() {
   const methods = [
-    { id: 'card', icon: '💳', name: '신용/체크카드', desc: '간편하고 빠른 결제' },
-    { id: 'transfer', icon: '🏦', name: '계좌이체', desc: '실시간 계좌이체' },
-    { id: 'vbank', icon: '🏪', name: '가상계좌', desc: '계좌번호 발급 후 입금' },
-    { id: 'phone', icon: '📱', name: '휴대폰', desc: '휴대폰 소액결제' },
-    { id: 'tosspay', icon: '⚡', name: '토스페이', desc: '토스 간편결제' },
-    { id: 'kakaopay', icon: '💬', name: '카카오페이', desc: '카카오 간편결제' },
-    { id: 'naverpay', icon: '🅝', name: '네이버페이', desc: '네이버 간편결제' },
-    { id: 'payco', icon: '🅿️', name: '페이코', desc: 'PAYCO 간편결제' },
-    { id: 'samsungpay', icon: '📲', name: '삼성페이', desc: '삼성 간편결제' },
-    { id: 'cultureland', icon: '🎫', name: '문화상품권', desc: '문화상품권 결제' },
-    { id: 'booknlife', icon: '📚', name: '도서문화상품권', desc: '도서/문화 상품권' },
-    { id: 'gamecash', icon: '🎮', name: '게임문화상품권', desc: '게임 상품권' }
+    { id: '카드', icon: '💳', name: '신용/체크카드', desc: '간편하고 빠른 결제' },
+    { id: '계좌이체', icon: '🏦', name: '계좌이체', desc: '실시간 계좌이체' },
+    { id: '가상계좌', icon: '🏪', name: '가상계좌', desc: '계좌번호 발급 후 입금' },
+    { id: '휴대폰', icon: '📱', name: '휴대폰', desc: '휴대폰 소액결제' },
+    { id: '간편결제', icon: '⚡', name: '토스페이', desc: '토스 간편결제' },
+    { id: '문화상품권', icon: '🎫', name: '문화상품권', desc: '문화상품권 결제' },
+    { id: '도서문화상품권', icon: '📚', name: '도서문화상품권', desc: '도서/문화 상품권' },
+    { id: '게임문화상품권', icon: '🎮', name: '게임문화상품권', desc: '게임 상품권' }
   ];
 
   return methods.map(method => `
@@ -187,7 +183,7 @@ function renderPaymentMethods() {
  * 이벤트 리스너 설정
  */
 async function setupGuestPaymentEvents(orderData, finalAmount) {
-  let selectedMethod = 'card';
+  let selectedMethod = '카드';
   let isFormValid = false;
 
   // 결제 컨트롤러 초기화
@@ -232,7 +228,7 @@ async function setupGuestPaymentEvents(orderData, finalAmount) {
   });
 
   // 기본 선택 (카드)
-  const defaultCard = document.querySelector('.payment-method-card[data-method="card"]');
+  const defaultCard = document.querySelector('.payment-method-card[data-method="카드"]');
   if (defaultCard) {
     defaultCard.classList.add('selected');
   }
