@@ -838,10 +838,26 @@ class PaymentService {
         storeId: orderData.storeId,
         guestName,
         guestPhone,
+        guestId: orderData.guestId,
         itemCount: orderData.items?.length
       });
 
       await client.query('BEGIN');
+
+      // 게스트 ID 확인 (pending_payments에서 가져온 orderData에 포함)
+      let guestId = orderData.guestId;
+
+      // 만약 guestId가 없다면 게스트 처리 로직 실행
+      if (!guestId) {
+        guestId = await paymentRepository.findGuestByPhone(client, guestPhone);
+        
+        if (!guestId) {
+          guestId = await paymentRepository.createGuest(client, guestPhone);
+          console.log(`✅ 새 게스트 생성: ID ${guestId}`);
+        } else {
+          console.log(`🔍 기존 게스트 발견: ID ${guestId}`);
+        }
+      }
 
       // 1. 새 주문 생성
       const newOrderId = await orderRepository.createOrder(client, {
@@ -851,18 +867,18 @@ class PaymentService {
         totalPrice: 0
       });
 
-      // 비회원 정보 업데이트
-      await paymentRepository.updateOrderWithGuestInfo(client, newOrderId, guestName, guestPhone);
-
-      // TLL 주문 특수 속성 설정
+      // 비회원 정보 업데이트 (guest_id와 guest_phone 모두 설정)
       await client.query(`
         UPDATE orders 
-        SET payment_status = 'PAID', 
-            session_ended = false
-        WHERE id = $1
-      `, [newOrderId]);
+        SET guest_id = $1,
+            guest_phone = $2,
+            payment_status = 'PAID', 
+            session_ended = false,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `, [guestId, guestPhone, newOrderId]);
 
-      console.log(`✅ 비회원 새 주문 생성: ${newOrderId}`);
+      console.log(`✅ 비회원 새 주문 생성: ${newOrderId}, guest_id: ${guestId}`);
 
       // 2. 배치 번호 계산
       const batchNo = await orderRepository.getNextBatchNo(client, newOrderId);

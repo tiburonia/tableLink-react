@@ -420,15 +420,25 @@ class PaymentRepository {
   /**
    * 비회원 정보로 주문 업데이트
    */
-  async updateOrderWithGuestInfo(client, orderId, guestName, guestPhone) {
-    await client.query(`
-      UPDATE orders
-      SET guest_phone = $1,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [guestPhone, orderId]);
+  async updateOrderWithGuestInfo(client, orderId, guestName, guestPhone, guestId = null) {
+    const query = guestId 
+      ? `UPDATE orders
+         SET guest_phone = $1,
+             guest_id = $2,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $3`
+      : `UPDATE orders
+         SET guest_phone = $1,
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = $2`;
+    
+    const params = guestId 
+      ? [guestPhone, guestId, orderId]
+      : [guestPhone, orderId];
 
-    console.log(`✅ 주문 ${orderId}에 비회원 정보 업데이트: ${guestName}, ${guestPhone}`);
+    await client.query(query, params);
+
+    console.log(`✅ 주문 ${orderId}에 비회원 정보 업데이트: ${guestName}, ${guestPhone}${guestId ? `, guestId: ${guestId}` : ''}`);
   }
 }
 
