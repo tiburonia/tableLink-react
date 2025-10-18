@@ -54,10 +54,13 @@ router.post('/checks/from-qr', async (req, res) => {
     // 게스트 처리
     let guestId = null;
     if (guest_phone) {
+      // 하이픈 제거
+      const cleanGuestPhone = guest_phone.replace(/[-\s]/g, '');
+      
       // 기존 게스트 확인
       const existingGuest = await client.query(`
         SELECT id FROM guest WHERE phone = $1
-      `, [guest_phone]);
+      `, [cleanGuestPhone]);
 
       if (existingGuest.rows.length > 0) {
         guestId = existingGuest.rows[0].id;
@@ -65,7 +68,7 @@ router.post('/checks/from-qr', async (req, res) => {
         // 새 게스트 생성
         const newGuest = await client.query(`
           INSERT INTO guest (phone) VALUES ($1) RETURNING id
-        `, [guest_phone]);
+        `, [cleanGuestPhone]);
         guestId = newGuest.rows[0].id;
       }
     }

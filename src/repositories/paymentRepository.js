@@ -261,9 +261,12 @@ class PaymentRepository {
    * 전화번호로 게스트 조회
    */
   async findGuestByPhone(client, phone) {
+    // 하이픈 제거
+    const cleanPhone = phone.replace(/[-\s]/g, '');
+    
     const result = await client.query(`
       SELECT id FROM guests WHERE phone = $1
-    `, [phone]);
+    `, [cleanPhone]);
 
     return result.rows.length > 0 ? result.rows[0].id : null;
   }
@@ -272,11 +275,14 @@ class PaymentRepository {
    * 새 게스트 생성
    */
   async createGuest(client, phone, name) {
+    // 하이픈 제거
+    const cleanPhone = phone.replace(/[-\s]/g, '');
+    
     const result = await client.query(`
       INSERT INTO guests (phone, created_at, name)
       VALUES ($1, CURRENT_TIMESTAMP, $2)
       RETURNING id
-    `, [phone, name]);
+    `, [cleanPhone, name]);
 
     return result.rows[0].id;
   }
@@ -421,6 +427,9 @@ class PaymentRepository {
    * 비회원 정보로 주문 업데이트
    */
   async updateOrderWithGuestInfo(client, orderId, guestName, guestPhone, guestId = null) {
+    // 하이픈 제거
+    const cleanPhone = guestPhone.replace(/[-\s]/g, '');
+    
     const query = guestId 
       ? `UPDATE orders
          SET guest_phone = $1,
@@ -433,12 +442,12 @@ class PaymentRepository {
          WHERE id = $2`;
     
     const params = guestId 
-      ? [guestPhone, guestId, orderId]
-      : [guestPhone, orderId];
+      ? [cleanPhone, guestId, orderId]
+      : [cleanPhone, orderId];
 
     await client.query(query, params);
 
-    console.log(`✅ 주문 ${orderId}에 비회원 정보 업데이트: ${guestName}, ${guestPhone}${guestId ? `, guestId: ${guestId}` : ''}`);
+    console.log(`✅ 주문 ${orderId}에 비회원 정보 업데이트: ${guestName}, ${cleanPhone}${guestId ? `, guestId: ${guestId}` : ''}`);
   }
 
   /**

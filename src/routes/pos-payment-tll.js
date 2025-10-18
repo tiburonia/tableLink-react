@@ -82,12 +82,13 @@ router.post('/process', async (req, res) => {
 
     // 2. 고객 유형별 처리
     if (customerType === 'guest' && guestPhone) {
-      // 비회원 전화번호 처리
-      console.log(`👤 비회원 전화번호 처리: ${guestPhone}`);
+      // 비회원 전화번호 처리 - 하이픈 제거
+      const cleanGuestPhone = guestPhone.replace(/[-\s]/g, '');
+      console.log(`👤 비회원 전화번호 처리: ${guestPhone} → ${cleanGuestPhone}`);
 
       const existingGuestResult = await client.query(`
         SELECT id FROM guests WHERE phone = $1
-      `, [guestPhone]);
+      `, [cleanGuestPhone]);
 
       if (existingGuestResult.rows.length > 0) {
         guestId = existingGuestResult.rows[0].id;
@@ -97,7 +98,7 @@ router.post('/process', async (req, res) => {
           INSERT INTO guests (phone, created_at)
           VALUES ($1, CURRENT_TIMESTAMP)
           RETURNING id
-        `, [guestPhone]);
+        `, [cleanGuestPhone]);
 
         guestId = newGuestResult.rows[0].id;
         console.log(`✅ 새 게스트 생성: ID ${guestId}`);
@@ -107,7 +108,7 @@ router.post('/process', async (req, res) => {
         UPDATE orders
         SET guest_phone = $1
         WHERE id = $2
-      `, [guestPhone, orderId]);
+      `, [cleanGuestPhone, orderId]);
 
     } else if (customerType === 'member' && (memberId || memberPhone)) {
       // 회원 처리
