@@ -99,7 +99,10 @@ const OrderPaymentManager = {
 
         const rightPanel = document.getElementById('rightPanel');
         if (rightPanel) {
-            rightPanel.innerHTML = window.OrderUIRenderer.renderPaymentMethodSection();
+            rightPanel.innerHTML = `
+                ${window.OrderUIRenderer.renderMenuSection()}
+                ${window.OrderUIRenderer.renderPaymentMethodSection()}
+            `;
         }
 
         this.currentPaymentData = null;
