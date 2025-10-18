@@ -1,4 +1,3 @@
-
 const authService = require('../services/authService');
 
 /**
@@ -13,16 +12,16 @@ class AuthController {
       const { id } = req.body;
 
       if (!id) {
-        return res.status(400).json({ 
-          success: false, 
-          error: '아이디를 입력해주세요' 
+        return res.status(400).json({
+          success: false,
+          error: '아이디를 입력해주세요'
         });
       }
 
       if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-        return res.status(400).json({ 
-          success: false, 
-          error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다' 
+        return res.status(400).json({
+          success: false,
+          error: '아이디는 3-20자의 영문과 숫자만 사용 가능합니다'
         });
       }
 
@@ -46,25 +45,31 @@ class AuthController {
       const { phone } = req.body;
 
       if (!phone) {
-        return res.status(400).json({ 
-          success: false, 
-          error: '전화번호를 입력해주세요' 
+        return res.status(400).json({
+          success: false,
+          error: '전화번호가 필요합니다'
         });
       }
 
-      if (!/^010-\d{4}-\d{4}$/.test(phone)) {
-        return res.status(400).json({ 
-          success: false, 
-          error: '올바른 전화번호 형식이 아닙니다' 
+      // 하이픈 제거
+      const cleanPhone = phone.replace(/[-\s]/g, '');
+      console.log(`📱 전화번호 정규화: ${phone} → ${cleanPhone}`);
+
+      // 전화번호 형식 검증 (숫자만 11자리)
+      if (!/^\d{11}$/.test(cleanPhone)) {
+        return res.status(400).json({
+          success: false,
+          error: '올바른 전화번호 형식이 아닙니다 (11자리 숫자)'
         });
       }
 
-      const available = await authService.checkPhoneAvailability(phone.trim());
+      const exists = await authService.checkPhoneExists(cleanPhone);
+      console.log(`✅ 전화번호 중복 체크 결과: ${cleanPhone} - ${exists ? '사용중' : '사용가능'}`);
 
       res.json({
         success: true,
-        available,
-        message: available ? '사용 가능한 전화번호입니다' : '이미 등록된 전화번호입니다'
+        exists,
+        message: exists ? '이미 사용 중인 전화번호입니다' : '사용 가능한 전화번호입니다'
       });
     } catch (error) {
       next(error);
