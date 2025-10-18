@@ -640,30 +640,18 @@ const OrderUIRenderer = {
                     </div>
                 </div>
 
-                <!-- 고객 유형 선택 -->
-                <div class="customer-type-section">
-                    <h3>고객 유형</h3>
-                    <div class="customer-type-buttons">
-                        <button class="customer-type-btn active" data-type="guest" onclick="OrderPaymentManager.selectCustomerType('guest')">
-                            <div class="type-icon">👤</div>
-                            <span>비회원</span>
-                        </button>
-                        <button class="customer-type-btn" data-type="member" onclick="OrderPaymentManager.selectCustomerType('member')">
-                            <div class="type-icon">🎫</div>
-                            <span>회원</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 회원 조회 패널 (회원 선택 시만 표시) -->
-                <div class="member-info-panel" id="memberInfoPanel" style="display: none;">
-                    <h3>회원 조회</h3>
+                <!-- 회원 조회 패널 -->
+                <div class="member-info-panel" id="memberInfoPanel">
+                    <h3>회원 조회 (선택)</h3>
                     <div class="member-search-group">
-                        <input type="tel" id="memberPhoneInputPanel" placeholder="전화번호 입력" maxlength="13">
+                        <input type="tel" id="memberPhoneInputPanel" placeholder="전화번호 입력 (선택사항)" maxlength="13">
                         <button class="search-btn" onclick="OrderPaymentManager.searchMemberInPanel()">조회</button>
                     </div>
                     <div class="member-display" id="memberDisplayPanel" style="display: none;">
                         <!-- 회원 정보 표시 영역 -->
+                    </div>
+                    <div class="member-info-help">
+                        <small>* 전화번호를 입력하지 않으면 비회원으로 결제됩니다</small>
                     </div>
                 </div>
 

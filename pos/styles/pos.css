@@ -3058,6 +3058,18 @@ body {
     font-weight: 600;
 }
 
+.member-info-help {
+    margin-top: 8px;
+    padding: 8px;
+    background: #f0f9ff;
+    border-radius: 6px;
+}
+
+.member-info-help small {
+    color: #3b82f6;
+    font-size: 13px;
+}
+
 .method-buttons-panel {
     display: flex;
     gap: 12px;

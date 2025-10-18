@@ -110,29 +110,7 @@ const OrderPaymentManager = {
         this.selectedMember = null;
     },
 
-    /**
-     * 고객 유형 선택
-     */
-    selectCustomerType(type) {
-        this.selectedCustomerType = type;
-
-        document.querySelectorAll('.customer-type-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.dataset.type === type);
-        });
-
-        const guestPanel = document.getElementById('guestInfoPanel');
-        const memberPanel = document.getElementById('memberInfoPanel');
-
-        if (guestPanel && memberPanel) {
-            if (type === 'guest') {
-                guestPanel.style.display = 'block';
-                memberPanel.style.display = 'none';
-            } else {
-                guestPanel.style.display = 'none';
-                memberPanel.style.display = 'block';
-            }
-        }
-    },
+    
 
     /**
      * 패널에서 결제 수단 선택
@@ -167,16 +145,21 @@ const OrderPaymentManager = {
 
             if (data.success && data.user) {
                 this.selectedMember = data.user;
+                this.selectedCustomerType = 'member';
                 memberDisplay.innerHTML = this.renderMemberCard(data.user);
                 memberDisplay.style.display = 'block';
             } else {
                 this.selectedMember = null;
+                this.selectedCustomerType = 'guest';
                 memberDisplay.style.display = 'none';
-                alert('회원을 찾을 수 없습니다.');
+                alert('회원을 찾을 수 없습니다. 비회원으로 진행됩니다.');
             }
         } catch (error) {
             console.error('❌ 회원 조회 실패:', error);
-            alert('회원 조회 중 오류가 발생했습니다.');
+            this.selectedMember = null;
+            this.selectedCustomerType = 'guest';
+            memberDisplay.style.display = 'none';
+            alert('회원 조회 중 오류가 발생했습니다. 비회원으로 진행됩니다.');
         }
     },
 
@@ -212,14 +195,24 @@ const OrderPaymentManager = {
             let memberPhone = null;
             let memberId = null;
 
-            // 회원 결제 시 회원 정보 필수 확인
-            if (this.selectedCustomerType === 'member') {
-                if (!this.selectedMember) {
-                    alert('회원 조회 후 선택해주세요.');
-                    return;
-                }
+            // 전화번호 입력 확인
+            const phoneInput = document.getElementById('memberPhoneInputPanel');
+            const inputPhone = phoneInput ? phoneInput.value.trim() : '';
+
+            // 전화번호가 입력되었지만 회원 조회를 안 한 경우
+            if (inputPhone && !this.selectedMember) {
+                alert('전화번호 조회 버튼을 눌러 회원 확인을 해주세요.');
+                return;
+            }
+
+            // 회원 정보가 있으면 회원 결제
+            if (this.selectedMember) {
+                this.selectedCustomerType = 'member';
                 memberPhone = this.selectedMember.phone;
                 memberId = this.selectedMember.id;
+            } else {
+                // 전화번호 미입력 시 비회원 결제
+                this.selectedCustomerType = 'guest';
             }
 
             const customerType = this.selectedCustomerType === 'member' ? '회원' : '비회원';
