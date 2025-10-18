@@ -1,4 +1,3 @@
-
 /**
  * 주문 결제 관리 모듈
  * - 결제 수단 선택
@@ -8,12 +7,15 @@
 
 const OrderPaymentManager = {
     selectedPaymentMethod: "card",
+    selectedCustomerType: "guest",
+    currentPaymentData: null,
+    selectedMember: null,
 
     /**
      * 결제 수단 선택 및 결제 처리 시작
      */
     async selectPaymentMethod(method) {
-        console.log(`💳 결제 수단 선택: ${method}`);
+        console.log(`💳 결제 수단 선택: ${method} - 우측 패널에 결제 UI 렌더링`);
 
         this.selectedPaymentMethod = method;
 
@@ -46,8 +48,290 @@ const OrderPaymentManager = {
             }
         }
 
-        console.log('ℹ️ 일반 POS 주문 - 기본 결제 모달 호출');
-        await this.showUnifiedPaymentModal(method);
+        console.log('ℹ️ 일반 POS 결제 - 우측 패널에 결제 UI 렌더링');
+        await this.showPaymentPanel(method);
+    },
+
+    /**
+     * 우측 패널에 결제 UI 렌더링
+     */
+    async showPaymentPanel(method = null) {
+        try {
+            console.log('🔄 결제 패널 렌더링 시작');
+
+            const storeId = window.POSCore?.storeId || window.POSOrderScreen?.currentStoreId;
+            const tableNumber = window.POSCore?.tableNumber || window.POSOrderScreen?.currentTableNumber;
+
+            if (!storeId || !tableNumber) {
+                console.error('❌ 매장 ID 또는 테이블 번호를 찾을 수 없습니다');
+                alert('매장 또는 테이블 정보를 찾을 수 없습니다.');
+                return;
+            }
+
+            // 결제 정보 로드
+            const paymentInfo = await this.loadPaymentInfo(storeId, tableNumber);
+
+            if (!paymentInfo) {
+                alert('결제할 주문이 없습니다.');
+                return;
+            }
+
+            this.currentPaymentData = paymentInfo;
+
+            // 우측 패널 업데이트
+            const rightPanel = document.getElementById('rightPanel');
+            if (rightPanel) {
+                rightPanel.innerHTML = window.OrderUIRenderer.renderPaymentPanel(paymentInfo);
+                console.log('✅ 결제 패널 렌더링 완료');
+            }
+
+        } catch (error) {
+            console.error('❌ 결제 패널 표시 실패:', error);
+            alert('결제 화면을 불러올 수 없습니다: ' + error.message);
+        }
+    },
+
+    /**
+     * 결제 패널 취소
+     */
+    cancelPaymentPanel() {
+        console.log('🚫 결제 패널 취소');
+
+        const rightPanel = document.getElementById('rightPanel');
+        if (rightPanel) {
+            rightPanel.innerHTML = window.OrderUIRenderer.renderPaymentMethodSection();
+        }
+
+        this.currentPaymentData = null;
+        this.selectedCustomerType = "guest";
+        this.selectedMember = null;
+    },
+
+    /**
+     * 고객 유형 선택
+     */
+    selectCustomerType(type) {
+        this.selectedCustomerType = type;
+
+        document.querySelectorAll('.customer-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === type);
+        });
+
+        const guestPanel = document.getElementById('guestInfoPanel');
+        const memberPanel = document.getElementById('memberInfoPanel');
+
+        if (guestPanel && memberPanel) {
+            if (type === 'guest') {
+                guestPanel.style.display = 'block';
+                memberPanel.style.display = 'none';
+            } else {
+                guestPanel.style.display = 'none';
+                memberPanel.style.display = 'block';
+            }
+        }
+    },
+
+    /**
+     * 패널에서 결제 수단 선택
+     */
+    selectPaymentMethodInPanel(method) {
+        document.querySelectorAll('.method-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.method === method);
+        });
+
+        const confirmBtn = document.querySelector('.confirm-payment-btn .btn-text');
+        if (confirmBtn) {
+            confirmBtn.textContent = method === 'CARD' ? '카드결제 진행' : '현금결제 진행';
+        }
+    },
+
+    /**
+     * 패널에서 회원 조회
+     */
+    async searchMemberInPanel() {
+        const phoneInput = document.getElementById('memberPhoneInputPanel');
+        const memberDisplay = document.getElementById('memberDisplayPanel');
+
+        const phoneNumber = phoneInput.value.trim();
+        if (!phoneNumber) {
+            alert('전화번호를 입력해주세요.');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/users/search-by-phone?phone=${encodeURIComponent(phoneNumber)}`);
+            const data = await response.json();
+
+            if (data.success && data.user) {
+                this.selectedMember = data.user;
+                memberDisplay.innerHTML = this.renderMemberCard(data.user);
+                memberDisplay.style.display = 'block';
+            } else {
+                this.selectedMember = null;
+                memberDisplay.style.display = 'none';
+                alert('회원을 찾을 수 없습니다.');
+            }
+        } catch (error) {
+            console.error('❌ 회원 조회 실패:', error);
+            alert('회원 조회 중 오류가 발생했습니다.');
+        }
+    },
+
+    /**
+     * 회원 카드 렌더링
+     */
+    renderMemberCard(user) {
+        return `
+            <div class="member-card-panel">
+                <div class="member-info">
+                    <strong>${user.name || '회원'}</strong>
+                    <span>${user.phone}</span>
+                </div>
+                <div class="member-points">
+                    보유 포인트: ${(user.point || 0).toLocaleString()}P
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * 패널에서 결제 확정
+     */
+    async confirmPaymentInPanel() {
+        try {
+            if (!this.currentPaymentData) {
+                alert('결제 정보가 없습니다.');
+                return;
+            }
+
+            const { orderId, totalAmount, storeId, tableNumber } = this.currentPaymentData;
+
+            let guestPhone = null;
+            let memberPhone = null;
+            let memberId = null;
+
+            if (this.selectedCustomerType === 'guest') {
+                const phoneInput = document.getElementById('guestPhoneInputPanel');
+                if (phoneInput && phoneInput.value.trim()) {
+                    guestPhone = phoneInput.value.trim();
+                }
+            } else {
+                if (!this.selectedMember) {
+                    alert('회원을 조회하고 선택해주세요.');
+                    return;
+                }
+                memberPhone = this.selectedMember.phone;
+                memberId = this.selectedMember.id;
+            }
+
+            const customerType = this.selectedCustomerType === 'member' ? '회원' : '비회원';
+            const phoneInfo = this.selectedCustomerType === 'member' 
+                ? `회원: ${memberPhone}` 
+                : guestPhone ? `비회원: ${guestPhone}` : '비회원 (전화번호 없음)';
+
+            if (!confirm(`${customerType} 카드결제를 진행하시겠습니까?\n결제 금액: ${totalAmount.toLocaleString()}원\n${phoneInfo}`)) {
+                return;
+            }
+
+            // 버튼 비활성화
+            const confirmBtn = document.querySelector('.confirm-payment-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.innerHTML = '<span class="btn-text">처리중...</span>';
+            }
+
+            // 결제 처리
+            const response = await fetch('/api/pos-payment/process-with-customer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId,
+                    paymentMethod: 'CARD',
+                    amount: totalAmount,
+                    storeId,
+                    tableNumber,
+                    customerType: this.selectedCustomerType,
+                    guestPhone,
+                    memberPhone,
+                    memberId
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '결제 처리 실패');
+            }
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(`결제가 완료되었습니다!\n결제 금액: ${result.amount.toLocaleString()}원`);
+
+                // 패널 닫기
+                this.cancelPaymentPanel();
+
+                // POS 화면 새로고침
+                if (typeof POSOrderScreen !== 'undefined') {
+                    POSOrderScreen.currentOrders = [];
+                    POSOrderScreen.cart = [];
+                    if (POSOrderScreen.refreshOrders) {
+                        await POSOrderScreen.refreshOrders();
+                    }
+                }
+
+                // 테이블 맵으로 이동
+                if (typeof POSCore !== 'undefined' && POSCore.showTableMap) {
+                    setTimeout(() => POSCore.showTableMap(), 2000);
+                }
+            } else {
+                throw new Error(result.error || '결제 처리 실패');
+            }
+
+        } catch (error) {
+            console.error('❌ 결제 처리 실패:', error);
+            alert('결제 처리 중 오류가 발생했습니다: ' + error.message);
+
+            const confirmBtn = document.querySelector('.confirm-payment-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = `
+                    <span class="btn-text">카드결제 진행</span>
+                    <span class="btn-amount">${this.currentPaymentData.totalAmount.toLocaleString()}원</span>
+                `;
+            }
+        }
+    },
+
+    /**
+     * 결제 정보 로드
+     */
+    async loadPaymentInfo(storeId, tableNumber) {
+        try {
+            const activeOrderResponse = await fetch(`/api/pos/stores/${storeId}/table/${tableNumber}/active-order`);
+            if (!activeOrderResponse.ok) return null;
+
+            const activeOrderData = await activeOrderResponse.json();
+            if (!activeOrderData.success || !activeOrderData.hasActiveOrder) return null;
+
+            const orderId = activeOrderData.orderId;
+
+            const unpaidResponse = await fetch(`/api/pos-payment/unpaid-tickets/${orderId}`);
+            if (!unpaidResponse.ok) return null;
+
+            const unpaidData = await unpaidResponse.json();
+            if (!unpaidData.success || unpaidData.totalTickets === 0) return null;
+
+            return {
+                totalAmount: unpaidData.totalAmount,
+                itemCount: unpaidData.totalTickets,
+                storeId: parseInt(storeId),
+                tableNumber: parseInt(tableNumber),
+                orderId: orderId
+            };
+        } catch (error) {
+            console.error('❌ 결제 정보 로드 실패:', error);
+            return null;
+        }
     },
 
     /**

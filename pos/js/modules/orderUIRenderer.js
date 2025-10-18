@@ -60,15 +60,15 @@ const OrderUIRenderer = {
     renderMainLayout() {
         return `
             <div class="pos-main-layout">
-                <!-- 좌측: 주문 관리 영역 -->
+                <!-- 좌측: 주문 관리 및 메뉴 선택 영역 -->
                 <div class="left-panel">
                     ${this.renderOrderSection()}
                     ${this.renderPaymentSection()}
+                    ${this.renderMenuSection()}
                 </div>
 
-                <!-- 우측: 메뉴 선택 영역 -->
-                <div class="right-panel">
-                    ${this.renderMenuSection()}
+                <!-- 우측: 결제 전용 영역 (기본은 메뉴, 결제 시작 시 결제 UI로 전환) -->
+                <div class="right-panel" id="rightPanel">
                     ${this.renderPaymentMethodSection()}
                 </div>
             </div>
@@ -602,6 +602,108 @@ const OrderUIRenderer = {
                 </button>
             `;
         }
+    },
+
+    /**
+     * 결제 패널 렌더링 (우측 패널 전용)
+     */
+    renderPaymentPanel(paymentData = null) {
+        if (!paymentData) {
+            // 기본 상태: 결제 수단 선택 버튼들만 표시
+            return this.renderPaymentMethodSection();
+        }
+
+        const { totalAmount, itemCount, tableNumber, orderId } = paymentData;
+
+        return `
+            <div class="payment-panel-container">
+                <div class="payment-panel-header">
+                    <h2>💳 결제 진행</h2>
+                    <button class="close-payment-panel" onclick="OrderPaymentManager.cancelPaymentPanel()">
+                        ← 취소
+                    </button>
+                </div>
+
+                <!-- 결제 요약 -->
+                <div class="payment-summary-card">
+                    <div class="summary-row">
+                        <span class="label">테이블</span>
+                        <span class="value">${tableNumber}번</span>
+                    </div>
+                    <div class="summary-row">
+                        <span class="label">주문 수량</span>
+                        <span class="value">${itemCount}개</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span class="label">결제 금액</span>
+                        <span class="value">${totalAmount.toLocaleString()}원</span>
+                    </div>
+                </div>
+
+                <!-- 고객 유형 선택 -->
+                <div class="customer-type-section">
+                    <h3>고객 유형</h3>
+                    <div class="customer-type-buttons">
+                        <button class="customer-type-btn active" data-type="guest" onclick="OrderPaymentManager.selectCustomerType('guest')">
+                            <div class="type-icon">👤</div>
+                            <span>비회원</span>
+                        </button>
+                        <button class="customer-type-btn" data-type="member" onclick="OrderPaymentManager.selectCustomerType('member')">
+                            <div class="type-icon">🎫</div>
+                            <span>회원</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 비회원 정보 입력 -->
+                <div class="guest-info-panel" id="guestInfoPanel">
+                    <h3>비회원 정보 (선택)</h3>
+                    <div class="phone-input-group">
+                        <label>전화번호</label>
+                        <input type="tel" id="guestPhoneInputPanel" placeholder="010-1234-5678 (선택)" maxlength="13">
+                        <div class="help-text">전화번호 입력 시 포인트 적립 가능</div>
+                    </div>
+                </div>
+
+                <!-- 회원 정보 입력 -->
+                <div class="member-info-panel" id="memberInfoPanel" style="display: none;">
+                    <h3>회원 정보</h3>
+                    <div class="member-search-group">
+                        <input type="tel" id="memberPhoneInputPanel" placeholder="010-1234-5678" maxlength="13">
+                        <button class="search-btn" onclick="OrderPaymentManager.searchMemberInPanel()">조회</button>
+                    </div>
+                    <div class="member-display" id="memberDisplayPanel" style="display: none;">
+                        <!-- 회원 정보 표시 영역 -->
+                    </div>
+                </div>
+
+                <!-- 결제 수단 -->
+                <div class="payment-method-panel">
+                    <h3>결제 수단 <span class="required">*</span></h3>
+                    <div class="method-buttons-panel">
+                        <button class="method-btn active" data-method="CARD" onclick="OrderPaymentManager.selectPaymentMethodInPanel('CARD')">
+                            <div class="method-icon">💳</div>
+                            <span>카드결제</span>
+                        </button>
+                        <button class="method-btn" data-method="CASH" disabled>
+                            <div class="method-icon">💵</div>
+                            <span>현금결제<br>(준비중)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 결제 버튼 -->
+                <div class="payment-panel-footer">
+                    <button class="cancel-payment-btn" onclick="OrderPaymentManager.cancelPaymentPanel()">
+                        취소
+                    </button>
+                    <button class="confirm-payment-btn" onclick="OrderPaymentManager.confirmPaymentInPanel()">
+                        <span class="btn-text">카드결제 진행</span>
+                        <span class="btn-amount">${totalAmount.toLocaleString()}원</span>
+                    </button>
+                </div>
+            </div>
+        `;
     },
 
     /**
