@@ -655,21 +655,11 @@ const OrderUIRenderer = {
                     </div>
                 </div>
 
-                <!-- 비회원 정보 입력 -->
-                <div class="guest-info-panel" id="guestInfoPanel">
-                    <h3>비회원 정보 (선택)</h3>
-                    <div class="phone-input-group">
-                        <label>전화번호</label>
-                        <input type="tel" id="guestPhoneInputPanel" placeholder="010-1234-5678 (선택)" maxlength="13">
-                        <div class="help-text">전화번호 입력 시 포인트 적립 가능</div>
-                    </div>
-                </div>
-
-                <!-- 회원 정보 입력 -->
+                <!-- 회원 조회 패널 (회원 선택 시만 표시) -->
                 <div class="member-info-panel" id="memberInfoPanel" style="display: none;">
-                    <h3>회원 정보</h3>
+                    <h3>회원 조회</h3>
                     <div class="member-search-group">
-                        <input type="tel" id="memberPhoneInputPanel" placeholder="010-1234-5678" maxlength="13">
+                        <input type="tel" id="memberPhoneInputPanel" placeholder="전화번호 입력" maxlength="13">
                         <button class="search-btn" onclick="OrderPaymentManager.searchMemberInPanel()">조회</button>
                     </div>
                     <div class="member-display" id="memberDisplayPanel" style="display: none;">

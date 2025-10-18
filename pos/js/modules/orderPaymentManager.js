@@ -209,18 +209,13 @@ const OrderPaymentManager = {
 
             const { orderId, totalAmount, storeId, tableNumber } = this.currentPaymentData;
 
-            let guestPhone = null;
             let memberPhone = null;
             let memberId = null;
 
-            if (this.selectedCustomerType === 'guest') {
-                const phoneInput = document.getElementById('guestPhoneInputPanel');
-                if (phoneInput && phoneInput.value.trim()) {
-                    guestPhone = phoneInput.value.trim();
-                }
-            } else {
+            // 회원 결제 시 회원 정보 필수 확인
+            if (this.selectedCustomerType === 'member') {
                 if (!this.selectedMember) {
-                    alert('회원을 조회하고 선택해주세요.');
+                    alert('회원 조회 후 선택해주세요.');
                     return;
                 }
                 memberPhone = this.selectedMember.phone;
@@ -230,7 +225,7 @@ const OrderPaymentManager = {
             const customerType = this.selectedCustomerType === 'member' ? '회원' : '비회원';
             const phoneInfo = this.selectedCustomerType === 'member' 
                 ? `회원: ${memberPhone}` 
-                : guestPhone ? `비회원: ${guestPhone}` : '비회원 (전화번호 없음)';
+                : '비회원';
 
             if (!confirm(`${customerType} 카드결제를 진행하시겠습니까?\n결제 금액: ${totalAmount.toLocaleString()}원\n${phoneInfo}`)) {
                 return;
@@ -254,7 +249,7 @@ const OrderPaymentManager = {
                     storeId,
                     tableNumber,
                     customerType: this.selectedCustomerType,
-                    guestPhone,
+                    guestPhone: null, // 비회원은 전화번호 없음
                     memberPhone,
                     memberId
                 })
