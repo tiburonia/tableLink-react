@@ -64,11 +64,11 @@ const OrderUIRenderer = {
                 <div class="left-panel">
                     ${this.renderOrderSection()}
                     ${this.renderPaymentSection()}
-                    ${this.renderMenuSection()}
                 </div>
 
                 <!-- 우측: 결제 전용 영역 (기본은 메뉴, 결제 시작 시 결제 UI로 전환) -->
                 <div class="right-panel" id="rightPanel">
+                    ${this.renderMenuSection()}
                     ${this.renderPaymentMethodSection()}
                 </div>
             </div>
