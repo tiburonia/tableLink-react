@@ -10,6 +10,7 @@ const OrderPaymentManager = {
     selectedCustomerType: "guest",
     currentPaymentData: null,
     selectedMember: null,
+    foundMember: null,
 
     /**
      * 결제 수단 선택 및 결제 처리 시작
@@ -108,6 +109,7 @@ const OrderPaymentManager = {
         this.currentPaymentData = null;
         this.selectedCustomerType = "guest";
         this.selectedMember = null;
+        this.foundMember = null;
     },
 
     
@@ -127,7 +129,7 @@ const OrderPaymentManager = {
     },
 
     /**
-     * 패널에서 회원 조회
+     * 패널에서 회원 조회 (조회만 하고 자동 연동하지 않음)
      */
     async searchMemberInPanel() {
         const phoneInput = document.getElementById('memberPhoneInputPanel');
@@ -144,23 +146,80 @@ const OrderPaymentManager = {
             const data = await response.json();
 
             if (data.success && data.user) {
-                this.selectedMember = data.user;
-                this.selectedCustomerType = 'member';
-                memberDisplay.innerHTML = this.renderMemberCard(data.user);
+                // 임시로 찾은 회원 정보 저장 (아직 연동 안 됨)
+                this.foundMember = data.user;
+                // 연동되지 않은 상태로 카드 표시
+                memberDisplay.innerHTML = window.OrderUIRenderer.renderMemberCard(data.user, false);
                 memberDisplay.style.display = 'block';
+                console.log('✅ 회원 조회 성공 (연동 대기 중):', data.user);
             } else {
-                this.selectedMember = null;
-                this.selectedCustomerType = 'guest';
+                this.foundMember = null;
                 memberDisplay.style.display = 'none';
-                alert('회원을 찾을 수 없습니다. 비회원으로 진행됩니다.');
+                alert('회원을 찾을 수 없습니다.');
             }
         } catch (error) {
             console.error('❌ 회원 조회 실패:', error);
-            this.selectedMember = null;
-            this.selectedCustomerType = 'guest';
+            this.foundMember = null;
             memberDisplay.style.display = 'none';
-            alert('회원 조회 중 오류가 발생했습니다. 비회원으로 진행됩니다.');
+            alert('회원 조회 중 오류가 발생했습니다.');
         }
+    },
+
+    /**
+     * 회원 연동 (사용자가 명시적으로 선택)
+     */
+    linkMember() {
+        if (!this.foundMember) {
+            alert('연동할 회원 정보가 없습니다.');
+            return;
+        }
+
+        this.selectedMember = this.foundMember;
+        this.selectedCustomerType = 'member';
+
+        const memberDisplay = document.getElementById('memberDisplayPanel');
+        memberDisplay.innerHTML = window.OrderUIRenderer.renderMemberCard(this.selectedMember, true);
+        
+        console.log('✅ 회원 연동 완료:', this.selectedMember);
+        alert(`${this.selectedMember.name}님으로 회원 연동되었습니다.`);
+    },
+
+    /**
+     * 회원 연동 해제
+     */
+    unlinkMember() {
+        this.selectedMember = null;
+        this.selectedCustomerType = 'guest';
+
+        const memberDisplay = document.getElementById('memberDisplayPanel');
+        const phoneInput = document.getElementById('memberPhoneInputPanel');
+        
+        if (this.foundMember) {
+            // 조회된 회원 정보는 유지하되 연동만 해제
+            memberDisplay.innerHTML = window.OrderUIRenderer.renderMemberCard(this.foundMember, false);
+        } else {
+            memberDisplay.style.display = 'none';
+            phoneInput.value = '';
+        }
+
+        console.log('✅ 회원 연동 해제');
+    },
+
+    /**
+     * 회원 검색 취소
+     */
+    cancelMemberSearch() {
+        this.foundMember = null;
+        this.selectedMember = null;
+        this.selectedCustomerType = 'guest';
+
+        const memberDisplay = document.getElementById('memberDisplayPanel');
+        const phoneInput = document.getElementById('memberPhoneInputPanel');
+        
+        memberDisplay.style.display = 'none';
+        phoneInput.value = '';
+
+        console.log('✅ 회원 검색 취소');
     },
 
     /**
@@ -195,23 +254,18 @@ const OrderPaymentManager = {
             let memberPhone = null;
             let memberId = null;
 
-            // 전화번호 입력 확인
-            const phoneInput = document.getElementById('memberPhoneInputPanel');
-            const inputPhone = phoneInput ? phoneInput.value.trim() : '';
-
-            // 전화번호가 입력되었지만 회원 조회를 안 한 경우
-            if (inputPhone && !this.selectedMember) {
-                alert('전화번호 조회 버튼을 눌러 회원 확인을 해주세요.');
-                return;
-            }
-
-            // 회원 정보가 있으면 회원 결제
+            // 회원 연동 여부 확인
             if (this.selectedMember) {
+                // 회원으로 연동되어 있음
                 this.selectedCustomerType = 'member';
                 memberPhone = this.selectedMember.phone;
                 memberId = this.selectedMember.id;
+            } else if (this.foundMember) {
+                // 회원을 조회했지만 연동하지 않음
+                alert('회원 정보를 조회했지만 연동되지 않았습니다.\n"이 회원으로 연동" 버튼을 클릭하거나, 비회원으로 진행하려면 "취소"를 누르세요.');
+                return;
             } else {
-                // 전화번호 미입력 시 비회원 결제
+                // 비회원 결제
                 this.selectedCustomerType = 'guest';
             }
 

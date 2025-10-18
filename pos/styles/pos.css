@@ -3070,6 +3070,90 @@ body {
     font-size: 13px;
 }
 
+.member-card-panel {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+}
+
+.member-card-panel.linked {
+    background: #ecfdf5;
+    border-color: #10b981;
+}
+
+.member-card-panel .member-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.member-card-panel .member-info strong {
+    font-size: 16px;
+    color: #1e293b;
+}
+
+.member-card-panel .member-info span {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.member-card-panel .member-points {
+    font-size: 14px;
+    color: #059669;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.member-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.member-link-btn,
+.member-unlink-btn,
+.member-cancel-btn {
+    flex: 1;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.member-link-btn {
+    background: #10b981;
+    color: white;
+}
+
+.member-link-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.member-unlink-btn {
+    background: #ef4444;
+    color: white;
+}
+
+.member-unlink-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.member-cancel-btn {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.member-cancel-btn:hover {
+    background: #cbd5e1;
+}
+
 .method-buttons-panel {
     display: flex;
     gap: 12px;

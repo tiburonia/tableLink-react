@@ -1,4 +1,3 @@
-
 /**
  * 주문 UI 렌더링 모듈
  * - 주문 목록 렌더링
@@ -231,10 +230,10 @@ const OrderUIRenderer = {
             const userPhone = group.guestPhone || group.userId || '-';
             const orders = group.orders || [];
             const orderId = group.orderId || (orders.length > 0 ? orders[0].order_id : null);
-            
+
             // 동일 메뉴 통합 처리 (메뉴명 + 단가 기준)
             const consolidatedOrders = this.consolidateTLLOrders(orders);
-            
+
             // 총 금액 계산
             const totalAmount = consolidatedOrders.reduce((sum, order) => sum + (order.total_price || 0), 0);
 
@@ -262,7 +261,7 @@ const OrderUIRenderer = {
                             <span class="subtotal-amount">${totalAmount.toLocaleString()}원</span>
                         </div>
                     </div>
-                    
+
                     <!-- 오른쪽: 사용자 정보 (메뉴 리스트 높이만큼 자동 확장) -->
                     <div class="tll-order-user">
                         <div class="user-badge">📱 TLL</div>
@@ -679,6 +678,37 @@ const OrderUIRenderer = {
                         <span class="btn-text">카드결제 진행</span>
                         <span class="btn-amount">${totalAmount.toLocaleString()}원</span>
                     </button>
+                </div>
+            </div>
+        `;
+    },
+
+    /**
+     * 회원 카드 렌더링 (연동 선택 버튼 포함)
+     */
+    renderMemberCard(user, isLinked = false) {
+        return `
+            <div class="member-card-panel ${isLinked ? 'linked' : ''}">
+                <div class="member-info">
+                    <strong>${user.name || '회원'}</strong>
+                    <span>${user.phone}</span>
+                </div>
+                <div class="member-points">
+                    보유 포인트: ${(user.point || 0).toLocaleString()}P
+                </div>
+                <div class="member-actions">
+                    ${isLinked ? `
+                        <button class="member-unlink-btn" onclick="OrderPaymentManager.unlinkMember()">
+                            <span>❌ 연동 해제</span>
+                        </button>
+                    ` : `
+                        <button class="member-link-btn" onclick="OrderPaymentManager.linkMember()">
+                            <span>✅ 이 회원으로 연동</span>
+                        </button>
+                        <button class="member-cancel-btn" onclick="OrderPaymentManager.cancelMemberSearch()">
+                            <span>취소</span>
+                        </button>
+                    `}
                 </div>
             </div>
         `;
