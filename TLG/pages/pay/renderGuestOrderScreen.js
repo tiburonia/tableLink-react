@@ -6,7 +6,12 @@ import { OrderService } from './services/orderService.js';
  */
 export async function renderGuestOrderScreen(store, tableName, tableNumber) {
   try {
-    console.log('🎫 비회원 주문 화면 로드:', { store: store.id, table: tableName, tableNum: tableNumber });
+    console.log('🎫 비회원 주문 화면 로드 시작:', { 
+      storeId: store.id, 
+      storeName: store.name,
+      tableName, 
+      tableNumber 
+    });
 
     const finalTableNumber = parseInt(tableNumber) || 1;
     const finalTableName = tableName || `${finalTableNumber}번 테이블`;
@@ -14,8 +19,13 @@ export async function renderGuestOrderScreen(store, tableName, tableNumber) {
     console.log(`🔍 최종 테이블 정보: ${finalTableName} (번호: ${finalTableNumber})`);
 
     // 메뉴 데이터 로드
+    console.log('📋 메뉴 데이터 로드 시작...');
     const menuData = await OrderService.loadMenuData(store.id);
+    console.log(`✅ 메뉴 데이터 로드 완료: ${menuData.length}개 메뉴`);
+    
     const menuByCategory = OrderService.groupMenuByCategory(menuData);
+    const categories = Object.keys(menuByCategory);
+    console.log(`📂 카테고리별 그룹핑 완료: ${categories.join(', ')}`);
 
     // 비회원 주문 상태 초기화
     window.currentGuestOrder = {
@@ -29,16 +39,33 @@ export async function renderGuestOrderScreen(store, tableName, tableNumber) {
 
     window.currentMenuData = menuData;
 
-    console.log('🏪 비회원 주문 초기화 완료:', window.currentGuestOrder);
+    console.log('🏪 비회원 주문 상태 초기화 완료:', {
+      storeId: window.currentGuestOrder.storeId,
+      storeName: window.currentGuestOrder.storeName,
+      tableName: window.currentGuestOrder.tableName,
+      tableNumber: window.currentGuestOrder.tableNumber,
+      cartItems: window.currentGuestOrder.cart.length,
+      menuCount: window.currentMenuData.length
+    });
 
     // UI 렌더링
+    console.log('🎨 UI 렌더링 시작...');
     renderGuestOrderHTML(store, finalTableName, finalTableNumber, menuByCategory);
+    console.log('✅ UI 렌더링 완료');
 
     // 이벤트 리스너 설정
+    console.log('🔧 이벤트 리스너 설정 시작...');
     setupGuestOrderEvents();
+    console.log('✅ 이벤트 리스너 설정 완료');
+
+    console.log('✅ 비회원 주문 화면 로드 완료');
 
   } catch (error) {
     console.error('❌ 비회원 주문 화면 로드 실패:', error);
+    console.error('상세 에러:', {
+      message: error.message,
+      stack: error.stack
+    });
     alert('주문 화면을 불러올 수 없습니다.');
   }
 }
@@ -231,14 +258,21 @@ function setupGuestOrderEvents() {
  * 카테고리 전환
  */
 function switchCategory(category) {
+  console.log(`📂 카테고리 전환: ${category}`);
+  
   const menuData = window.currentMenuData || [];
   const filtered = category === 'all' 
     ? menuData 
     : menuData.filter(item => item.category === category);
   
+  console.log(`✅ 필터링 완료: ${filtered.length}개 메뉴`);
+  
   const menuGrid = document.getElementById('menuGrid');
   if (menuGrid) {
     menuGrid.innerHTML = renderMenuItems(filtered);
+    console.log('✅ 메뉴 그리드 업데이트 완료');
+  } else {
+    console.warn('⚠️ menuGrid 요소를 찾을 수 없습니다');
   }
 
   document.querySelectorAll('.category-btn').forEach(btn => {
@@ -279,12 +313,16 @@ function closeCart() {
  * 장바구니 추가
  */
 function addToCart(menuId, menuName, price) {
+  console.log('🛒 장바구니 추가 시작:', { menuId, menuName, price });
+  
   const cart = window.currentGuestOrder.cart;
   const existingItem = cart.find(item => item.menuId === menuId);
 
   if (existingItem) {
+    console.log(`📦 기존 아이템 수량 증가: ${menuName} (${existingItem.quantity} → ${existingItem.quantity + 1})`);
     existingItem.quantity += 1;
   } else {
+    console.log(`🆕 새 아이템 추가: ${menuName} (가격: ₩${price.toLocaleString()})`);
     cart.push({
       menuId,
       menuName,
@@ -293,8 +331,8 @@ function addToCart(menuId, menuName, price) {
     });
   }
 
+  console.log(`✅ 장바구니 업데이트 완료: 총 ${cart.length}개 아이템, ${cart.reduce((sum, item) => sum + item.quantity, 0)}개 수량`);
   updateCartUI();
-  console.log('✅ 장바구니 업데이트:', cart);
 }
 
 /**
@@ -388,9 +426,12 @@ function updateCartUI() {
  * 결제 진행
  */
 async function proceedToPayment() {
+  console.log('💳 결제 진행 시작');
+  
   const cart = window.currentGuestOrder.cart;
 
   if (cart.length === 0) {
+    console.warn('⚠️ 장바구니가 비어있어 결제를 진행할 수 없습니다');
     alert('장바구니가 비어있습니다.');
     return;
   }
@@ -408,12 +449,20 @@ async function proceedToPayment() {
       isGuest: true
     };
 
-    console.log('💳 비회원 결제 페이지로 이동:', paymentData);
+    console.log('📦 결제 데이터 준비 완료:', {
+      storeId: paymentData.storeId,
+      storeName: paymentData.storeName,
+      tableNumber: paymentData.tableNumber,
+      itemCount: paymentData.cart.length,
+      totalAmount: `₩${paymentData.totalAmount.toLocaleString()}`
+    });
 
     // 비회원 결제 페이지로 이동
     if (typeof window.renderGuestPayment === 'function') {
+      console.log('✅ renderGuestPayment 함수 발견, 실행 중...');
       await window.renderGuestPayment(paymentData);
     } else {
+      console.log('📥 renderGuestPayment 모듈 동적 로드 시작...');
       // 비회원 결제 화면 모듈 동적 로드
       const script = document.createElement('script');
       script.type = 'module';
@@ -425,13 +474,24 @@ async function proceedToPayment() {
         document.head.appendChild(script);
       });
 
+      console.log('✅ renderGuestPayment 모듈 로드 완료');
+
       if (typeof window.renderGuestPayment === 'function') {
+        console.log('✅ renderGuestPayment 함수 실행 중...');
         await window.renderGuestPayment(paymentData);
+      } else {
+        throw new Error('renderGuestPayment 함수를 로드할 수 없습니다');
       }
     }
 
+    console.log('✅ 결제 페이지 이동 완료');
+
   } catch (error) {
     console.error('❌ 결제 진행 실패:', error);
+    console.error('상세 에러:', {
+      message: error.message,
+      stack: error.stack
+    });
     alert('결제를 진행할 수 없습니다.');
   }
 }
