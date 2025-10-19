@@ -156,8 +156,8 @@ const OrderUIRenderer = {
         if (posOrders.length > 0) {
             tableBody = posOrders
                 .map(order => `
-                    <tr class="order-row" 
-                        data-order-id="${order.id}" 
+                    <tr class="order-row"
+                        data-order-id="${order.id}"
                         data-menu-id="${order.menuId || order.id}"
                         onclick="OrderModificationManager.toggleOrderRowSelection('${order.id}', '${order.menuName}', ${order.quantity})"
                         style="cursor: pointer;">
@@ -230,6 +230,7 @@ const OrderUIRenderer = {
             const userPhone = group.guestPhone || group.userId || '-';
             const orders = group.orders || [];
             const orderId = group.orderId || (orders.length > 0 ? orders[0].order_id : null);
+            const customerType = group.customerType || 'general'; // customerType 없으면 'general'로 기본값 설정
 
             // 동일 메뉴 통합 처리 (메뉴명 + 단가 기준)
             const consolidatedOrders = this.consolidateTLLOrders(orders);
@@ -239,10 +240,10 @@ const OrderUIRenderer = {
 
             return `
                 <div class="tll-order-group">
-                    <!-- 왼쪽: 메뉴 리스트 -->
-                    <div class="tll-order-items">
+                    <!-- 왼쪽: 메뉴 리스트 영역 -->
+                    <div class="tll-order-items tll-order-items-${customerType}">
                         ${consolidatedOrders.map(order => `
-                            <div class="tll-order-item">
+                            <div class="tll-order-item tll-order-item-${customerType}">
                                 <div class="item-menu">
                                     <span class="menu-name">${order.menu_name}</span>
                                     <span class="menu-price">${(order.unit_price || 0).toLocaleString()}원</span>
