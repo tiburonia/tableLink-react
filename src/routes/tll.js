@@ -57,19 +57,21 @@ router.post('/checks/from-qr', async (req, res) => {
       // 하이픈 제거
       const cleanGuestPhone = guest_phone.replace(/[-\s]/g, '');
       
-      // 기존 게스트 확인
+      // 기존 게스트 확인 (guests 테이블 사용)
       const existingGuest = await client.query(`
-        SELECT id FROM guest WHERE phone = $1
+        SELECT id FROM guests WHERE phone = $1
       `, [cleanGuestPhone]);
 
       if (existingGuest.rows.length > 0) {
         guestId = existingGuest.rows[0].id;
+        console.log(`🔍 기존 게스트 발견: ID ${guestId}`);
       } else {
         // 새 게스트 생성
         const newGuest = await client.query(`
-          INSERT INTO guest (phone) VALUES ($1) RETURNING id
+          INSERT INTO guests (phone, created_at) VALUES ($1, CURRENT_TIMESTAMP) RETURNING id
         `, [cleanGuestPhone]);
         guestId = newGuest.rows[0].id;
+        console.log(`✅ 새 게스트 생성: ID ${guestId}`);
       }
     }
 
@@ -95,15 +97,18 @@ router.post('/checks/from-qr', async (req, res) => {
       console.log(`🔄 TLL 기존 주문 ${orderId} 사용 (테이블 ${tableNumber})`);
     } else {
       // 새 주문 생성 (현재 스키마에 맞게)
+      // guest_phone도 함께 저장
+      const cleanGuestPhone = guest_phone ? guest_phone.replace(/[-\s]/g, '') : null;
+      
       const newOrderResult = await client.query(`
         INSERT INTO orders (
-          store_id, user_id, guest_id, source, status, payment_status, table_number, table_num
-        ) VALUES ($1, $2, $3, 'TLL', 'OPEN', 'UNPAID', $4, $5)
+          store_id, user_id, guest_id, guest_phone, source, status, payment_status, table_number, table_num
+        ) VALUES ($1, $2, $3, $4, 'TLL', 'OPEN', 'UNPAID', $5, $6)
         RETURNING id
-      `, [storeId, user_id || null, guestId, tableNumber, tableNumber]);
+      `, [storeId, user_id || null, guestId, cleanGuestPhone, tableNumber, tableNumber]);
 
       orderId = newOrderResult.rows[0].id;
-      console.log(`✅ TLL 새 주문 ${orderId} 생성 완료 (테이블 ${tableNumber})`);
+      console.log(`✅ TLL 새 주문 ${orderId} 생성 완료 (테이블 ${tableNumber}, guestId: ${guestId}, guestPhone: ${cleanGuestPhone})`);
 
       // 테이블에 processing_order_id 설정 및 상태 업데이트
       const tableUpdateResult = await client.query(`
