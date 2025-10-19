@@ -82,6 +82,7 @@ class OrderRepository {
   async getTLLOrders(storeId, tableNumber) {
     const result = await pool.query(`
       SELECT
+        o.id as order_id,
         o.user_id,
         o.guest_id,
         o.guest_phone,
@@ -96,7 +97,7 @@ class OrderRepository {
             'total_price', oi.total_price,
             'item_status', oi.item_status,
             'cook_station', oi.cook_station,
-            'order_id', oi.order_id,
+            'order_id', o.id,
             'paid_status', ot.paid_status,
             'ticket_created_at', ot.created_at,
             'guest_phone', o.guest_phone,
@@ -116,6 +117,7 @@ class OrderRepository {
         AND tbo.unlinked_at IS NULL
         AND oi.item_status != 'CANCELED'
       GROUP BY
+        o.id,
         o.user_id,
         o.guest_id,
         o.guest_phone,
