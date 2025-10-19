@@ -300,6 +300,10 @@ const OrderUIRenderer = {
                             <span>합계</span>
                             <span>₩${totalAmount.toLocaleString()}</span>
                         </div>
+                        <button class="tll-end-session-btn" onclick="OrderSessionManager.endUserTLLSession(${orderId}, '${displayName}')">
+                            <span class="btn-icon">🔚</span>
+                            <span class="btn-text">세션 종료</span>
+                        </button>
                     </div>
                 </div>
             `;
