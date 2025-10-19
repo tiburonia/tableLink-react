@@ -330,7 +330,7 @@ class OrderService {
       const guestId = group.guest_id || null;
       const guestName = group.guest_name || null;
       const guestPhone = group.guest_phone || null;
-      const userName = group.user_name || (guestPhone ? '게스트' : '알 수 없음');
+      const userName = group.user_name || null;
 
       return {
         orderId: group.order_id,

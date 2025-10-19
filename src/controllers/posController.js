@@ -72,13 +72,13 @@ class POSController {
       // TLL 주문을 사용자별로 그룹핑
       const tllOrdersRaw = result.tllOrders;
       const tllOrders = tllOrdersRaw.map(group => {
-        const isGuest = !group.user_id;
+        const isGuest = !group.userId;
         return {
           customerType: isGuest ? 'guest' : 'member',
-          userId: group.user_id,
-          userName: group.user_name || null,
-          guestId: group.guest_id || null,
-          guestName: group.guest_name || null,
+          userId: group.userId || null,
+          userName: group.userName || null,
+          guestId: group.guestId || null,
+          guestName: group.guestName || null,
           orders: group.orders,
           orderId: group.orders[0]?.order_id
         };
