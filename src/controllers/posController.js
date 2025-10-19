@@ -69,15 +69,24 @@ class POSController {
 
       const result = await orderService.getTLLOrders(parseInt(storeId), parseInt(tableNumber));
 
-      // 각 tllOrder 그룹에 orderId 추가
-      const tllOrdersWithOrderId = result.tllOrders.map(group => ({
-        ...group,
-        orderId: group.orders && group.orders.length > 0 ? group.orders[0].order_id : null
-      }));
+      // TLL 주문을 사용자별로 그룹핑
+      const tllOrdersRaw = result.tllOrders;
+      const tllOrders = tllOrdersRaw.map(group => {
+        const isGuest = !group.user_id;
+        return {
+          customerType: isGuest ? 'guest' : 'member',
+          userId: group.user_id,
+          userName: group.user_name || null,
+          guestId: group.guest_id || null,
+          guestName: group.guest_name || null,
+          orders: group.orders,
+          orderId: group.orders[0]?.order_id
+        };
+      });
 
       res.json({
         success: true,
-        tllOrders: tllOrdersWithOrderId,
+        tllOrders: tllOrders,
         groupCount: result.groupCount
       });
     } catch (error) {

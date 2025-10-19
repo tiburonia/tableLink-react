@@ -83,8 +83,10 @@ class OrderRepository {
     const result = await pool.query(`
       SELECT
         o.user_id,
+        o.guest_id,
         o.guest_phone,
         u.name as user_name,
+        g.name as guest_name,
         json_agg(
           json_build_object(
             'id', oi.id,
@@ -107,12 +109,18 @@ class OrderRepository {
       JOIN order_tickets ot ON o.id = ot.order_id
       JOIN order_items oi ON ot.id = oi.ticket_id
       LEFT JOIN users u ON o.user_id = u.id
+      LEFT JOIN guests g ON o.guest_id = g.id
       WHERE tbo.store_id = $1
         AND tbo.table_id = $2
         AND tbo.source = 'TLL'
         AND tbo.unlinked_at IS NULL
         AND oi.item_status != 'CANCELED'
-      GROUP BY o.user_id, o.guest_phone, u.name
+      GROUP BY
+        o.user_id,
+        o.guest_id,
+        o.guest_phone,
+        u.name,
+        g.name
       ORDER BY MIN(o.created_at) DESC
     `, [storeId, tableNumber]);
 
@@ -402,7 +410,7 @@ class OrderRepository {
       id, store_id, table_num, source, session_status, is_mixed, created_at, updated_at
       FROM orders
       WHERE id = $1
-    `, [orderId]) 
+    `, [orderId])
 
 
     return result.rows.length > 0 ? result.rows[0] : null;
