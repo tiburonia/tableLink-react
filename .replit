@@ -1,4 +1,4 @@
-modules = ["bash", "nodejs-20", "web", "postgresql-16"]
+modules = ["bash", "nodejs-20", "web", "postgresql-16", "python-3.11"]
 run = "node src/server.js"
 
 [nix]
