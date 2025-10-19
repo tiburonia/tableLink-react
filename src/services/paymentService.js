@@ -864,6 +864,9 @@ class PaymentService {
       });
 
       // 비회원 정보 업데이트 (guest_id와 guest_phone 모두 설정)
+      // 하이픈 제거하여 guests 테이블의 phone과 일치시킴
+      const cleanGuestPhone = guestPhone.replace(/[-\s]/g, '');
+      
       await client.query(`
         UPDATE orders 
         SET guest_id = $1,
@@ -872,9 +875,9 @@ class PaymentService {
             session_ended = false,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = $3
-      `, [guestId, guestPhone, newOrderId]);
+      `, [guestId, cleanGuestPhone, newOrderId]);
 
-      console.log(`✅ 비회원 새 주문 생성: ${newOrderId}, guest_id: ${guestId}`);
+      console.log(`✅ 비회원 새 주문 생성: ${newOrderId}, guest_id: ${guestId}, guest_phone: ${cleanGuestPhone}`);
 
       // 2. 배치 번호 계산
       const batchNo = await orderRepository.getNextBatchNo(client, newOrderId);
