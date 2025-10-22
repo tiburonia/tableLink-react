@@ -69,6 +69,7 @@ class AuthController {
       res.json({
         success: true,
         exists,
+        available: !exists,
         message: exists ? '이미 사용 중인 전화번호입니다' : '사용 가능한 전화번호입니다'
       });
     } catch (error) {

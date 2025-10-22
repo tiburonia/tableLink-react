@@ -23,6 +23,13 @@ class AuthService {
   }
 
   /**
+   * 전화번호 존재 확인
+   */
+  async checkPhoneExists(phone) {
+    return await authRepository.checkPhoneExists(phone);
+  }
+
+  /**
    * 회원가입
    */
   async signup(signupData) {
