@@ -1303,7 +1303,6 @@ body {
 /* 결제 섹션 좌우 2분할 레이아웃 */
 .payment-content {
     display: grid;
-    grid-template-columns: 1fr 1fr;
     gap: 16px;
     padding: 16px 20px;
     height: calc(100% - 32px);

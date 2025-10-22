@@ -404,9 +404,7 @@ const OrderUIRenderer = {
                     </div>
 
                     <!-- 우측: TLL 사용자 정보 및 액션 버튼 -->
-                    <div class="payment-right">
-                        ${this.renderTLLUserInfo()}
-                    </div>
+                   
                 </div>
             </div>
         `;
