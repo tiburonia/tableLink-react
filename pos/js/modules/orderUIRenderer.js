@@ -262,6 +262,12 @@ const OrderUIRenderer = {
             // 총 금액 계산
             const totalAmount = consolidatedOrders.reduce((sum, order) => sum + (order.total_price || 0), 0);
 
+            // 전화번호 표시 로직
+            let phoneDisplay = '';
+            if (customerType === 'guest' && group.guestPhone) {
+                phoneDisplay = `<div class="user-phone">📞 ${group.guestPhone}</div>`;
+            }
+
             return `
                 <div class="tll-order-group">
                     <!-- 왼쪽: 메뉴 리스트 영역 -->
@@ -289,16 +295,17 @@ const OrderUIRenderer = {
 
                     <!-- 오른쪽: 사용자 정보 (메뉴 리스트 높이만큼 자동 확장) -->
                     <div class="tll-order-user ${customerClass}">
-                        <div class="user-badge">${userTypeBadge}</div>
-                        <div class="user-name">${displayName}</div>
-                        <div class="user-id">주문번호: ${group.orderId}</div>
-                        ${customerType === 'guest' && group.guestPhone ? `
-                            <div class="user-phone">📞 ${group.guestPhone}</div>
-                        ` : ''}
-                        <div class="item-count">총 ${group.orders.length}개 메뉴</div>
-                        <div class="tll-order-subtotal">
-                            <span>합계</span>
-                            <span>₩${totalAmount.toLocaleString()}</span>
+                        <div class="tll-order-user-header">
+                            <div class="user-badge">${customerType === 'member' ? '👤 회원' : '🎫 게스트'}</div>
+                            <div class="tll-order-user-icon">${customerType === 'member' ? '👤' : '👥'}</div>
+                            <div class="user-name">${displayName}</div>
+                            ${phoneDisplay}
+                            ${group.userId ? `<div class="user-id">ID: ${group.userId}</div>` : ''}
+                        </div>
+                        <div class="tll-order-user-divider"></div>
+                        <div class="user-total">
+                            <div class="total-label">주문 합계</div>
+                            <div class="total-amount">₩${totalAmount.toLocaleString()}</div>
                         </div>
                         <button class="tll-end-session-btn" onclick="OrderSessionManager.endUserTLLSession(${orderId}, '${displayName}')">
                             <span class="btn-icon">🔚</span>
@@ -404,7 +411,7 @@ const OrderUIRenderer = {
                     </div>
 
                     <!-- 우측: TLL 사용자 정보 및 액션 버튼 -->
-                   
+
                 </div>
             </div>
         `;

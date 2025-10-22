@@ -14,7 +14,7 @@ function renderSignUp() {
       }
 
       .signup-page {
-        min-height: 100vh;
+        height: 794ph;
         background: #f8f9fa;
         display: flex;
         flex-direction: column;
