@@ -1,4 +1,3 @@
-
 const express = require('express');
 const router = express.Router();
 const pool = require('../db/pool');
@@ -115,7 +114,7 @@ function formatDate(date) {
   if (diffDays === 1) return '1일 전';
   if (diffDays < 7) return `${diffDays}일 전`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}주일 전`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}개월 전';
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}개월 전`;
   return `${Math.floor(diffDays / 365)}년 전`;
 }
 
