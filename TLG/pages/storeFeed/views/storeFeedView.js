@@ -36,7 +36,10 @@ export const storeFeedView = {
         </div>
 
         <div class="feed-timeline" id="feed-timeline">
-          ${posts.map(post => this.renderPost(post)).join('')}
+          ${posts.length > 0 
+            ? posts.map(post => this.renderPost(post)).join('') 
+            : this.renderEmptyState()
+          }
         </div>
 
         <!-- SNS 스타일 하단 네비게이션 -->
@@ -118,6 +121,19 @@ export const storeFeedView = {
       <span class="post-type-badge" style="background: ${badge.color}20; color: ${badge.color};">
         ${badge.icon} ${badge.text}
       </span>
+    `;
+  },
+
+  /**
+   * 빈 상태 렌더링
+   */
+  renderEmptyState() {
+    return `
+      <div class="feed-empty-state">
+        <div class="empty-icon">📭</div>
+        <h3 class="empty-title">아직 게시물이 없어요</h3>
+        <p class="empty-text">매장의 새로운 소식을 기다려주세요!</p>
+      </div>
     `;
   },
 
@@ -424,6 +440,35 @@ export const storeFeedView = {
 
         .nav-btn:hover .nav-icon {
           transform: scale(1.1);
+        }
+
+        /* 빈 상태 스타일 */
+        .feed-empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 80px 20px;
+          text-align: center;
+        }
+
+        .empty-icon {
+          font-size: 64px;
+          margin-bottom: 16px;
+          opacity: 0.6;
+        }
+
+        .empty-title {
+          font-size: 18px;
+          font-weight: 700;
+          color: #374151;
+          margin-bottom: 8px;
+        }
+
+        .empty-text {
+          font-size: 14px;
+          color: #9ca3af;
+          line-height: 1.5;
         }
       </style>
     `;

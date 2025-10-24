@@ -1,4 +1,3 @@
-
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -88,6 +87,7 @@ try {
   const kdsRoutes = require('./routes/kds');
   const tossRoutes = require('./routes/toss');
   const storesClustersRouter = require('./routes/stores-clusters');
+  const storeFeedsRouter = require('./routes/store-feeds'); // store-feeds 라우트 추가
 
   // 새 시스템 라우터
   const authRoutes = require('./routes/auth');
@@ -110,6 +110,7 @@ try {
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes);
   app.use('/api/clusters', storesClustersRouter);
+  app.use('/api/store-feeds', storeFeedsRouter); // store-feeds 라우트 마운트
 
   // 라우터 등록
   app.use('/api/auth', authRoutes);
