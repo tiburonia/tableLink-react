@@ -14,7 +14,7 @@ function renderSignUp() {
       }
 
       .signup-page {
-        height: 794ph;
+        height: 794px;
         background: #f8f9fa;
         display: flex;
         flex-direction: column;
