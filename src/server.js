@@ -30,7 +30,7 @@ global.io = io;
 setupSocketHandlers(io, pool);
 
 // 이벤트 기반 서비스 초기화
-initializeServices();
+initializeServices();  
 
 // Unhandled Promise Rejection 방지
 process.on('unhandledRejection', (reason, promise) => {

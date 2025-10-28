@@ -24,7 +24,7 @@ async function renderStoreFeed(storeId) {
           <p style="color: #6b7280; margin-bottom: 20px;">${error.message}</p>
           <button onclick="renderStore({id: ${storeId}})" 
                   style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer;">
-            매장으로 돌아가기
+            매장으로 돌아가기  
           </button>
         </div>
       `;
