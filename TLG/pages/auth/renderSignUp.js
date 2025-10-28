@@ -1276,17 +1276,6 @@ function renderSignUp() {
               });
             }
           }, 100);
-                  <p class="success-message">
-                    TableLink에 가입해 주셔서 감사합니다.<br>
-                    이제 다양한 매장에서 편리하게 주문하실 수 있습니다.
-                  </p>
-                  <button onclick="renderLogin()" class="signup-btn">
-                    로그인하러 가기
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
         } else {
           throw new Error(data.error || '회원가입에 실패했습니다');
         }
