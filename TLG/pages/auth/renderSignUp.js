@@ -261,6 +261,83 @@ function renderSignUp() {
         letter-spacing: -0.1px;
       }
 
+      .guest-orders-info {
+        margin-top: 12px;
+        padding: 14px;
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 1.5px solid #38bdf8;
+        border-radius: 10px;
+        animation: slideIn 0.3s ease-out;
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(-10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .guest-orders-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        color: #0284c7;
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      .guest-orders-header svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .guest-orders-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .guest-order-item {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid #e0f2fe;
+        font-size: 12px;
+      }
+
+      .guest-order-store {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 4px;
+      }
+
+      .guest-order-details {
+        color: #6b7280;
+        font-size: 11px;
+        line-height: 1.5;
+      }
+
+      .guest-order-price {
+        color: #0284c7;
+        font-weight: 600;
+        margin-top: 4px;
+      }
+
+      .guest-orders-notice {
+        margin-top: 10px;
+        padding: 8px 10px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 6px;
+        font-size: 11px;
+        color: #0369a1;
+        line-height: 1.4;
+      }
+
       .password-strength {
         margin-top: 10px;
       }
@@ -670,6 +747,7 @@ function renderSignUp() {
             </div>
             <div class="input-status" id="userPhoneStatus"></div>
             <div class="form-hint">전화번호를 등록하시면 주문 내역 연동 및 알림 서비스를 받을 수 있습니다 (중복확인 필요)</div>
+            <div id="guestOrdersContainer"></div>
           </div>
 
           <button type="submit" class="signup-btn" id="signupBtn" disabled>
@@ -837,6 +915,53 @@ function renderSignUp() {
         elements.loadingOverlay.style.display = 'none';
         utils.updateSubmitButton();
       }
+    },
+
+    displayGuestOrders(orders, orderCount) {
+      const container = document.getElementById('guestOrdersContainer');
+      if (!container) return;
+
+      const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffTime = Math.abs(now - date);
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) return '오늘';
+        if (diffDays === 1) return '어제';
+        if (diffDays < 7) return `${diffDays}일 전`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)}주 전`;
+        return `${Math.floor(diffDays / 30)}개월 전`;
+      };
+
+      const ordersHTML = orders.slice(0, 3).map(order => `
+        <div class="guest-order-item">
+          <div class="guest-order-store">${order.store_name || '매장'}</div>
+          <div class="guest-order-details">
+            ${order.menu_items || '메뉴 정보 없음'} · ${order.item_count || 0}개 항목
+          </div>
+          <div class="guest-order-details">${formatDate(order.created_at)}</div>
+          <div class="guest-order-price">₩${parseInt(order.total_price || 0).toLocaleString()}</div>
+        </div>
+      `).join('');
+
+      container.innerHTML = `
+        <div class="guest-orders-info">
+          <div class="guest-orders-header">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <span>기존 주문 내역 ${orderCount}건 발견</span>
+          </div>
+          <div class="guest-orders-list">
+            ${ordersHTML}
+          </div>
+          ${orderCount > 3 ? `<div class="guest-order-details" style="text-align: center; margin-top: 8px; color: #0284c7;">외 ${orderCount - 3}건</div>` : ''}
+          <div class="guest-orders-notice">
+            ✨ 회원가입 시 모든 주문 내역이 자동으로 연동됩니다
+          </div>
+        </div>
+      `;
     }
   };
 
@@ -996,7 +1121,8 @@ function renderSignUp() {
 
     // 전화번호 포매팅 및 유효성 검사
     if (elements.userPhone) {
-      elements.userPhone.addEventListener('input', (e) => {
+      let phoneCheckTimeout;
+      elements.userPhone.addEventListener('input', async (e) => {
       const formatted = utils.formatPhone(e.target.value);
       e.target.value = formatted;
 
@@ -1014,6 +1140,34 @@ function renderSignUp() {
                         result.isValid ? '⏳' : '❌');
       } else {
         utils.showStatus('userPhone', '', '');
+      }
+
+      // 게스트 주문 조회 (디바운스)
+      clearTimeout(phoneCheckTimeout);
+      const guestOrdersContainer = document.getElementById('guestOrdersContainer');
+      
+      if (result.isValid && formatted.length === 13) {
+        phoneCheckTimeout = setTimeout(async () => {
+          try {
+            const response = await fetch('/api/auth/users/check-guest-orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone: formatted })
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.hasOrders) {
+              utils.displayGuestOrders(data.orders, data.orderCount);
+            } else {
+              guestOrdersContainer.innerHTML = '';
+            }
+          } catch (error) {
+            console.error('게스트 주문 조회 오류:', error);
+          }
+        }, 500);
+      } else {
+        guestOrdersContainer.innerHTML = '';
       }
 
       utils.updateSubmitButton();

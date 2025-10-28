@@ -137,6 +137,42 @@ class AuthController {
       next(error);
     }
   }
+
+  /**
+   * 전화번호로 게스트 주문 조회
+   */
+  async checkGuestOrders(req, res, next) {
+    try {
+      const { phone } = req.body;
+
+      if (!phone) {
+        return res.status(400).json({
+          success: false,
+          error: '전화번호가 필요합니다'
+        });
+      }
+
+      const cleanPhone = phone.replace(/[-\s]/g, '');
+
+      if (!/^\d{11}$/.test(cleanPhone)) {
+        return res.status(400).json({
+          success: false,
+          error: '올바른 전화번호 형식이 아닙니다'
+        });
+      }
+
+      const guestOrders = await authService.getGuestOrdersByPhone(cleanPhone);
+
+      res.json({
+        success: true,
+        hasOrders: guestOrders.length > 0,
+        orderCount: guestOrders.length,
+        orders: guestOrders
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AuthController();

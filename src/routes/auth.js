@@ -68,6 +68,13 @@ router.get('/users/favorites/:userId', userController.getFavoriteStores);
  */
 router.post('/users/favorite/toggle', userController.toggleFavorite);
 
+
+/**
+ * [POST] /users/check-guest-orders - 전화번호로 게스트 주문 조회
+ */
+router.post('/users/check-guest-orders', authController.checkGuestOrders);
+
+
 /**
  * [GET] /users/favorite/status/:userId/:storeId - 즐겨찾기 상태 확인
  */

@@ -145,6 +145,14 @@ class AuthService {
 
     return convertedCount;
   }
+
+  /**
+   * 전화번호로 게스트 주문 조회
+   */
+  async getGuestOrdersByPhone(cleanPhone) {
+    const guestOrders = await authRepository.getGuestOrdersByPhone(cleanPhone);
+    return guestOrders;
+  }
 }
 
 module.exports = new AuthService();

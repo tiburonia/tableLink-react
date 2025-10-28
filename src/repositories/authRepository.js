@@ -105,6 +105,33 @@ class AuthRepository {
       client.release();
     }
   }
+
+  /**
+   * 전화번호로 게스트 주문 조회
+   */
+  async getGuestOrdersByPhone(cleanPhone) {
+    const result = await pool.query(`
+      SELECT 
+        o.id as order_id,
+        o.created_at,
+        o.total_price,
+        s.name as store_name,
+        s.id as store_id,
+        COUNT(DISTINCT oi.id) as item_count,
+        STRING_AGG(DISTINCT oi.menu_name, ', ') as menu_items
+      FROM guests g
+      INNER JOIN orders o ON o.guest_id = g.id
+      LEFT JOIN stores s ON s.id = o.store_id
+      LEFT JOIN order_items oi ON oi.order_id = o.id
+      WHERE g.phone = $1
+        AND o.status != 'CANCELLED'
+      GROUP BY o.id, o.created_at, o.total_price, s.name, s.id
+      ORDER BY o.created_at DESC
+      LIMIT 10
+    `, [cleanPhone]);
+
+    return result.rows;
+  }
 }
 
 module.exports = new AuthRepository();
