@@ -124,7 +124,7 @@ class AuthRepository {
       LEFT JOIN stores s ON s.id = o.store_id
       LEFT JOIN order_items oi ON oi.order_id = o.id
       WHERE g.phone = $1
-        AND o.status != 'CANCELLED'
+        AND o.session_status != 'CANCELLED'
       GROUP BY o.id, o.created_at, o.total_price, s.name, s.id
       ORDER BY o.created_at DESC
       LIMIT 10
