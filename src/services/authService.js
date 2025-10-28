@@ -129,6 +129,22 @@ class AuthService {
       }
     };
   }
+
+  /**
+   * 게스트 주문을 회원 주문으로 전환
+   */
+  async convertGuestOrdersToUser(userId, phone) {
+    // 하이픈 제거
+    const cleanPhone = phone.replace(/[-\s]/g, '');
+    
+    const convertedCount = await authRepository.convertGuestOrdersToUser(userId, cleanPhone);
+    
+    if (convertedCount > 0) {
+      console.log(`✅ 게스트 주문 전환 완료: ${convertedCount}개 주문이 회원 ${userId}로 연결됨 (전화번호: ${cleanPhone})`);
+    }
+
+    return convertedCount;
+  }
 }
 
 module.exports = new AuthService();

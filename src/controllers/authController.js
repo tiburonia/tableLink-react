@@ -86,6 +86,11 @@ class AuthController {
 
       const newUser = await authService.signup({ id, pw, name, phone });
 
+      // 전화번호가 있는 경우 게스트 주문을 회원 주문으로 전환
+      if (phone) {
+        await authService.convertGuestOrdersToUser(newUser.userId, phone);
+      }
+
       res.json({
         success: true,
         message: '회원가입이 완료되었습니다',

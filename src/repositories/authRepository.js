@@ -58,6 +58,53 @@ class AuthRepository {
 
     return result.rows[0];
   }
+
+  /**
+   * 게스트 주문을 회원 주문으로 전환
+   */
+  async convertGuestOrdersToUser(userId, cleanPhone) {
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // 1. 해당 전화번호를 가진 게스트 찾기
+      const guestResult = await client.query(`
+        SELECT id FROM guests WHERE phone = $1
+      `, [cleanPhone]);
+
+      if (guestResult.rows.length === 0) {
+        await client.query('COMMIT');
+        console.log(`ℹ️ 전화번호 ${cleanPhone}에 해당하는 게스트가 없습니다`);
+        return 0;
+      }
+
+      const guestId = guestResult.rows[0].id;
+
+      // 2. 게스트 주문을 회원 주문으로 업데이트
+      const updateResult = await client.query(`
+        UPDATE orders
+        SET user_id = $1,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE guest_id = $2
+        RETURNING id
+      `, [userId, guestId]);
+
+      await client.query('COMMIT');
+
+      const convertedCount = updateResult.rows.length;
+      console.log(`✅ ${convertedCount}개의 게스트 주문(guest_id: ${guestId})이 회원(user_id: ${userId})으로 전환되었습니다`);
+
+      return convertedCount;
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('❌ 게스트 주문 전환 실패:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 module.exports = new AuthRepository();
