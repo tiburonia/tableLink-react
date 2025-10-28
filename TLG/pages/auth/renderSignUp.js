@@ -759,7 +759,7 @@ function renderSignUp() {
         </form>
 
         <div class="login-link">
-          <p class="login-text" id="goToLoginBtn">이미 계정이 있으신가요?</p>
+          <p class="login-text">이미 계정이 있으신가요?</p>
           <button type="button" class="login-btn" id="goToLoginBtn">로그인하기</button>
         </div>
       </div>
@@ -1292,25 +1292,13 @@ function renderSignUp() {
     // 로그인 페이지로 이동
     if (elements.goToLoginBtn) {
       elements.goToLoginBtn.addEventListener('click', () => {
-      if (typeof renderLogin === 'function') {
-        renderLogin();
-      } else if (typeof window.renderLogin === 'function') {
-        window.renderLogin();
-      } else {
-        const script = document.createElement('script');
-        script.src = '/TLG/pages/auth/renderLogin.js';
-        script.onload = () => {
-          if (typeof window.renderLogin === 'function') {
-            window.renderLogin();
-          } else {
-            alert('로그인 페이지를 불러올 수 없습니다.');
-          }
-        };
-        script.onerror = () => {
-          alert('로그인 페이지를 불러올 수 없습니다.');
-        };
-        document.head.appendChild(script);
-      }
+        console.log('🔄 로그인 페이지로 이동');
+        if (typeof window.renderLogin === 'function') {
+          window.renderLogin();
+        } else {
+          console.error('❌ renderLogin 함수를 찾을 수 없음');
+          window.location.href = '/';
+        }
       });
     } else {
       console.error('❌ goToLoginBtn 요소를 찾을 수 없음');
