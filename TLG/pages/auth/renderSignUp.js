@@ -1255,6 +1255,27 @@ function renderSignUp() {
                 <div class="success-page">
                   <div class="success-icon">✓</div>
                   <h2 class="success-title">회원가입 완료!</h2>
+                  <p class="success-message">${data.user.name || data.user.id}님, 환영합니다!</p>
+                  <button class="primary-btn" id="goToLoginBtn">로그인하러 가기</button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          // 로그인 페이지로 이동 버튼 이벤트
+          setTimeout(() => {
+            const goToLoginBtn = document.getElementById('goToLoginBtn');
+            if (goToLoginBtn) {
+              goToLoginBtn.addEventListener('click', () => {
+                console.log('🔄 로그인 페이지로 이동');
+                if (typeof window.renderLogin === 'function') {
+                  window.renderLogin();
+                } else {
+                  window.location.href = '/';
+                }
+              });
+            }
+          }, 100);
                   <p class="success-message">
                     TableLink에 가입해 주셔서 감사합니다.<br>
                     이제 다양한 매장에서 편리하게 주문하실 수 있습니다.
