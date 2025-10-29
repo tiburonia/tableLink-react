@@ -10,8 +10,9 @@ export const mapDataRepository = {
    */
   async fetchViewportStores(level, bbox) {
     try {
-      const url = `/api/clusters/clusters?level=${level}&bbox=${bbox}`;
-      const response = await fetch(url);
+      const response = await fetch(
+        `/api/clusters/clusters?level=${level}&bbox=${bbox}`
+      );
 
       if (!response.ok) {
         throw new Error(`매장 데이터 조회 실패: ${response.status}`);

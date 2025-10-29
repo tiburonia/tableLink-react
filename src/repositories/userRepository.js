@@ -123,12 +123,12 @@ class UserRepository {
   }
 
   /**
-   * 팔로잉 매장 조회
+   * 즐겨찾기 매장 조회
    */
-  async getFollowingStores(userId) {
+  async getFavoriteStores(userId) {
     const result = await pool.query(`
       SELECT 
-        f.id as following_id,
+        f.id as favorite_id,
         f.created_at,
         s.id,
         s.is_open,
@@ -148,13 +148,13 @@ class UserRepository {
 
     return result.rows.map(store => ({
       id: store.id,
-      followingId: store.following_id,
+      favoriteId: store.favorite_id,
       name: store.name,
       category: store.category,
       ratingAverage: store.rating_average ? parseFloat(store.rating_average) : 0.0,
       reviewCount: store.review_count || 0,
       isOpen: store.is_open !== false,
-      followingDate: store.created_at,
+      favoriteDate: store.created_at,
       coord: store.latitude && store.longitude 
         ? { lat: parseFloat(store.latitude), lng: parseFloat(store.longitude) }
         : null
@@ -263,9 +263,9 @@ class UserRepository {
   }
 
   /**
-   * 팔로잉 존재 확인
+   * 즐겨찾기 존재 확인
    */
-  async checkFollowingExists(userId, storeId) {
+  async checkFavoriteExists(userId, storeId) {
     const result = await pool.query(`
       SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2
     `, [userId, storeId]);
@@ -274,9 +274,9 @@ class UserRepository {
   }
 
   /**
-   * 팔로잉 추가
+   * 즐겨찾기 추가
    */
-  async addFollowing(userId, storeId) {
+  async addFavorite(userId, storeId) {
     await pool.query(`
       INSERT INTO favorites (user_id, store_id)
       VALUES ($1, $2)
@@ -284,27 +284,27 @@ class UserRepository {
   }
 
   /**
-   * 팔로잉 제거
+   * 즐겨찾기 제거
    */
-  async removeFollowing(userId, storeId) {
+  async removeFavorite(userId, storeId) {
     await pool.query(`
       DELETE FROM favorites WHERE user_id = $1 AND store_id = $2
     `, [userId, storeId]);
   }
 
   /**
-   * 매장 팔로잉 수 증가
+   * 매장 즐겨찾기 수 증가
    */
-  async incrementStoreFollowingCount(storeId) {
+  async incrementStoreFavoriteCount(storeId) {
     await pool.query(`
       UPDATE stores SET favorite_count = favorite_count + 1 WHERE id = $1
     `, [storeId]);
   }
 
   /**
-   * 매장 팔로잉 수 감소
+   * 매장 즐겨찾기 수 감소
    */
-  async decrementStoreFollowingCount(storeId) {
+  async decrementStoreFavoriteCount(storeId) {
     await pool.query(`
       UPDATE stores SET favorite_count = GREATEST(favorite_count - 1, 0) WHERE id = $1
     `, [storeId]);

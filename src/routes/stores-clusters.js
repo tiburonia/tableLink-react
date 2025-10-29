@@ -3,7 +3,7 @@ const router = express.Router();
 const pool = require('../db/pool');
 
 // 개별 매장만 반환하는 단순화된 API
-router.get('/', async (req, res, next) => {
+router.get('/clusters', async (req, res) => {
   try {
     const { level, bbox } = req.query;
 
@@ -72,11 +72,11 @@ router.get('/', async (req, res, next) => {
 
   } catch (error) {
     console.error('❌ 개별 매장 API 오류:', error);
-
+    
     // 에러 타입별 상세 응답
     let errorMessage = '매장 데이터 조회 실패';
     let statusCode = 500;
-
+    
     if (error.message.includes('데이터베이스 연결')) {
       errorMessage = '데이터베이스 연결에 실패했습니다';
       statusCode = 503;
@@ -113,7 +113,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
     // bbox 크기 검사 (너무 작거나 큰 영역 방지)
     const lngRange = Math.abs(xmax - xmin);
     const latRange = Math.abs(ymax - ymin);
-
+    
     if (lngRange > 10 || latRange > 10) {
       console.warn('⚠️ bbox 영역이 너무 큽니다:', { lngRange, latRange });
       return [];
@@ -148,7 +148,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
     const bboxResult = await pool.query(bboxQuery, [xmin, ymin, xmax, ymax]);
     const bboxCount = parseInt(bboxResult.rows[0]?.count || 0);
     console.log(`📍 bbox 영역 내 매장 수: ${bboxCount}`);
-
+    
     if (bboxResult.rows[0]) {
       console.log(`📍 DB 좌표 범위: lng(${bboxResult.rows[0].min_lng} ~ ${bboxResult.rows[0].max_lng}), lat(${bboxResult.rows[0].min_lat} ~ ${bboxResult.rows[0].max_lat})`);
     }
@@ -219,7 +219,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
         FROM store_addresses sa
         JOIN stores s ON s.id = sa.store_id
       `;
-
+      
       const debugResult = await pool.query(debugCountQuery, [xmin, ymin, xmax, ymax]);
       console.log('🔍 디버깅 결과:', debugResult.rows[0]);
 
@@ -227,7 +227,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
       try {
         const centerLng = (xmin + xmax) / 2;
         const centerLat = (ymin + ymax) / 2;
-
+        
         const nearestQuery = `
           SELECT sa.store_id, ST_X(sa.geom) as longitude, ST_Y(sa.geom) as latitude, 
                  COALESCE(s.name, '매장명 없음') as name,
@@ -265,7 +265,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
           const storeId = parseInt(row.store_id);
           const latitude = parseFloat(row.latitude);
           const longitude = parseFloat(row.longitude);
-
+          
           if (!storeId || isNaN(latitude) || isNaN(longitude)) {
             console.warn('⚠️ 유효하지 않은 매장 데이터 건너뜀:', {
               store_id: row.store_id,
@@ -277,7 +277,7 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
 
           // 통합된 storeData 객체 형식으로 반환
           const address = `${row.sido || ''} ${row.sigungu || ''} ${row.eupmyeondong || ''}`.trim();
-
+          
           return {
             kind: 'individual',
             id: storeId,
@@ -319,19 +319,19 @@ async function getIndividualStores(xmin, ymin, xmax, ymax) {
 
   } catch (error) {
     console.error('❌ 매장 조회 중 오류:', error);
-
+    
     // DB 연결 문제인지 확인
     if (error.code === 'ECONNREFUSED' || error.code === 'ENOTFOUND') {
       console.error('❌ 데이터베이스 연결 실패');
       throw new Error('데이터베이스 연결에 실패했습니다');
     }
-
+    
     // SQL 오류인지 확인
     if (error.code && error.code.startsWith('4')) {
       console.error('❌ SQL 쿼리 오류:', error.message);
       throw new Error('데이터 조회 중 오류가 발생했습니다');
     }
-
+    
     // 기타 오류
     throw error;
   }

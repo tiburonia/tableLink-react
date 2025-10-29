@@ -278,31 +278,31 @@ window.MapPanelUI = {
   // 패널 드래그 기능 설정
   setupPanelDrag() {
     // setupPanelDrag가 이미 실행되었는지 확인 (중복 실행 방지)
-
-
+    
+    
     const storePanel = document.getElementById('mapStorePanel');
     const panelHandle = document.getElementById('panelHandle');
     if (!storePanel || !panelHandle) {
       console.error('❌ 패널 요소를 찾을 수 없습니다');
       return;
     }
-
+    
     let isDragging = false;
     let startY;
     let startHeight;
-
+    
     // 최초 렌더링 검증 (window 전역 객체 사용)
     if (typeof window.mapPanelFirstRender === 'undefined') {
       window.mapPanelFirstRender = true;
     }
-
+    
     const isFirstRender = window.mapPanelFirstRender;
     let currentHeight;
-
+    
     console.log('🔍 패널 렌더링 검증 (window 전역 객체)');
     console.log('  - window.mapPanelFirstRender:', window.mapPanelFirstRender);
     console.log('  - isFirstRender:', isFirstRender);
-
+    
     if (isFirstRender) {
       // 최초 렌더링: expanded 클래스 추가 + 동적 400px 높이 설정
       console.log('✨ 최초 렌더링 - expanded 클래스 + 400px 높이 설정');
@@ -320,7 +320,7 @@ window.MapPanelUI = {
       storePanel.style.height = '125px';
       currentHeight = 125;
     }
-
+    
     console.log('✅ 패널 초기화 완료 - currentHeight:', currentHeight);
 
     // 마우스 이벤트
@@ -942,7 +942,7 @@ window.MapPanelUI = {
       console.log('🆕 패널이 없어서 새로 생성 - 이벤트 리스너 플래그 초기화');
       document.body.insertAdjacentHTML('beforeend', this.renderPanelHTML());
       document.body.insertAdjacentHTML('beforeend', this.getPanelStyles());
-
+      
       // DOM이 새로 생성되었으므로 이벤트 리스너 플래그 초기화
       window.mapPanelDragSetup = false;
     }

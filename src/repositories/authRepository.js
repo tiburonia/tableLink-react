@@ -133,4 +133,5 @@ class AuthRepository {
     return result.rows;
   }
 }
+
 module.exports = new AuthRepository();
