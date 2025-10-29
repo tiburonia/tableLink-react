@@ -183,9 +183,13 @@ export const regularPageController = {
         currentX = e.touches[0].clientX;
         const deltaX = currentX - startX;
 
-        // 오른쪽으로만 드래그 허용
+        // 오른쪽으로만 드래그 허용 (패널이 열리는 방향)
         if (deltaX > 0) {
-          const translateX = Math.min(deltaX, 280);
+          const translateX = Math.min(deltaX, 280); // 최대 280px까지 이동
+          sidePanel.style.transform = `translate3d(${translateX}px, 0, 0)`;
+        } else {
+          // 왼쪽으로 드래그할 경우 패널을 닫는 동작을 하기 위함
+          const translateX = Math.max(deltaX, -280); // 최대 -280px까지 이동 (닫기 동작)
           sidePanel.style.transform = `translate3d(${translateX}px, 0, 0)`;
         }
       });
@@ -198,13 +202,13 @@ export const regularPageController = {
 
         const deltaX = currentX - startX;
 
-        // 140px 이상 드래그하면 닫기
-        if (deltaX > 140) {
+        // 드래그 거리가 충분하면 닫기 (왼쪽으로 드래그)
+        if (deltaX < -100) {
           closeSidePanel();
+        } else {
+          // 드래그 거리가 충분하지 않으면 원래 위치로 복귀
+          sidePanel.style.transform = 'translate3d(0, 0, 0)';
         }
-
-        // 원래 위치로 복귀
-        sidePanel.style.transform = '';
       });
     }
 

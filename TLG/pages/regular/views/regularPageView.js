@@ -1825,12 +1825,12 @@ export const regularPageView = {
         .side-panel {
           position: fixed;
           top: 0;
-          right: 0;
+          left: 0;
           width: 280px;
           height: 100%;
           background: #ffffff;
-          box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
-          transform: translate3d(100%, 0, 0);
+          box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+          transform: translate3d(-100%, 0, 0);
           transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
           z-index: 9999;
           display: flex;
