@@ -267,7 +267,7 @@ class UserRepository {
    */
   async checkFavoriteExists(userId, storeId) {
     const result = await pool.query(`
-      SELECT id FROM favorites WHERE user_id = $1 AND store_id = $2
+      SELECT id FROM following WHERE user_id = $1 AND store_id = $2
     `, [userId, storeId]);
 
     return result.rows.length > 0;
@@ -278,7 +278,7 @@ class UserRepository {
    */
   async addFavorite(userId, storeId) {
     await pool.query(`
-      INSERT INTO favorites (user_id, store_id)
+      INSERT INTO following (user_id, store_id)
       VALUES ($1, $2)
     `, [userId, storeId]);
   }
@@ -288,7 +288,7 @@ class UserRepository {
    */
   async removeFavorite(userId, storeId) {
     await pool.query(`
-      DELETE FROM favorites WHERE user_id = $1 AND store_id = $2
+      DELETE FROM following WHERE user_id = $1 AND store_id = $2
     `, [userId, storeId]);
   }
 

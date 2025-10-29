@@ -32,6 +32,7 @@ export const favoriteService = {
   async toggleFavorite(store, userId) {
     const storeId = store.id || store.storeId;
     const storeName = store.name || store.storeName;
+    const userPk =  window.userInfo.userId
 
     if (!storeId) {
       throw new Error('매장 정보가 올바르지 않습니다.');
@@ -44,12 +45,12 @@ export const favoriteService = {
     console.log(`🔄 즐겨찾기 토글 시작: storeId=${storeId}, storeName=${storeName}`);
 
     // 현재 즐겨찾기 상태 확인
-    const currentStatus = await this.getFavoriteStatus(userId, storeId);
+    const currentStatus = await this.getFavoriteStatus(userPk, storeId);
     console.log(`📋 현재 즐겨찾기 상태: ${currentStatus ? '등록됨' : '등록안됨'}`);
 
     // 서버에 즐겨찾기 토글 요청
     const action = currentStatus ? 'remove' : 'add';
-    const result = await favoriteRepository.toggleFavorite(userId, storeId, action);
+    const result = await favoriteRepository.toggleFavorite(userPk, storeId, action);
 
     // 로컬 스토리지 캐시 무효화
     this.invalidateCache(userId);

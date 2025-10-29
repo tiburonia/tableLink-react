@@ -161,7 +161,7 @@ class UserService {
       }
 
       await userRepository.addFavorite(userId, storeId);
-      await userRepository.incrementStoreFavoriteCount(storeId);
+      //await userRepository.incrementStoreFavoriteCount(storeId);
 
       console.log(`✅ 사용자 ${userId}가 매장 ${store.name} 즐겨찾기 추가`);
 
