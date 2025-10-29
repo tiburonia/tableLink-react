@@ -6,13 +6,6 @@ async function renderRegularPage() {
   try {
     console.log('❤️ 단골매장 페이지 진입');
 
-    // renderFeed 함수 먼저 전역 등록 (HTML에서 사용하므로)
-    if (!window.renderFeed) {
-      const feedModule = await import('/TLG/pages/feed/renderFeed.js');
-      // renderFeed는 이미 모듈에서 window에 등록되지만, 확실하게 하기 위해 체크
-      console.log('✅ renderFeed 함수 사전 로드 완료');
-    }
-
     // Controller 동적 로드
     const { regularPageController } = await import('/TLG/pages/regular/controllers/regularPageController.js');
 

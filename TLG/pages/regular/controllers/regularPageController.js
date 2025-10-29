@@ -98,8 +98,30 @@ export const regularPageController = {
       });
     }
 
+    // 피드로 이동 (이벤트 위임)
+    document.addEventListener('click', async (e) => {
+      const target = e.target.closest('[data-action="goto-feed"]');
+      if (target) {
+        e.preventDefault();
+        await this.navigateToFeed();
+      }
+    });
+
     // 사이드패널 이벤트
     this.setupSidePanelEvents();
+  },
+
+  /**
+   * 피드 페이지로 이동
+   */
+  async navigateToFeed() {
+    try {
+      const { default: renderFeed } = await import('/TLG/pages/feed/renderFeed.js');
+      await renderFeed();
+    } catch (error) {
+      console.error('❌ 피드 페이지 이동 실패:', error);
+      alert('피드 페이지를 불러올 수 없습니다.');
+    }
   },
 
   /**
