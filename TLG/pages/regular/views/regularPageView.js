@@ -22,6 +22,8 @@ export const regularPageView = {
             ${this.renderRecentVisited(stores)}
             ${this.renderStoresList(stores)}
             ${this.renderFollowingPostsPreview(posts)}
+
+            
           </div>
 
           <!-- 팔로우 매장 탭 -->
@@ -73,7 +75,7 @@ export const regularPageView = {
             주변 매장
           </button>
           <button class="tab-nav-btn" data-tab="following" id="followingTab">
-            팔로우 매장
+            팔로우·단골 매장
           </button>
         </div>
       </header>
@@ -488,6 +490,7 @@ export const regularPageView = {
           ${previewPosts.map(post => this.renderPostCardCompact(post)).join('')}
         </div>
       </section>
+      <!-- lazy-loading 방식으로 끊임없이 추가 게시물 로딩 -->
     `;
   },
 

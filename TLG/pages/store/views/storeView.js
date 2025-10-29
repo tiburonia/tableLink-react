@@ -28,11 +28,13 @@ export const storeView = {
     main.innerHTML = `
     <div class="store-fixed-header">
       <button id="backBtn" class="header-btn" data-action="back-to-map" aria-label="뒤로가기">
-        <span class="header-btn-ico">⬅️</span>
+        <span class="header-btn-ico"><svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M15 18L9 12L15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg></span>
       </button>
 
       <button id="TLL" class="header-btn" data-action="start-tll" aria-label="QR결제">
-        <span class="header-btn-ico">📱</span>
+        <span class="header-btn-ico"><img width="30" height="30" src="https://img.icons8.com/external-tanah-basah-glyph-tanah-basah/30/external-qr-metaverse-tanah-basah-glyph-tanah-basah.png" alt="external-qr-metaverse-tanah-basah-glyph-tanah-basah"></span>
       </button>
     </div>
 

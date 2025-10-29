@@ -90,7 +90,7 @@ export const accountSettingsView = {
           </button>
           
           <button class="sns-button apple ${connections.apple ? 'connected' : ''}" id="appleBtn" data-sns="apple">
-            <img style="display: block;-webkit-user-select: none;margin: auto;cursor: zoom-out;background-color: hsl(0, 0%, 90%);transition: background-color 300ms;" src="https://w7.pngwing.com/pngs/619/38/png-transparent-computer-icons-apple-logo-monochrome-black.png" width="32" height="32">
+            <img style="display: block;-webkit-user-select: none;cursor: zoom-out;background-color: hsl(0, 0%, 90%);transition: background-color 300ms;" src="https://w7.pngwing.com/pngs/619/38/png-transparent-computer-icons-apple-logo-monochrome-black.png" width="32" height="32">
             <span>애플</span>
           </button>
         </div>
