@@ -353,39 +353,63 @@ export const regularPageView = {
   },
 
   /**
-   * 컴팩트 게시물 카드 (미리보기용)
+   * 컴팩트 게시물 카드 (미리보기용 - 인스타그램 스타일)
    */
   renderPostCardCompact(post) {
     const relativeTime = window.regularPageService?.getRelativeTime(post.createdAt) || '최근';
     const typeInfo = this.getTypeInfo(post.postType);
-    const truncatedContent = post.content.length > 40
-      ? post.content.substring(0, 40) + '...'
+    const truncatedContent = post.content.length > 80
+      ? post.content.substring(0, 80) + '...'
       : post.content;
 
     return `
-      <article class="post-card-compact-preview" onclick="renderFeed()">
-        <div class="post-compact-left">
-          <span class="post-type-icon" style="color: ${typeInfo.color};">
-            ${typeInfo.icon}
-          </span>
-          <div class="post-compact-info">
-            <h4 class="post-compact-title">${post.title}</h4>
-            <p class="post-compact-preview">${truncatedContent}</p>
-            <div class="post-compact-meta">
-              <span class="post-compact-store">${post.storeName}</span>
+      <article class="post-card-compact-preview instagram-style" onclick="renderFeed()">
+        <div class="post-header-compact">
+          <div class="post-header-left">
+            <span class="store-avatar">${post.storeLogo || '🏪'}</span>
+            <div class="post-header-info">
+              <h4 class="post-compact-store-name">${post.storeName}</h4>
               <span class="post-compact-time">${relativeTime}</span>
             </div>
           </div>
+          <span class="post-type-badge-compact" style="background: ${typeInfo.color}20; color: ${typeInfo.color};">
+            ${typeInfo.icon}
+          </span>
         </div>
+
         ${post.hasImage ? `
-          <div class="post-compact-thumb">
+          <div class="post-image-large">
             <img 
               src="${post.imageUrl || '/TableLink.png'}" 
-              alt="매장 소식"
+              alt="${post.title}"
               onerror="this.src='/TableLink.png'"
             >
           </div>
         ` : ''}
+
+        <div class="post-content-compact">
+          <h3 class="post-compact-title-large">${post.title}</h3>
+          <p class="post-compact-preview-large">${truncatedContent}</p>
+        </div>
+
+        <div class="post-actions-compact">
+          <button class="action-btn-compact" onclick="event.stopPropagation()">
+            <span class="action-icon">${post.hasLiked ? '❤️' : '🤍'}</span>
+            <span class="action-text">좋아요 ${post.likes}</span>
+          </button>
+          <button class="action-btn-compact" onclick="event.stopPropagation()">
+            <span class="action-icon">💬</span>
+            <span class="action-text">댓글 ${post.comments}</span>
+          </button>
+          ${post.hasCoupon ? `
+            <button class="coupon-btn-compact ${post.couponReceived ? 'received' : ''}" 
+                    onclick="event.stopPropagation(); receiveCoupon(${post.id}, ${post.storeId})"
+                    ${post.couponReceived ? 'disabled' : ''}>
+              <span class="coupon-icon">${post.couponReceived ? '✓' : '🎁'}</span>
+              <span class="coupon-text">${post.couponReceived ? '받음' : '쿠폰받기'}</span>
+            </button>
+          ` : ''}
+        </div>
       </article>
     `;
   },
@@ -1260,9 +1284,9 @@ export const regularPageView = {
           box-shadow: 0 4px 16px rgba(255, 138, 0, 0.3);
         }
 
-        /* ===== 팔로우 매장 게시물 미리보기 ===== */
+        /* ===== 팔로우 매장 게시물 미리보기 (인스타그램 스타일) ===== */
         .following-posts-preview-section {
-          padding: 16px 20px;
+          padding: 16px 0;
           background: white;
           margin-bottom: 8px;
         }
@@ -1270,27 +1294,31 @@ export const regularPageView = {
         .following-posts-preview-list {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 0;
         }
 
-        .post-card-compact-preview {
+        .post-card-compact-preview.instagram-style {
+          display: flex;
+          flex-direction: column;
+          background: white;
+          border-bottom: 8px solid #f8fafc;
+          cursor: pointer;
+          transition: all 0.2s;
+          padding: 0;
+        }
+
+        .post-card-compact-preview.instagram-style:active {
+          background: #fafafa;
+        }
+
+        .post-header-compact {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 12px;
-          padding: 12px;
-          background: #f9fafb;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.2s;
+          padding: 12px 16px;
         }
 
-        .post-card-compact-preview:active {
-          background: #f3f4f6;
-          transform: scale(0.98);
-        }
-
-        .post-compact-left {
+        .post-header-left {
           display: flex;
           align-items: center;
           gap: 10px;
@@ -1298,18 +1326,26 @@ export const regularPageView = {
           min-width: 0;
         }
 
-        .post-type-icon {
+        .store-avatar {
+          width: 40px;
+          height: 40px;
+          background: linear-gradient(135deg, #FF8A00, #FF9F33);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
           font-size: 20px;
           flex-shrink: 0;
+          box-shadow: 0 2px 8px rgba(255, 138, 0, 0.2);
         }
 
-        .post-compact-info {
+        .post-header-info {
           flex: 1;
           min-width: 0;
         }
 
-        .post-compact-title {
-          margin: 0 0 4px 0;
+        .post-compact-store-name {
+          margin: 0;
           font-size: 14px;
           font-weight: 700;
           color: #1f2937;
@@ -1318,44 +1354,120 @@ export const regularPageView = {
           white-space: nowrap;
         }
 
-        .post-compact-preview {
-          margin: 0 0 4px 0;
-          font-size: 12px;
-          color: #6b7280;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .post-compact-meta {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-size: 11px;
-        }
-
-        .post-compact-store {
-          color: #FF8A00;
-          font-weight: 600;
-        }
-
         .post-compact-time {
+          font-size: 11px;
           color: #9ca3af;
+          font-weight: 500;
         }
 
-        .post-compact-thumb {
-          width: 56px;
-          height: 56px;
-          border-radius: 8px;
-          overflow: hidden;
-          background: #e5e7eb;
+        .post-type-badge-compact {
+          padding: 4px 10px;
+          border-radius: 12px;
+          font-size: 12px;
+          font-weight: 600;
           flex-shrink: 0;
         }
 
-        .post-compact-thumb img {
+        .post-image-large {
+          width: 100%;
+          aspect-ratio: 1 / 1;
+          overflow: hidden;
+          background: #f3f4f6;
+        }
+
+        .post-image-large img {
           width: 100%;
           height: 100%;
           object-fit: cover;
+        }
+
+        .post-content-compact {
+          padding: 12px 16px;
+        }
+
+        .post-compact-title-large {
+          margin: 0 0 6px 0;
+          font-size: 16px;
+          font-weight: 700;
+          color: #1f2937;
+          line-height: 1.4;
+        }
+
+        .post-compact-preview-large {
+          margin: 0;
+          font-size: 14px;
+          color: #6b7280;
+          line-height: 1.5;
+        }
+
+        .post-actions-compact {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 8px 12px 12px 12px;
+          border-top: 1px solid #f3f4f6;
+        }
+
+        .action-btn-compact {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border: none;
+          background: #f9fafb;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 600;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .action-btn-compact:active {
+          background: #f3f4f6;
+          transform: scale(0.97);
+        }
+
+        .action-icon {
+          font-size: 16px;
+        }
+
+        .action-text {
+          font-size: 12px;
+        }
+
+        .coupon-btn-compact {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 14px;
+          border: none;
+          background: linear-gradient(135deg, #FF8A00, #FF9F33);
+          color: white;
+          border-radius: 8px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-left: auto;
+        }
+
+        .coupon-btn-compact:active {
+          transform: scale(0.97);
+        }
+
+        .coupon-btn-compact.received {
+          background: #e5e7eb;
+          color: #9ca3af;
+          cursor: not-allowed;
+        }
+
+        .coupon-icon {
+          font-size: 14px;
+        }
+
+        .coupon-text {
+          font-size: 12px;
         }
 
         /* ===== 즐겨찾기 매장 ===== */
