@@ -59,23 +59,58 @@ export const regularPageController = {
    * 이벤트 리스너 설정
    */
   setupEventListeners() {
-    // 정렬 버튼
-    const sortBtn = document.getElementById('sortBtn');
-    if (sortBtn) {
-      sortBtn.addEventListener('click', () => {
-        console.log('정렬 버튼 클릭');
-        alert('정렬 기능은 곧 구현됩니다!');
+    // 사이드 메뉴 버튼
+    const sideMenuBtn = document.getElementById('sideMenuBtn');
+    if (sideMenuBtn) {
+      sideMenuBtn.addEventListener('click', () => {
+        console.log('사이드 메뉴 클릭');
+        alert('사이드 메뉴 기능은 곧 구현됩니다!');
       });
     }
 
-    // 검색 버튼
-    const searchBtn = document.getElementById('searchBtn');
-    if (searchBtn) {
-      searchBtn.addEventListener('click', () => {
-        console.log('검색 버튼 클릭');
-        if (typeof renderSearch === 'function') {
-          renderSearch('');
+    // 알림 버튼
+    const notificationBtn = document.getElementById('notificationBtn');
+    if (notificationBtn) {
+      notificationBtn.addEventListener('click', () => {
+        console.log('알림 버튼 클릭');
+        if (typeof renderNotification === 'function') {
+          renderNotification();
+        } else {
+          alert('알림 기능은 곧 구현됩니다!');
         }
+      });
+    }
+
+    // 메시지 버튼
+    const messageBtn = document.getElementById('messageBtn');
+    if (messageBtn) {
+      messageBtn.addEventListener('click', () => {
+        console.log('메시지 버튼 클릭');
+        alert('메시지 기능은 곧 구현됩니다!');
+      });
+    }
+
+    // 탭 전환 이벤트
+    const followingTab = document.getElementById('followingTab');
+    const nearbyTab = document.getElementById('nearbyTab');
+    const followingPane = document.getElementById('followingPane');
+    const nearbyPane = document.getElementById('nearbyPane');
+
+    if (followingTab && nearbyTab && followingPane && nearbyPane) {
+      followingTab.addEventListener('click', () => {
+        followingTab.classList.add('active');
+        nearbyTab.classList.remove('active');
+        followingPane.style.display = 'block';
+        nearbyPane.style.display = 'none';
+        console.log('팔로우 매장 탭 활성화');
+      });
+
+      nearbyTab.addEventListener('click', () => {
+        nearbyTab.classList.add('active');
+        followingTab.classList.remove('active');
+        nearbyPane.style.display = 'block';
+        followingPane.style.display = 'none';
+        console.log('주변 매장 탭 활성화');
       });
     }
   },

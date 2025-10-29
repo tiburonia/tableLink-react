@@ -14,19 +14,21 @@ export const regularPageView = {
       <div class="regular-page-container">
         ${this.renderHeader(summary)}
 
-        <!-- Regular Pane (단골 매장) -->
-        <div class="regular-pane">
-          ${this.renderFavoriteStoresPreview(favoriteStores)}
-          ${this.renderStoreFeed(posts)}
-          ${this.renderRecentVisited(stores)}
-          ${this.renderStoresList(stores)}
+        <!-- 탭 컨텐츠 영역 -->
+        <div class="tab-content-area">
+          <!-- 팔로우 매장 탭 -->
+          <div class="tab-pane active" id="followingPane">
+            ${this.renderStoreFeed(posts)}
+          </div>
+
+          <!-- 주변 매장 탭 -->
+          <div class="tab-pane" id="nearbyPane" style="display:none;">
+            ${this.renderFavoriteStoresPreview(favoriteStores)}
+            ${this.renderRecentVisited(stores)}
+            ${this.renderStoresList(stores)}
+          </div>
         </div>
 
-        <!-- Favorite Pane (즐겨찾기 전체) -->
-        <div class="favorite-pane" style="display:none">
-          ${this.renderFavoriteListGrid(favoriteStores)}
-        </div>
-        ${this.renderLocalToggle()}
         ${this.renderBottomNav()}
       </div>
       ${this.getStyles()}
@@ -40,77 +42,63 @@ export const regularPageView = {
     return `
       <header class="regular-header">
         <div class="header-content">
-          <h1 class="page-title">🍽️ 내 맛집</h1>
+          <button class="icon-btn hamburger-btn" id="sideMenuBtn" aria-label="메뉴">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <line x1="3" y1="18" x2="21" y2="18"/>
+            </svg>
+          </button>
+          <h1 class="page-title">내 맛집</h1>
           <div class="header-actions">
-            <button class="icon-btn" id="searchBtn" aria-label="검색">
+            <button class="icon-btn" id="notificationBtn" aria-label="알림">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+              <span class="notification-badge">3</span>
+            </button>
+            <button class="icon-btn" id="messageBtn" aria-label="메시지">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
               </svg>
             </button>
           </div>
+        </div>
+        
+        <!-- 탭 네비게이션 -->
+        <div class="tab-navigation">
+          <button class="tab-nav-btn active" data-tab="following" id="followingTab">
+            팔로우 매장
+          </button>
+          <button class="tab-nav-btn" data-tab="nearby" id="nearbyTab">
+            주변 매장
+          </button>
         </div>
       </header>
     `;
   },
 
-  /**
-   * 로컬 토글 바 (단골/즐겨찾기)
-   */
-  renderLocalToggle() {
-    return `
-      <div class="local-toggle">
-        <button class="toggle-btn active" data-tab="regular">❤️ 단골</button>
-        <button class="toggle-btn" data-tab="favorite">⭐ 즐겨찾기</button>
-      </div>
-    `;
-  },
+  
 
   /**
    * 매장 소식 피드 섹션
    */
   renderStoreFeed(posts) {
-    if (!posts || posts.length === 0) return '';
-
-    const newPostsCount = posts.filter(p => {
-      const diff = Date.now() - new Date(p.createdAt);
-      return diff < 24 * 60 * 60 * 1000;
-    }).length;
-
-    const previewPosts = posts.slice(0, 3);
+    if (!posts || posts.length === 0) {
+      return `
+        <div class="feed-empty-state">
+          <div class="empty-icon">📭</div>
+          <h3>팔로우 중인 매장이 없습니다</h3>
+          <p>자주 가는 매장을 팔로우하고<br>최신 소식을 받아보세요!</p>
+        </div>
+      `;
+    }
 
     return `
-      <section class="feed-section">
-        ${newPostsCount > 0 ? `
-          <div class="new-posts-banner">
-            <span class="banner-icon">🔔</span>
-            <span class="banner-text">새로운 단골 소식 ${newPostsCount}개</span>
-          </div>
-        ` : ''}
-
-        <div class="section-header-compact">
-          <h2 class="section-title">🗞 단골 매장 소식</h2>
-          <button class="view-all-btn" onclick="renderFeed()">
-            전체보기
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 18l6-6-6-6"/>
-            </svg>
-          </button>
-        </div>
-
-        <div class="feed-list-preview">
-          ${previewPosts.map(post => this.renderPostCard(post)).join('')}
-        </div>
-
-        ${posts.length > 3 ? `
-          <button class="show-more-btn" onclick="renderFeed()">
-            <span>더 많은 소식 보기 (${posts.length - 3}개)</span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M19 9l-7 7-7-7"/>
-            </svg>
-          </button>
-        ` : ''}
-      </section>
+      <div class="feed-list">
+        ${posts.map(post => this.renderPostCard(post)).join('')}
+      </div>
     `;
   },
 
@@ -509,26 +497,29 @@ export const regularPageView = {
         /* ===== 헤더 ===== */
         .regular-header {
           background: white;
-          padding: 0px 20px 
           position: sticky;
           top: 0;
           z-index: 100;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         }
 
         .header-content {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 8px;
+          padding: 12px 20px;
+        }
+
+        .hamburger-btn {
+          margin-right: 12px;
         }
 
         .page-title {
           margin: 0;
-          font-size: 24px;
-          font-weight: 800;
+          font-size: 20px;
+          font-weight: 700;
           color: #1f2937;
-          letter-spacing: -0.02em;
+          flex: 1;
         }
 
         .header-actions {
@@ -537,9 +528,9 @@ export const regularPageView = {
         }
 
         .icon-btn {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
           border: none;
           background: #f3f4f6;
           color: #6b7280;
@@ -548,6 +539,7 @@ export const regularPageView = {
           align-items: center;
           justify-content: center;
           transition: all 0.2s;
+          position: relative;
         }
 
         .icon-btn:active {
@@ -555,86 +547,114 @@ export const regularPageView = {
           background: #e5e7eb;
         }
 
-        .header-subtitle {
-          margin: 0;
-          font-size: 13px;
-          color: #9ca3af;
-          font-weight: 500;
-        }
-
-        /* ===== 로컬 토글 (Floating Capsule Segmented Control) ===== */
-        .local-toggle {
-          position: fixed;
-          left: 50%;
-          bottom: 90px;
-          transform: translateX(-50%);
-          display: inline-flex;
+        .notification-badge {
+          position: absolute;
+          top: 6px;
+          right: 6px;
+          background: #ef4444;
+          color: white;
+          font-size: 10px;
+          font-weight: 700;
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          display: flex;
           align-items: center;
-          padding: 4px;
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
-          border-radius: 100px;
-          box-shadow:
-            0 8px 32px rgba(0, 0, 0, 0.08),
-            0 2px 8px rgba(0, 0, 0, 0.04),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
-          border: 1px solid rgba(0, 0, 0, 0.06);
-          z-index: 90;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          justify-content: center;
+          border: 2px solid white;
         }
 
-        .local-toggle:hover {
-          box-shadow:
-            0 12px 40px rgba(0, 0, 0, 0.12),
-            0 4px 12px rgba(0, 0, 0, 0.06),
-            inset 0 1px 0 rgba(255, 255, 255, 0.9);
+        /* ===== 탭 네비게이션 ===== */
+        .tab-navigation {
+          display: flex;
+          border-bottom: 1px solid #e5e7eb;
+          background: white;
         }
 
-        .toggle-btn {
-          min-width: 100px;
-          position: relative;
+        .tab-nav-btn {
+          flex: 1;
+          padding: 14px 16px;
           border: none;
           background: transparent;
-          border-radius: 100px;
-          padding: 10px 12px;
-          font-size: 14px;
+          color: #9ca3af;
+          font-size: 15px;
           font-weight: 600;
-          color: #6b7280;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          white-space: nowrap;
-          z-index: 1;
+          position: relative;
+          transition: all 0.2s;
         }
 
-        .toggle-btn:hover:not(.active) {
-          color: #374151;
+        .tab-nav-btn.active {
+          color: #FF8A00;
         }
 
-        .toggle-btn.active {
-          background: linear-gradient(135deg, #FF8A00 0%, #FF9F33 100%);
-          color: white;
-          font-weight: 700;
-          box-shadow:
-            0 4px 16px rgba(255, 138, 0, 0.25),
-            0 2px 8px rgba(255, 138, 0, 0.15),
-            inset 0 1px 0 rgba(255, 255, 255, 0.2);
-          transform: scale(1.02);
-        }
-
-        .toggle-btn.active::before {
+        .tab-nav-btn.active::after {
           content: '';
           position: absolute;
-          inset: 0;
-          border-radius: 100px;
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
-          pointer-events: none;
+          bottom: -1px;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: #FF8A00;
+          border-radius: 3px 3px 0 0;
         }
 
-        /* ===== Pane 전환 ===== */
-        .regular-pane,
-        .favorite-pane {
-          transition: opacity 0.25s ease, transform 0.25s ease;
+        .tab-nav-btn:hover:not(.active) {
+          color: #6b7280;
+          background: #f9fafb;
+        }
+
+        /* ===== 탭 컨텐츠 영역 ===== */
+        .tab-content-area {
+          flex: 1;
+          overflow-y: auto;
+          background: #fafafa;
+        }
+
+        .tab-pane {
+          min-height: 100%;
+          animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        /* ===== 피드 리스트 ===== */
+        .feed-list {
+          padding: 12px 0;
+        }
+
+        .feed-empty-state {
+          text-align: center;
+          padding: 80px 20px;
+        }
+
+        .feed-empty-state .empty-icon {
+          font-size: 64px;
+          margin-bottom: 16px;
+          opacity: 0.5;
+        }
+
+        .feed-empty-state h3 {
+          margin: 0 0 8px 0;
+          font-size: 18px;
+          font-weight: 700;
+          color: #1f2937;
+        }
+
+        .feed-empty-state p {
+          margin: 0;
+          font-size: 14px;
+          color: #9ca3af;
+          line-height: 1.6;
         }
 
         /* ===== 최근 방문 섹션 ===== */
@@ -830,48 +850,18 @@ export const regularPageView = {
           font-weight: 500;
         }
 
-        /* ===== 단골 소식 피드 섹션 (미니멀) ===== */
-        .feed-section {
-          background: white;
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 16px;
-        }
-
-        .new-posts-banner {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          color: white;
-          padding: 8px 12px;
-          border-radius: 8px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          margin-bottom: 12px;
-          font-size: 12px;
-          font-weight: 600;
-        }
-
-        .banner-icon {
-          font-size: 14px;
-        }
-
-        .feed-list-preview {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
+        /* ===== 단골 소식 피드 섹션 ===== */
         .feed-post-card {
-          background: #f8f9fa;
-          border-radius: 10px;
-          padding: 12px;
+          background: white;
+          margin-bottom: 8px;
+          padding: 16px 20px;
+          border-bottom: 8px solid #f8fafc;
           transition: all 0.2s;
           cursor: pointer;
         }
 
-        .feed-post-card:hover {
-          background: #f1f3f5;
-          transform: translateX(2px);
+        .feed-post-card:active {
+          background: #f9fafb;
         }
 
         .post-card-compact {
