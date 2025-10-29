@@ -23,7 +23,7 @@ export const regularPageView = {
             ${this.renderStoresList(stores)}
             ${this.renderFollowingPostsPreview(posts)}
 
-            
+
           </div>
 
           <!-- 팔로우 매장 탭 -->
@@ -221,8 +221,6 @@ export const regularPageView = {
     `;
   },
 
-
-
   /**
    * 매장 소식 피드 섹션
    */
@@ -255,50 +253,50 @@ export const regularPageView = {
       : post.content;
 
     return `
-      <article class="feed-post-card" onclick="renderFeed()">
-        <div class="post-card-compact">
-          <div class="post-left">
-            <span class="store-emoji-small">${post.storeLogo}</span>
-            <div class="post-info">
-              <div class="post-header-row">
-                <span class="post-type-tag" style="color: ${typeInfo.color};">
-                  ${typeInfo.icon}
-                </span>
-                <h4 class="post-card-title-compact">${post.title}</h4>
-              </div>
-              <p class="post-card-preview">${truncatedContent}</p>
-              <div class="post-meta-row">
-                <span class="store-name-small">${post.storeName}</span>
-                <span class="post-time-small">${relativeTime}</span>
-              </div>
+      <article class="feed-post-card instagram-style" onclick="renderFeed()">
+        <div class="post-header-compact">
+          <div class="post-header-left">
+            <span class="store-avatar">${post.storeLogo || '🏪'}</span>
+            <div class="post-header-info">
+              <h4 class="post-compact-store-name">${post.storeName}</h4>
+              <span class="post-compact-time">${relativeTime}</span>
             </div>
           </div>
-
-          ${post.hasImage ? `
-            <div class="post-thumbnail">
-              <img 
-                src="${post.imageUrl || '/TableLink.png'}" 
-                alt="매장 소식"
-                onerror="this.src='/TableLink.png'"
-              >
-            </div>
-          ` : ''}
+          <span class="post-type-badge-compact" style="background: ${typeInfo.color}20; color: ${typeInfo.color};">
+            ${typeInfo.icon}
+          </span>
         </div>
 
-        <div class="post-actions-minimal">
-          <button class="action-btn-minimal" onclick="event.stopPropagation(); toggleLike(${post.id})">
-            <span>${post.hasLiked ? '❤️' : '🤍'}</span>
-            <span class="action-count">${post.likes}</span>
+        ${post.hasImage ? `
+          <div class="post-image-large">
+            <img 
+              src="${post.imageUrl || '/TableLink.png'}" 
+              alt="${post.title}"
+              onerror="this.src='/TableLink.png'"
+            >
+          </div>
+        ` : ''}
+
+        <div class="post-content-compact">
+          <h3 class="post-compact-title-large">${post.title}</h3>
+          <p class="post-compact-preview-large">${truncatedContent}</p>
+        </div>
+
+        <div class="post-actions-compact">
+          <button class="action-btn-compact" onclick="event.stopPropagation(); toggleLike(${post.id})">
+            <span class="action-icon">${post.hasLiked ? '❤️' : '🤍'}</span>
+            <span class="action-text">${post.likes}</span>
           </button>
-          <button class="action-btn-minimal" onclick="event.stopPropagation(); viewComments(${post.id})">
-            <span>💬</span>
-            <span class="action-count">${post.comments}</span>
+          <button class="action-btn-compact" onclick="event.stopPropagation(); viewComments(${post.id})">
+            <span class="action-icon">💬</span>
+            <span class="action-text">${post.comments}</span>
           </button>
           ${post.hasCoupon ? `
-            <button class="coupon-btn-minimal ${post.couponReceived ? 'received' : ''}"
+            <button class="action-btn-compact coupon ${post.couponReceived ? 'received' : ''}"
                     onclick="event.stopPropagation(); receiveCoupon(${post.id}, ${post.storeId})"
                     ${post.couponReceived ? 'disabled' : ''}>
-              ${post.couponReceived ? '✓' : '🎁'}
+              <span class="action-icon">${post.couponReceived ? '✓' : '🎁'}</span>
+              <span class="action-text">${post.couponReceived ? '받음' : '쿠폰받기'}</span>
             </button>
           ` : ''}
         </div>
