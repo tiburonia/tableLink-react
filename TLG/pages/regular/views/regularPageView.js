@@ -1210,7 +1210,6 @@ export const regularPageView = {
         .stores-section-minimal {
           padding: 12px 20px;
           background: white;
-          margin-bottom: 80px;
         }
 
         .stores-list-minimal {

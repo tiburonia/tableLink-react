@@ -138,7 +138,7 @@ class UserRepository {
         si.review_count,
         sa.latitude,
         sa.longitude
-      FROM favorites f
+      FROM following f
       JOIN stores s ON f.store_id = s.id
       LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN store_addresses sa ON s.id = sa.store_id
