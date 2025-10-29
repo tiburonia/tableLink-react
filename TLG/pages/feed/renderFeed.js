@@ -3,7 +3,7 @@
  * 단골 소식 피드 페이지 진입점
  */
 
-async function renderFeed(tab = 'following') {
+async function renderFeed(tab = 'all') {
   try {
     console.log('📰 단골 소식 피드 페이지 진입');
 
@@ -39,25 +39,8 @@ async function switchFeedTab(tab) {
   }
 }
 
-// 사이드 패널 제어 함수
-function openSidePanel() {
-  const panel = document.getElementById('sidePanel');
-  if (panel) {
-    panel.classList.add('active');
-  }
-}
-
-function closeSidePanel() {
-  const panel = document.getElementById('sidePanel');
-  if (panel) {
-    panel.classList.remove('active');
-  }
-}
-
 // 전역으로 노출
 window.renderFeed = renderFeed;
 window.switchFeedTab = switchFeedTab;
-window.openSidePanel = openSidePanel;
-window.closeSidePanel = closeSidePanel;
 
 console.log('✅ renderFeed 함수 전역 등록 완료');

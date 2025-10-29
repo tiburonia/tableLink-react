@@ -8,12 +8,12 @@ import { feedService } from '/TLG/pages/feed/services/feedService.js';
 import { feedView } from '/TLG/pages/feed/views/feedView.js';
 
 export const feedController = {
-  currentTab: 'following',
+  currentTab: 'all',
 
   /**
    * 피드 페이지 초기화
    */
-  async init(tab = 'following') {
+  async init(tab = 'all') {
     console.log('📰 단골 소식 피드 페이지 초기화 시작');
 
     try {
