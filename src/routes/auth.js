@@ -80,4 +80,10 @@ router.post('/users/check-guest-orders', authController.checkGuestOrders);
  */
 router.get('/users/favorite/status/:userId/:storeId', userController.getFavoriteStatus);
 
+// 팔로잉 상태 조회 (users 라우터로 이동됨)
+// router.get('/following/status/:userId/:storeId', authController.getFollowingStatus.bind(authController));
+
+// 팔로잉 토글 (users 라우터로 이동됨)
+// router.post('/users/following/toggle', authController.toggleFollowing.bind(authController));
+
 module.exports = router;
