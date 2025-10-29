@@ -1,0 +1,120 @@
+ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+
+=== 📍 에러 발생 ===
+🌐 URL: GET /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+📊 Status: 404
+💬 Message: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+🔍 Code: N/A
+📚 Stack Trace:
+Error: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+    at notFound (/home/runner/workspace/src/mw/errors.js:5:17)
+    at Layer.handleRequest (/home/runner/workspace/node_modules/router/lib/layer.js:152:17)
+    at trimPrefix (/home/runner/workspace/node_modules/router/index.js:342:13)
+    at /home/runner/workspace/node_modules/router/index.js:297:9
+    at processParams (/home/runner/workspace/node_modules/router/index.js:582:12)
+    at next (/home/runner/workspace/node_modules/router/index.js:291:5)
+    at SendStream.error (/home/runner/workspace/node_modules/serve-static/index.js:120:7)
+    at SendStream.emit (node:events:524:28)
+    at SendStream.error (/home/runner/workspace/node_modules/send/index.js:168:17)
+    at SendStream.onStatError (/home/runner/workspace/node_modules/send/index.js:315:12)
+=== 📍 에러 종료 ===
+
+
+=== 📍 에러 발생 ===
+🌐 URL: GET /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+📊 Status: 404
+💬 Message: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+🔍 Code: N/A
+📚 Stack Trace:
+Error: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+    at notFound (/home/runner/workspace/src/mw/errors.js:5:17)
+    at Layer.handleRequest (/home/runner/workspace/node_modules/router/lib/layer.js:152:17)
+    at trimPrefix (/home/runner/workspace/node_modules/router/index.js:342:13)
+    at /home/runner/workspace/node_modules/router/index.js:297:9
+    at processParams (/home/runner/workspace/node_modules/router/index.js:582:12)
+    at next (/home/runner/workspace/node_modules/router/index.js:291:5)
+    at SendStream.error (/home/runner/workspace/node_modules/serve-static/index.js:120:7)
+    at SendStream.emit (node:events:524:28)
+    at SendStream.error (/home/runner/workspace/node_modules/send/index.js:168:17)
+    at SendStream.onStatError (/home/runner/workspace/node_modules/send/index.js:315:12)
+=== 📍 에러 종료 ===
+
+
+=== 📍 에러 발생 ===
+🌐 URL: GET /api/clusters/clusters?level=12&bbox=126.9738158,37.5583951,126.9821842,37.574604
+📊 Status: 404
+💬 Message: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158,37.5583951,126.9821842,37.574604
+🔍 Code: N/A
+📚 Stack Trace:
+Error: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158,37.5583951,126.9821842,37.574604
+    at notFound (/home/runner/workspace/src/mw/errors.js:5:17)
+    at Layer.handleRequest (/home/runner/workspace/node_modules/router/lib/layer.js:152:17)
+    at trimPrefix (/home/runner/workspace/node_modules/router/index.js:342:13)
+    at /home/runner/workspace/node_modules/router/index.js:297:9
+    at processParams (/home/runner/workspace/node_modules/router/index.js:582:12)
+    at next (/home/runner/workspace/node_modules/router/index.js:291:5)
+    at SendStream.error (/home/runner/workspace/node_modules/serve-static/index.js:120:7)
+    at SendStream.emit (node:events:524:28)
+    at SendStream.error (/home/runner/workspace/node_modules/send/index.js:168:17)
+    at SendStream.onStatError (/home/runner/workspace/node_modules/send/index.js:315:12)
+=== 📍 에러 종료 ===
+
+
+=== 📍 에러 발생 ===
+🌐 URL: GET /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+📊 Status: 404
+💬 Message: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+🔍 Code: N/A
+📚 Stack Trace:
+Error: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+    at notFound (/home/runner/workspace/src/mw/errors.js:5:17)
+    at Layer.handleRequest (/home/runner/workspace/node_modules/router/lib/layer.js:152:17)
+    at trimPrefix (/home/runner/workspace/node_modules/router/index.js:342:13)
+    at /home/runner/workspace/node_modules/router/index.js:297:9
+    at processParams (/home/runner/workspace/node_modules/router/index.js:582:12)
+    at next (/home/runner/workspace/node_modules/router/index.js:291:5)
+    at SendStream.error (/home/runner/workspace/node_modules/serve-static/index.js:120:7)
+    at SendStream.emit (node:events:524:28)
+    at SendStream.error (/home/runner/workspace/node_modules/send/index.js:168:17)
+    at SendStream.onStatError (/home/runner/workspace/node_modules/send/index.js:315:12)
+=== 📍 에러 종료 ===
+
+
+=== 📍 에러 발생 ===
+🌐 URL: GET /api/clusters/clusters?level=12&bbox=126.9738158,37.5583951,126.9821842,37.574604
+📊 Status: 404
+💬 Message: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158,37.5583951,126.9821842,37.574604
+🔍 Code: N/A
+📚 Stack Trace:
+Error: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158,37.5583951,126.9821842,37.574604
+    at notFound (/home/runner/workspace/src/mw/errors.js:5:17)
+    at Layer.handleRequest (/home/runner/workspace/node_modules/router/lib/layer.js:152:17)
+    at trimPrefix (/home/runner/workspace/node_modules/router/index.js:342:13)
+    at /home/runner/workspace/node_modules/router/index.js:297:9
+    at processParams (/home/runner/workspace/node_modules/router/index.js:582:12)
+    at next (/home/runner/workspace/node_modules/router/index.js:291:5)
+    at SendStream.error (/home/runner/workspace/node_modules/serve-static/index.js:120:7)
+    at SendStream.emit (node:events:524:28)
+    at SendStream.error (/home/runner/workspace/node_modules/send/index.js:168:17)
+    at SendStream.onStatError (/home/runner/workspace/node_modules/send/index.js:315:12)
+=== 📍 에러 종료 ===
+
+
+=== 📍 에러 발생 ===
+🌐 URL: GET /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+📊 Status: 404
+💬 Message: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+🔍 Code: N/A
+📚 Stack Trace:
+Error: Not Found - /api/clusters/clusters?level=12&bbox=126.9738158%2C37.5583951%2C126.9821842%2C37.574604
+    at notFound (/home/runner/workspace/src/mw/errors.js:5:17)
+    at Layer.handleRequest (/home/runner/workspace/node_modules/router/lib/layer.js:152:17)
+    at trimPrefix (/home/runner/workspace/node_modules/router/index.js:342:13)
+    at /home/runner/workspace/node_modules/router/index.js:297:9
+    at processParams (/home/runner/workspace/node_modules/router/index.js:582:12)
+    at next (/home/runner/workspace/node_modules/router/index.js:291:5)
+    at SendStream.error (/home/runner/workspace/node_modules/serve-static/index.js:120:7)
+    at SendStream.emit (node:events:524:28)
+    at SendStream.error (/home/runner/workspace/node_modules/send/index.js:168:17)
+    at SendStream.onStatError (/home/runner/workspace/node_modules/send/index.js:315:12)
+=== 📍 에러 종료 ===
