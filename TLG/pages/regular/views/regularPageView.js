@@ -454,34 +454,58 @@ export const regularPageView = {
   renderPostCardCompact(post) {
     const relativeTime = window.regularPageService?.getRelativeTime(post.createdAt) || '최근';
     const typeInfo = this.getTypeInfo(post.postType);
-    const truncatedContent = post.content.length > 40
-      ? post.content.substring(0, 40) + '...'
+    const truncatedContent = post.content.length > 80
+      ? post.content.substring(0, 80) + '...'
       : post.content;
 
     return `
-      <article class="post-card-compact-preview" data-action="goto-feed">
-        <div class="post-compact-left">
-          <span class="post-type-icon" style="color: ${typeInfo.color};">
-            ${typeInfo.icon}
-          </span>
-          <div class="post-compact-info">
-            <h4 class="post-compact-title">${post.title}</h4>
-            <p class="post-compact-preview">${truncatedContent}</p>
-            <div class="post-compact-meta">
-              <span class="post-compact-store">${post.storeName}</span>
+      <article class="post-card-compact-preview instagram-style" data-action="goto-feed">
+        <div class="post-header-compact">
+          <div class="post-header-left">
+            <span class="store-avatar">${post.storeLogo || '🏪'}</span>
+            <div class="post-header-info">
+              <h4 class="post-compact-store-name">${post.storeName}</h4>
               <span class="post-compact-time">${relativeTime}</span>
             </div>
           </div>
+          <span class="post-type-badge-compact" style="background: ${typeInfo.color}20; color: ${typeInfo.color};">
+            ${typeInfo.icon}
+          </span>
         </div>
+
         ${post.hasImage ? `
-          <div class="post-compact-thumb">
+          <div class="post-image-large">
             <img 
               src="${post.imageUrl || '/TableLink.png'}" 
-              alt="매장 소식"
+              alt="${post.title}"
               onerror="this.src='/TableLink.png'"
             >
           </div>
         ` : ''}
+
+        <div class="post-content-compact">
+          <h3 class="post-compact-title-large">${post.title}</h3>
+          <p class="post-compact-preview-large">${truncatedContent}</p>
+        </div>
+
+        <div class="post-actions-compact">
+          <button class="action-btn-compact" onclick="event.stopPropagation()">
+            <span class="action-icon">${post.hasLiked ? '❤️' : '🤍'}</span>
+            <span class="action-text">좋아요 ${post.likes}</span>
+          </button>
+          <button class="action-btn-compact" onclick="event.stopPropagation()">
+            <span class="action-icon">💬</span>
+            <span class="action-text">댓글 ${post.comments}</span>
+          </button>
+          ${post.hasCoupon ? `
+            <button class="coupon-btn-compact ${post.couponReceived ? 'received' : ''}" 
+                    onclick="event.stopPropagation(); receiveCoupon(${post.id}, ${post.storeId})"
+                    ${post.couponReceived ? 'disabled' : ''}>
+              <span class="coupon-icon">${post.couponReceived ? '✓' : '🎁'}</span>
+              <span class="coupon-text">${post.couponReceived ? '받음' : '쿠폰받기'}</span>
+            </button>
+          ` : ''}
+        </div>
       </article>
     `;
   },
@@ -1369,7 +1393,7 @@ export const regularPageView = {
           gap: 0;
         }
 
-        .post-card-compact-preview.instagram-style {
+        .post-card-compact-preview {
           display: flex;
           flex-direction: column;
           background: white;
@@ -1379,7 +1403,7 @@ export const regularPageView = {
           padding: 0;
         }
 
-        .post-card-compact-preview.instagram-style:active {
+        .post-card-compact-preview:active {
           background: #fafafa;
         }
 
