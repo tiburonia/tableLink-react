@@ -16,16 +16,16 @@ export const regularPageView = {
 
         <!-- 탭 컨텐츠 영역 -->
         <div class="tab-content-area">
-          <!-- 팔로우 매장 탭 -->
-          <div class="tab-pane active" id="followingPane">
-            ${this.renderStoreFeed(posts)}
-          </div>
-
           <!-- 주변 매장 탭 -->
-          <div class="tab-pane" id="nearbyPane" style="display:none;">
+          <div class="tab-pane active" id="nearbyPane">
             ${this.renderFavoriteStoresPreview(favoriteStores)}
             ${this.renderRecentVisited(stores)}
             ${this.renderStoresList(stores)}
+          </div>
+
+          <!-- 팔로우 매장 탭 -->
+          <div class="tab-pane" id="followingPane" style="display:none;">
+            ${this.renderStoreFeed(posts)}
           </div>
         </div>
 
@@ -68,11 +68,11 @@ export const regularPageView = {
         
         <!-- 탭 네비게이션 -->
         <div class="tab-navigation">
-          <button class="tab-nav-btn active" data-tab="following" id="followingTab">
-            팔로우 매장
-          </button>
-          <button class="tab-nav-btn" data-tab="nearby" id="nearbyTab">
+          <button class="tab-nav-btn active" data-tab="nearby" id="nearbyTab">
             주변 매장
+          </button>
+          <button class="tab-nav-btn" data-tab="following" id="followingTab">
+            팔로우 매장
           </button>
         </div>
       </header>

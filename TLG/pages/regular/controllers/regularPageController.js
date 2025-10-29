@@ -91,26 +91,26 @@ export const regularPageController = {
     }
 
     // 탭 전환 이벤트
-    const followingTab = document.getElementById('followingTab');
     const nearbyTab = document.getElementById('nearbyTab');
-    const followingPane = document.getElementById('followingPane');
+    const followingTab = document.getElementById('followingTab');
     const nearbyPane = document.getElementById('nearbyPane');
+    const followingPane = document.getElementById('followingPane');
 
-    if (followingTab && nearbyTab && followingPane && nearbyPane) {
-      followingTab.addEventListener('click', () => {
-        followingTab.classList.add('active');
-        nearbyTab.classList.remove('active');
-        followingPane.style.display = 'block';
-        nearbyPane.style.display = 'none';
-        console.log('팔로우 매장 탭 활성화');
-      });
-
+    if (nearbyTab && followingTab && nearbyPane && followingPane) {
       nearbyTab.addEventListener('click', () => {
         nearbyTab.classList.add('active');
         followingTab.classList.remove('active');
         nearbyPane.style.display = 'block';
         followingPane.style.display = 'none';
         console.log('주변 매장 탭 활성화');
+      });
+
+      followingTab.addEventListener('click', () => {
+        followingTab.classList.add('active');
+        nearbyTab.classList.remove('active');
+        followingPane.style.display = 'block';
+        nearbyPane.style.display = 'none';
+        console.log('팔로우 매장 탭 활성화');
       });
     }
   },
