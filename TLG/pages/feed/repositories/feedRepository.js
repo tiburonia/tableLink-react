@@ -189,14 +189,13 @@ export const feedRepository = {
     // 필터 적용
     let filteredPosts = allPosts;
     
-    if (filter === 'fav') {
-      // 단골 매장만 필터링 (실제로는 사용자의 단골 매장 ID로 필터)
+    if (filter === 'following') {
+      // 팔로우한 매장만 필터링 (실제로는 사용자의 단골 매장 ID로 필터)
       const regularStoreIds = [386, 497, 173]; // 더미 단골 매장 ID
       filteredPosts = allPosts.filter(post => regularStoreIds.includes(post.storeId));
-    } else if (filter === 'event') {
-      filteredPosts = allPosts.filter(post => post.postType === 'event' || post.postType === 'promotion');
-    } else if (filter === 'menu') {
-      filteredPosts = allPosts.filter(post => post.postType === 'new_menu');
+    } else if (filter === 'nearby') {
+      // 주변 매장 - 모든 게시물 표시
+      filteredPosts = allPosts;
     }
 
     return filteredPosts;

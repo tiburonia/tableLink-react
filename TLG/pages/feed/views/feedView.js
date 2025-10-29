@@ -8,11 +8,12 @@ export const feedView = {
   /**
    * 메인 피드 페이지 렌더링
    */
-  render(data, currentTab = 'all') {
+  render(data, currentTab = 'following') {
     const { posts, totalCount } = data;
 
     return `
       <div class="feed-page-container">
+        ${this.renderSidePanel()}
         ${this.renderHeader()}
         ${this.renderTabs(currentTab)}
         ${this.renderFeedList(posts)}
@@ -23,18 +24,69 @@ export const feedView = {
   },
 
   /**
+   * 사이드 패널 렌더링
+   */
+  renderSidePanel() {
+    return `
+      <div class="side-panel" id="sidePanel">
+        <div class="side-panel-overlay" onclick="closeSidePanel()"></div>
+        <div class="side-panel-content">
+          <div class="side-panel-header">
+            <h3>메뉴</h3>
+            <button class="close-panel-btn" onclick="closeSidePanel()">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+          <div class="side-panel-menu">
+            <button class="panel-menu-item" onclick="renderMyPage(); closeSidePanel();">
+              <span class="menu-icon">👤</span>
+              <span class="menu-label">내 정보</span>
+            </button>
+            <button class="panel-menu-item" onclick="renderRegularPage(); closeSidePanel();">
+              <span class="menu-icon">❤️</span>
+              <span class="menu-label">단골 매장</span>
+            </button>
+            <button class="panel-menu-item" onclick="renderMap(); closeSidePanel();">
+              <span class="menu-icon">🗺️</span>
+              <span class="menu-label">지도</span>
+            </button>
+            <button class="panel-menu-item" onclick="renderNotification(); closeSidePanel();">
+              <span class="menu-icon">🔔</span>
+              <span class="menu-label">알림</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  /**
    * 헤더 렌더링
    */
   renderHeader() {
     return `
       <header class="feed-header">
-        <button class="back-btn" onclick="renderRegularPage()">
+        <button class="hamburger-btn" onclick="openSidePanel()">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
+            <path d="M3 12h18M3 6h18M3 18h18"/>
           </svg>
         </button>
         <h2 class="feed-title">단골 소식</h2>
-        <div class="header-spacer"></div>
+        <div class="header-actions">
+          <button class="header-icon-btn" onclick="renderNotification()">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </button>
+          <button class="header-icon-btn" onclick="alert('메시지 기능은 곧 구현됩니다!')">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+        </div>
       </header>
     `;
   },
@@ -44,10 +96,8 @@ export const feedView = {
    */
   renderTabs(currentTab) {
     const tabs = [
-      { id: 'all', label: '전체', icon: '📢' },
-      { id: 'fav', label: '내 단골', icon: '❤️' },
-      { id: 'event', label: '이벤트', icon: '🎉' },
-      { id: 'menu', label: '신메뉴', icon: '🍽️' }
+      { id: 'following', label: '팔로우 매장', icon: '❤️' },
+      { id: 'nearby', label: '주변 매장', icon: '📍' }
     ];
 
     return `
@@ -57,7 +107,6 @@ export const feedView = {
             class="feed-tab ${currentTab === tab.id ? 'active' : ''}" 
             data-tab="${tab.id}"
             onclick="switchFeedTab('${tab.id}')">
-            <span class="tab-icon">${tab.icon}</span>
             <span class="tab-label">${tab.label}</span>
           </button>
         `).join('')}
@@ -214,13 +263,127 @@ export const feedView = {
           position: relative;
         }
 
+        /* 사이드 패널 */
+        .side-panel {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 200;
+          pointer-events: none;
+          transition: opacity 0.3s ease;
+          opacity: 0;
+        }
+
+        .side-panel.active {
+          pointer-events: all;
+          opacity: 1;
+        }
+
+        .side-panel-overlay {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .side-panel.active .side-panel-overlay {
+          opacity: 1;
+        }
+
+        .side-panel-content {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 280px;
+          height: 100%;
+          background: white;
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+          box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+        }
+
+        .side-panel.active .side-panel-content {
+          transform: translateX(0);
+        }
+
+        .side-panel-header {
+          padding: 20px;
+          border-bottom: 1px solid #e5e7eb;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .side-panel-header h3 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 700;
+          color: #111827;
+        }
+
+        .close-panel-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+          color: #6b7280;
+          transition: all 0.2s;
+        }
+
+        .close-panel-btn:hover {
+          color: #111827;
+        }
+
+        .side-panel-menu {
+          flex: 1;
+          padding: 12px 0;
+          overflow-y: auto;
+        }
+
+        .panel-menu-item {
+          width: 100%;
+          padding: 16px 20px;
+          border: none;
+          background: none;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+          text-align: left;
+        }
+
+        .panel-menu-item:hover {
+          background: #f9fafb;
+        }
+
+        .menu-icon {
+          font-size: 24px;
+          width: 32px;
+          text-align: center;
+        }
+
+        .menu-label {
+          font-size: 16px;
+          font-weight: 600;
+          color: #374151;
+        }
+
         /* 헤더 */
         .feed-header {
           position: sticky;
           top: 0;
           background: white;
           border-bottom: 1px solid #e5e7eb;
-          padding: 12px 16px 12px 16px;
+          padding: 12px 16px;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -229,13 +392,15 @@ export const feedView = {
         }
 
         .feed-title {
+          flex: 1;
+          text-align: center;
           font-size: 18px;
           font-weight: 700;
           color: #111827;
           letter-spacing: -0.5px;
         }
 
-        .back-btn {
+        .hamburger-btn {
           background: none;
           border: none;
           cursor: pointer;
@@ -246,58 +411,68 @@ export const feedView = {
           transition: all 0.2s;
         }
 
-        .back-btn:hover {
+        .hamburger-btn:hover {
           color: #111827;
-          transform: scale(1.1);
         }
 
-        .header-spacer {
-          width: 32px;
+        .header-actions {
+          display: flex;
+          gap: 8px;
+        }
+
+        .header-icon-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 4px;
+          display: flex;
+          align-items: center;
+          color: #374151;
+          transition: all 0.2s;
+        }
+
+        .header-icon-btn:hover {
+          color: #111827;
         }
 
         /* 탭 */
         .feed-tabs {
           position: sticky;
           background: white;
-          padding: 12px 16px 8px 16px;
-          display: flex;
-          gap: 8px;
-          overflow-x: auto;
+          padding: 0;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
           z-index: 99;
-          border-bottom: 1px solid #f3f4f6;
+          border-bottom: 1px solid #e5e7eb;
         }
 
         .feed-tab {
-          flex-shrink: 0;
-          padding: 8px 14px;
-          border-radius: 16px;
+          padding: 14px 16px;
           border: none;
-          background: #f3f4f6;
+          background: white;
           color: #6b7280;
-          font-size: 13px;
+          font-size: 15px;
           font-weight: 600;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 5px;
+          justify-content: center;
+          gap: 6px;
           transition: all 0.2s;
+          border-bottom: 3px solid transparent;
         }
 
         .feed-tab.active {
-          background: #111827;
-          color: white;
+          color: #111827;
+          border-bottom-color: #111827;
         }
 
         .feed-tab:hover {
-          background: #e5e7eb;
-        }
-
-        .feed-tab.active:hover {
-          background: #1f2937;
+          background: #f9fafb;
         }
 
         .tab-icon {
-          font-size: 14px;
+          font-size: 16px;
         }
 
         /* 피드 컨텐츠 */
