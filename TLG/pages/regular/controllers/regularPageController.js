@@ -1,4 +1,3 @@
-
 /**
  * 단골매장 페이지 Controller
  * 흐름 제어 및 이벤트 처리
@@ -17,7 +16,7 @@ export const regularPageController = {
     try {
       // 사용자 정보 가져오기 (AuthManager 사용)
       const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : window.userInfo;
-      
+
       if (!userInfo || !userInfo.userId) {
         console.warn('⚠️ 로그인 필요');
         alert('로그인이 필요합니다.');
@@ -59,60 +58,140 @@ export const regularPageController = {
    * 이벤트 리스너 설정
    */
   setupEventListeners() {
-    // 사이드 메뉴 버튼
-    const sideMenuBtn = document.getElementById('sideMenuBtn');
-    if (sideMenuBtn) {
-      sideMenuBtn.addEventListener('click', () => {
-        console.log('사이드 메뉴 클릭');
-        alert('사이드 메뉴 기능은 곧 구현됩니다!');
-      });
-    }
-
-    // 알림 버튼
-    const notificationBtn = document.getElementById('notificationBtn');
-    if (notificationBtn) {
-      notificationBtn.addEventListener('click', () => {
-        console.log('알림 버튼 클릭');
-        if (typeof renderNotification === 'function') {
-          renderNotification();
-        } else {
-          alert('알림 기능은 곧 구현됩니다!');
-        }
-      });
-    }
-
-    // 메시지 버튼
-    const messageBtn = document.getElementById('messageBtn');
-    if (messageBtn) {
-      messageBtn.addEventListener('click', () => {
-        console.log('메시지 버튼 클릭');
-        alert('메시지 기능은 곧 구현됩니다!');
-      });
-    }
-
-    // 탭 전환 이벤트
+    // 탭 전환
     const nearbyTab = document.getElementById('nearbyTab');
     const followingTab = document.getElementById('followingTab');
     const nearbyPane = document.getElementById('nearbyPane');
     const followingPane = document.getElementById('followingPane');
 
-    if (nearbyTab && followingTab && nearbyPane && followingPane) {
+    if (nearbyTab) {
       nearbyTab.addEventListener('click', () => {
         nearbyTab.classList.add('active');
-        followingTab.classList.remove('active');
+        followingTab?.classList.remove('active');
         nearbyPane.style.display = 'block';
         followingPane.style.display = 'none';
-        console.log('주변 매장 탭 활성화');
-      });
-
-      followingTab.addEventListener('click', () => {
-        followingTab.classList.add('active');
-        nearbyTab.classList.remove('active');
-        followingPane.style.display = 'block';
-        nearbyPane.style.display = 'none';
-        console.log('팔로우 매장 탭 활성화');
       });
     }
+
+    if (followingTab) {
+      followingTab.addEventListener('click', () => {
+        followingTab.classList.add('active');
+        nearbyTab?.classList.remove('active');
+        followingPane.style.display = 'block';
+        nearbyPane.style.display = 'none';
+      });
+    }
+
+    // 즐겨찾기 전체보기
+    const viewAllBtns = document.querySelectorAll('.view-all-btn[data-tab="favorite"]');
+    viewAllBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.showFavoriteListGrid();
+      });
+    });
+
+    // 더보기 버튼
+    const showAllBtn = document.getElementById('showAllBtn');
+    if (showAllBtn) {
+      showAllBtn.addEventListener('click', () => {
+        this.showAllStores();
+      });
+    }
+
+    // 사이드패널 이벤트
+    this.setupSidePanelEvents();
+  },
+
+  /**
+   * 사이드패널 이벤트 설정
+   */
+  setupSidePanelEvents() {
+    const sideMenuBtn = document.getElementById('sideMenuBtn');
+    const sidePanel = document.getElementById('sidePanel');
+    const sidePanelOverlay = document.getElementById('sidePanelOverlay');
+    const sidePanelCloseBtn = document.getElementById('sidePanelCloseBtn');
+
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+
+    // 사이드패널 열기
+    const openSidePanel = () => {
+      sidePanel.classList.add('active');
+      sidePanelOverlay.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    };
+
+    // 사이드패널 닫기
+    const closeSidePanel = () => {
+      sidePanel.classList.remove('active');
+      sidePanelOverlay.classList.remove('active');
+      document.body.style.overflow = '';
+    };
+
+    // 전역 함수로 등록 (다른 곳에서도 사용 가능)
+    window.closeSidePanel = closeSidePanel;
+
+    // 메뉴 버튼 클릭
+    if (sideMenuBtn) {
+      sideMenuBtn.addEventListener('click', openSidePanel);
+    }
+
+    // 닫기 버튼 클릭
+    if (sidePanelCloseBtn) {
+      sidePanelCloseBtn.addEventListener('click', closeSidePanel);
+    }
+
+    // 오버레이 클릭
+    if (sidePanelOverlay) {
+      sidePanelOverlay.addEventListener('click', closeSidePanel);
+    }
+
+    // 터치 드래그로 닫기
+    if (sidePanel) {
+      sidePanel.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+        isDragging = true;
+        sidePanel.classList.add('dragging');
+      });
+
+      sidePanel.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+
+        currentX = e.touches[0].clientX;
+        const deltaX = currentX - startX;
+
+        // 오른쪽으로만 드래그 허용
+        if (deltaX > 0) {
+          const translateX = Math.min(deltaX, 280);
+          sidePanel.style.transform = `translate3d(${translateX}px, 0, 0)`;
+        }
+      });
+
+      sidePanel.addEventListener('touchend', () => {
+        if (!isDragging) return;
+
+        isDragging = false;
+        sidePanel.classList.remove('dragging');
+
+        const deltaX = currentX - startX;
+
+        // 140px 이상 드래그하면 닫기
+        if (deltaX > 140) {
+          closeSidePanel();
+        }
+
+        // 원래 위치로 복귀
+        sidePanel.style.transform = '';
+      });
+    }
+
+    // ESC 키로 닫기
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sidePanel.classList.contains('active')) {
+        closeSidePanel();
+      }
+    });
   },
 
   /**

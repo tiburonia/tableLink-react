@@ -77,6 +77,102 @@ export const regularPageView = {
           </button>
         </div>
       </header>
+
+      <!-- 사이드패널 오버레이 -->
+      <div class="side-panel-overlay" id="sidePanelOverlay"></div>
+
+      <!-- 사이드패널 -->
+      <div class="side-panel" id="sidePanel">
+        <div class="side-panel-header">
+          <div class="side-panel-profile">
+            <div class="side-panel-avatar">
+              <img src="/TableLink.png" alt="프로필" onerror="this.style.display='none'">
+            </div>
+            <div class="side-panel-user-info">
+              <h3 class="side-panel-username">${window.userInfo?.userId || '게스트'}</h3>
+              <p class="side-panel-email">${window.userInfo?.name || ''}</p>
+            </div>
+          </div>
+          <button class="side-panel-close-btn" id="sidePanelCloseBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <nav class="side-panel-nav">
+          <a href="#" class="side-panel-menu-item" onclick="renderMyPage(); window.closeSidePanel(); return false;">
+            <div class="side-panel-menu-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </div>
+            <span class="side-panel-menu-text">내 프로필</span>
+            <svg class="side-panel-menu-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </a>
+
+          <a href="#" class="side-panel-menu-item" onclick="renderMyAccount(); window.closeSidePanel(); return false;">
+            <div class="side-panel-menu-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 1v6m0 6v6m-8.66-8.66l5.2 3M15.46 8.34l5.2-3m-5.2 10.32l5.2 3M9.66 15.66l-5.2 3"/>
+              </svg>
+            </div>
+            <span class="side-panel-menu-text">설정</span>
+            <svg class="side-panel-menu-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </a>
+
+          <a href="#" class="side-panel-menu-item" onclick="alert('알림 설정'); window.closeSidePanel(); return false;">
+            <div class="side-panel-menu-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>
+            </div>
+            <span class="side-panel-menu-text">알림 설정</span>
+            <svg class="side-panel-menu-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </a>
+
+          <div class="side-panel-divider"></div>
+
+          <a href="#" class="side-panel-menu-item" onclick="alert('고객센터'); window.closeSidePanel(); return false;">
+            <div class="side-panel-menu-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <span class="side-panel-menu-text">고객센터</span>
+            <svg class="side-panel-menu-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </a>
+
+          <a href="#" class="side-panel-menu-item side-panel-menu-item-danger" onclick="if(confirm('로그아웃 하시겠습니까?')) { window.performLogout(); window.closeSidePanel(); } return false;">
+            <div class="side-panel-menu-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </div>
+            <span class="side-panel-menu-text">로그아웃</span>
+          </a>
+        </nav>
+
+        <div class="side-panel-footer">
+          <p class="side-panel-version">TableLink v1.0.0</p>
+        </div>
+      </div>
     `;
   },
 
@@ -1702,6 +1798,234 @@ export const regularPageView = {
           font-weight: 500;
         }
 
+        /* ===== 사이드패널 오버레이 ===== */
+        .side-panel-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0);
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s ease, visibility 0.3s ease;
+          z-index: 9998;
+          pointer-events: none;
+        }
+
+        .side-panel-overlay.active {
+          opacity: 1;
+          visibility: visible;
+          background: rgba(0, 0, 0, 0.4);
+          pointer-events: auto;
+          backdrop-filter: blur(2px);
+        }
+
+        /* ===== 사이드패널 ===== */
+        .side-panel {
+          position: fixed;
+          top: 0;
+          right: 0;
+          width: 280px;
+          height: 100%;
+          background: #ffffff;
+          box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
+          transform: translate3d(100%, 0, 0);
+          transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+          z-index: 9999;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .side-panel.active {
+          transform: translate3d(0, 0, 0);
+        }
+
+        .side-panel.dragging {
+          transition: none;
+        }
+
+        /* 사이드패널 헤더 */
+        .side-panel-header {
+          padding: 40px 20px 20px 20px;
+          background: linear-gradient(135deg, #FF8A00, #FF9F33);
+          position: relative;
+          flex-shrink: 0;
+        }
+
+        .side-panel-profile {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .side-panel-avatar {
+          width: 56px;
+          height: 56px;
+          border-radius: 50%;
+          background: white;
+          overflow: hidden;
+          border: 3px solid rgba(255, 255, 255, 0.3);
+          flex-shrink: 0;
+        }
+
+        .side-panel-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .side-panel-user-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .side-panel-username {
+          margin: 0 0 4px 0;
+          font-size: 18px;
+          font-weight: 700;
+          color: white;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .side-panel-email {
+          margin: 0;
+          font-size: 13px;
+          color: rgba(255, 255, 255, 0.85);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .side-panel-close-btn {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.2);
+          border: none;
+          color: white;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s;
+        }
+
+        .side-panel-close-btn:active {
+          background: rgba(255, 255, 255, 0.3);
+          transform: scale(0.95);
+        }
+
+        /* 사이드패널 네비게이션 */
+        .side-panel-nav {
+          flex: 1;
+          overflow-y: auto;
+          padding: 12px 0;
+        }
+
+        .side-panel-nav::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .side-panel-nav::-webkit-scrollbar-thumb {
+          background: #d1d5db;
+          border-radius: 4px;
+        }
+
+        .side-panel-menu-item {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 16px 20px;
+          color: #1f2937;
+          text-decoration: none;
+          transition: all 0.2s;
+          position: relative;
+        }
+
+        .side-panel-menu-item:active {
+          background: #f3f4f6;
+        }
+
+        .side-panel-menu-item::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 20px;
+          right: 20px;
+          height: 1px;
+          background: #f3f4f6;
+        }
+
+        .side-panel-menu-item:last-of-type::after {
+          display: none;
+        }
+
+        .side-panel-menu-icon {
+          width: 36px;
+          height: 36px;
+          background: #f3f4f6;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          color: #6b7280;
+        }
+
+        .side-panel-menu-text {
+          flex: 1;
+          font-size: 15px;
+          font-weight: 600;
+          color: #1f2937;
+        }
+
+        .side-panel-menu-arrow {
+          color: #9ca3af;
+          flex-shrink: 0;
+        }
+
+        .side-panel-menu-item-danger {
+          color: #ef4444;
+        }
+
+        .side-panel-menu-item-danger .side-panel-menu-icon {
+          background: #fee2e2;
+          color: #ef4444;
+        }
+
+        .side-panel-menu-item-danger .side-panel-menu-text {
+          color: #ef4444;
+        }
+
+        .side-panel-divider {
+          height: 8px;
+          background: #f9fafb;
+          margin: 8px 0;
+        }
+
+        /* 사이드패널 푸터 */
+        .side-panel-footer {
+          padding: 16px 20px;
+          border-top: 1px solid #f3f4f6;
+          background: #fafafa;
+          flex-shrink: 0;
+        }
+
+        .side-panel-version {
+          margin: 0;
+          font-size: 12px;
+          color: #9ca3af;
+          text-align: center;
+          font-weight: 500;
+        }
+
         /* 반응형 */
         @media (max-width: 380px) {
           .stores-grid,
@@ -1711,6 +2035,11 @@ export const regularPageView = {
 
           .recent-actions {
             flex-wrap: wrap;
+          }
+
+          .side-panel {
+            width: 85%;
+            max-width: 320px;
           }
         }
       </style>
