@@ -104,13 +104,13 @@ class UserController {
 
   
   /**
-   * 즐겨찾기 매장 조회
+   * 팔로잉 매장 조회
    */
-  async getFavoriteStores(req, res, next) {
+  async getFollowingStores(req, res, next) {
     try {
       const { userId } = req.params;
 
-      const stores = await userService.getFavoriteStores(parseInt(userId));
+      const stores = await userService.getFollowingStores(parseInt(userId));
 
       res.json({
         success: true,
@@ -122,9 +122,9 @@ class UserController {
   }
 
   /**
-   * 즐겨찾기 토글
+   * 팔로잉 토글
    */
-  async toggleFavorite(req, res, next) {
+  async toggleFollowing(req, res, next) {
     try {
       const { userId, storeId, action } = req.body;
 
@@ -135,7 +135,7 @@ class UserController {
         });
       }
 
-      const result = await userService.toggleFavorite(parseInt(userId), parseInt(storeId), action);
+      const result = await userService.toggleFollowing(parseInt(userId), parseInt(storeId), action);
 
       res.json({
         success: true,
@@ -147,17 +147,17 @@ class UserController {
   }
 
   /**
-   * 즐겨찾기 상태 확인
+   * 팔로잉 상태 확인
    */
-  async getFavoriteStatus(req, res, next) {
+  async getFollowingStatus(req, res, next) {
     try {
       const { userId, storeId } = req.params;
 
-      const isFavorite = await userService.getFavoriteStatus(parseInt(userId), parseInt(storeId));
+      const isFollowing = await userService.getFollowingStatus(parseInt(userId), parseInt(storeId));
 
       res.json({
         success: true,
-        isFavorite
+        isFollowing
       });
     } catch (error) {
       next(error);

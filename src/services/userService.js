@@ -128,16 +128,16 @@ class UserService {
   }
 
   /**
-   * 즐겨찾기 매장 조회
+   * 팔로잉 매장 조회
    */
-  async getFavoriteStores(userId) {
-    return await userRepository.getFavoriteStores(userId);
+  async getFollowingStores(userId) {
+    return await userRepository.getFollowingStores(userId);
   }
 
   /**
-   * 즐겨찾기 토글
+   * 팔로잉 토글
    */
-  async toggleFavorite(userId, storeId, action) {
+  async toggleFollowing(userId, storeId, action) {
     const user = await userRepository.getUserById(userId);
     if (!user) {
       throw new Error('사용자를 찾을 수 없습니다');
@@ -148,44 +148,44 @@ class UserService {
       throw new Error('매장을 찾을 수 없습니다');
     }
 
-    const isFavorited = await userRepository.checkFavoriteExists(userId, storeId);
-    const finalAction = action || (isFavorited ? 'remove' : 'add');
+    const isFollowing = await userRepository.checkFollowingExists(userId, storeId);
+    const finalAction = action || (isFollowing ? 'remove' : 'add');
 
     if (finalAction === 'add') {
-      if (isFavorited) {
+      if (isFollowing) {
         return {
-          message: '이미 즐겨찾기에 등록된 매장입니다',
+          message: '이미 팔로우 중인 매장입니다',
           storeName: store.name,
           action: 'already_added'
         };
       }
 
-      await userRepository.addFavorite(userId, storeId);
-      await userRepository.incrementStoreFavoriteCount(storeId);
+      await userRepository.addFollowing(userId, storeId);
+      await userRepository.incrementStoreFollowingCount(storeId);
 
-      console.log(`✅ 사용자 ${userId}가 매장 ${store.name} 즐겨찾기 추가`);
+      console.log(`✅ 사용자 ${userId}가 매장 ${store.name} 팔로우 추가`);
 
       return {
-        message: '즐겨찾기에 추가되었습니다',
+        message: '매장을 팔로우했습니다',
         storeName: store.name,
         action: 'added'
       };
     } else if (finalAction === 'remove') {
-      if (!isFavorited) {
+      if (!isFollowing) {
         return {
-          message: '즐겨찾기에 없는 매장입니다',
+          message: '팔로우 중이지 않은 매장입니다',
           storeName: store.name,
           action: 'not_found'
         };
       }
 
-      await userRepository.removeFavorite(userId, storeId);
-      await userRepository.decrementStoreFavoriteCount(storeId);
+      await userRepository.removeFollowing(userId, storeId);
+      await userRepository.decrementStoreFollowingCount(storeId);
 
-      console.log(`✅ 사용자 ${userId}가 매장 ${store.name} 즐겨찾기 제거`);
+      console.log(`✅ 사용자 ${userId}가 매장 ${store.name} 팔로우 해제`);
 
       return {
-        message: '즐겨찾기에서 제거되었습니다',
+        message: '매장 팔로우를 해제했습니다',
         storeName: store.name,
         action: 'removed'
       };
@@ -195,10 +195,10 @@ class UserService {
   }
 
   /**
-   * 즐겨찾기 상태 확인
+   * 팔로잉 상태 확인
    */
-  async getFavoriteStatus(userId, storeId) {
-    return await userRepository.checkFavoriteExists(userId, storeId);
+  async getFollowingStatus(userId, storeId) {
+    return await userRepository.checkFollowingExists(userId, storeId);
   }
 
   /**
