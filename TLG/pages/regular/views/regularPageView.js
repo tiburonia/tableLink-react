@@ -758,7 +758,7 @@ export const regularPageView = {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
+          margin: 12px;
         }
 
         .section-title {
@@ -1370,7 +1370,7 @@ export const regularPageView = {
 
         .post-image-large {
           width: 100%;
-          aspect-ratio: 1 / 1;
+          aspect-ratio: 3 / 1;
           overflow: hidden;
           background: #f3f4f6;
         }
