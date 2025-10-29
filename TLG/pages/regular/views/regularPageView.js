@@ -21,6 +21,7 @@ export const regularPageView = {
             ${this.renderFavoriteStoresPreview(favoriteStores)}
             ${this.renderRecentVisited(stores)}
             ${this.renderStoresList(stores)}
+            ${this.renderFollowingPostsPreview(posts)}
           </div>
 
           <!-- 팔로우 매장 탭 -->
@@ -321,6 +322,71 @@ export const regularPageView = {
           </button>
         </div>
       </section>
+    `;
+  },
+
+  /**
+   * 팔로우 매장 게시물 미리보기 (주변 매장 탭)
+   */
+  renderFollowingPostsPreview(posts) {
+    if (!posts || posts.length === 0) return '';
+
+    const previewPosts = posts.slice(0, 3);
+
+    return `
+      <section class="following-posts-preview-section">
+        <div class="section-header-compact">
+          <h2 class="section-title">📰 팔로우 매장 소식</h2>
+          <button class="view-all-btn" onclick="document.getElementById('followingTab').click()">
+            전체보기
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="following-posts-preview-list">
+          ${previewPosts.map(post => this.renderPostCardCompact(post)).join('')}
+        </div>
+      </section>
+    `;
+  },
+
+  /**
+   * 컴팩트 게시물 카드 (미리보기용)
+   */
+  renderPostCardCompact(post) {
+    const relativeTime = window.regularPageService?.getRelativeTime(post.createdAt) || '최근';
+    const typeInfo = this.getTypeInfo(post.postType);
+    const truncatedContent = post.content.length > 40
+      ? post.content.substring(0, 40) + '...'
+      : post.content;
+
+    return `
+      <article class="post-card-compact-preview" onclick="renderFeed()">
+        <div class="post-compact-left">
+          <span class="post-type-icon" style="color: ${typeInfo.color};">
+            ${typeInfo.icon}
+          </span>
+          <div class="post-compact-info">
+            <h4 class="post-compact-title">${post.title}</h4>
+            <p class="post-compact-preview">${truncatedContent}</p>
+            <div class="post-compact-meta">
+              <span class="post-compact-store">${post.storeName}</span>
+              <span class="post-compact-time">${relativeTime}</span>
+            </div>
+          </div>
+        </div>
+        ${post.hasImage ? `
+          <div class="post-compact-thumb">
+            <img 
+              src="${post.imageUrl || '/TableLink.png'}" 
+              alt="매장 소식"
+              onerror="this.src='/TableLink.png'"
+            >
+          </div>
+        ` : ''}
+      </article>
     `;
   },
 
@@ -1192,6 +1258,104 @@ export const regularPageView = {
         .empty-btn:active {
           transform: translateY(-1px);
           box-shadow: 0 4px 16px rgba(255, 138, 0, 0.3);
+        }
+
+        /* ===== 팔로우 매장 게시물 미리보기 ===== */
+        .following-posts-preview-section {
+          padding: 16px 20px;
+          background: white;
+          margin-bottom: 8px;
+        }
+
+        .following-posts-preview-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .post-card-compact-preview {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 12px;
+          background: #f9fafb;
+          border-radius: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .post-card-compact-preview:active {
+          background: #f3f4f6;
+          transform: scale(0.98);
+        }
+
+        .post-compact-left {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex: 1;
+          min-width: 0;
+        }
+
+        .post-type-icon {
+          font-size: 20px;
+          flex-shrink: 0;
+        }
+
+        .post-compact-info {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .post-compact-title {
+          margin: 0 0 4px 0;
+          font-size: 14px;
+          font-weight: 700;
+          color: #1f2937;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .post-compact-preview {
+          margin: 0 0 4px 0;
+          font-size: 12px;
+          color: #6b7280;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .post-compact-meta {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 11px;
+        }
+
+        .post-compact-store {
+          color: #FF8A00;
+          font-weight: 600;
+        }
+
+        .post-compact-time {
+          color: #9ca3af;
+        }
+
+        .post-compact-thumb {
+          width: 56px;
+          height: 56px;
+          border-radius: 8px;
+          overflow: hidden;
+          background: #e5e7eb;
+          flex-shrink: 0;
+        }
+
+        .post-compact-thumb img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
         }
 
         /* ===== 즐겨찾기 매장 ===== */
