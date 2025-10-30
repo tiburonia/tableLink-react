@@ -90,11 +90,10 @@ class TossController {
       });
 
       // 4. 단골 처리 (결제 성공 시)
-      if (result.success && result.order) {
+      if (result.success && result.orderId) {
         try {
           await regularService.handleRegularAfterPayment({
-            storeId: result.order.store_id,
-            userId: result.order.user_pk,
+            orderId: result.orderId,
             orderAmount: amount,
           });
         } catch (regularError) {

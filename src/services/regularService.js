@@ -8,18 +8,36 @@ class RegularService {
   /**
    * 결제 완료 후 단골 처리
    */
-  async handleRegularAfterPayment({ storeId, userId, orderAmount }) {
+  async handleRegularAfterPayment({ orderId, orderAmount }) {
     try {
-      console.log('💎 단골 처리 시작:', { storeId, userId, orderAmount });
+      console.log('💎 단골 처리 시작:', { orderId, orderAmount });
 
-      // 1️⃣ 기존 단골 기록 조회
+      // 1️⃣ 주문 정보 조회
+      const orderInfo = await regularRepository.getOrderInfo(orderId);
+      
+      if (!orderInfo) {
+        console.error('❌ 주문 정보를 찾을 수 없습니다:', orderId);
+        return;
+      }
+
+      if (!orderInfo.user_pk) {
+        console.log('ℹ️ 비회원 주문이므로 단골 처리를 건너뜁니다');
+        return;
+      }
+
+      const { store_id: storeId, user_pk: userId, total_price } = orderInfo;
+      const finalAmount = orderAmount || total_price || 0;
+
+      console.log('📊 단골 처리 데이터:', { storeId, userId, finalAmount });
+
+      // 2️⃣ 기존 단골 기록 조회
       const existingRegular = await regularRepository.findRegularByStoreAndUser(storeId, userId);
 
       if (existingRegular) {
         console.log('📊 기존 단골 발견:', existingRegular);
 
-        // 2️⃣ 통계 업데이트
-        await regularRepository.updateRegularStats(storeId, userId, orderAmount);
+        // 3️⃣ 통계 업데이트
+        await regularRepository.updateRegularStats(storeId, userId, finalAmount);
 
         // 3️⃣ 등급 승급 확인
         const currentLevelId = existingRegular.level_id;
@@ -60,7 +78,7 @@ class RegularService {
             storeId,
             userId,
             levelId: lowestLevel.id,
-            initialAmount: orderAmount,
+            initialAmount: finalAmount,
           });
           console.log('✅ 신규 단골 생성 완료:', lowestLevel.level);
         }

@@ -112,6 +112,23 @@ class RegularRepository {
       VALUES ($1, $2, $3, 1, $4, NOW(), NOW(), NOW())
     `, [storeId, userId, levelId, initialAmount || 0]);
   }
+
+  /**
+   * 주문 정보 조회 (단골 처리용)
+   */
+  async getOrderInfo(orderId) {
+    const result = await pool.query(`
+      SELECT 
+        id,
+        store_id,
+        user_id as user_pk,
+        total_price
+      FROM orders
+      WHERE id = $1
+    `, [orderId]);
+
+    return result.rows[0];
+  }
 }
 
 module.exports = new RegularRepository();
