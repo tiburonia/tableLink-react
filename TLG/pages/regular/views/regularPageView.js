@@ -19,8 +19,6 @@ export const regularPageView = {
           <!-- 주변 매장 탭 -->
           <div class="tab-pane active" id="nearbyPane">
             ${this.renderFavoriteStoresPreview(favoriteStores)}
-            ${this.renderRecentVisited(stores)}
-            ${this.renderStoresList(stores)}
             ${this.renderFollowingPostsPreview(posts)}
 
 
@@ -28,6 +26,7 @@ export const regularPageView = {
 
           <!-- 팔로우 매장 탭 -->
           <div class="tab-pane" id="followingPane" style="display:none;">
+            ${this.renderRecentVisited(stores)}
             ${this.renderStoreFeed(posts)}
           </div>
         </div>
@@ -1084,7 +1083,6 @@ export const regularPageView = {
         .feed-post-card {
           background: white;
           margin-bottom: 8px;
-          padding: 16px 20px;
           border-bottom: 8px solid #f8fafc;
           transition: all 0.2s;
           cursor: pointer;
