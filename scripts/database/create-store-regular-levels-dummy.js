@@ -108,26 +108,32 @@ async function createStoreRegularLevelsDummy() {
       console.log(`🔄 [${processedStores}/${totalStores}] 매장 ${storeId} - 레벨 시스템 생성 중...`);
       
       for (const levelData of levels) {
-        await client.query(`
-          INSERT INTO store_regular_levels (
-            store_id, 
-            grade, 
-            level, 
-            min_orders, 
-            min_spent, 
-            benefits
-          )
-          VALUES ($1, $2, $3, $4, $5, $6)
-        `, [
-          storeId,
-          levelData.grade,
-          levelData.level,
-          levelData.min_orders,
-          levelData.min_spent,
-          JSON.stringify(levelData.benefits)
-        ]);
+        try {
+          await client.query(`
+            INSERT INTO store_regular_levels (
+              store_id, 
+              level, 
+              min_orders, 
+              min_spent, 
+              benefits,
+              grade
+            )
+            VALUES ($1, $2, $3, $4, $5, $6)
+            ON CONFLICT (store_id, level) DO NOTHING
+          `, [
+            storeId,
+            levelData.level,
+            levelData.min_orders,
+            levelData.min_spent,
+            JSON.stringify(levelData.benefits),
+            levelData.grade
+          ]);
 
-        insertCount++;
+          insertCount++;
+        } catch (error) {
+          console.error(`❌ 매장 ${storeId} 레벨 ${levelData.level} 생성 실패:`, error.message);
+          // 계속 진행
+        }
       }
 
       console.log(`✅ [${processedStores}/${totalStores}] 매장 ${storeId} - 4개 레벨 생성 완료`);
