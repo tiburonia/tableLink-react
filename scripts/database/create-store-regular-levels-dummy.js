@@ -78,9 +78,19 @@ async function createStoreRegularLevelsDummy() {
     ];
 
     let insertCount = 0;
+    let processedStores = 0;
+    let skippedStores = 0;
+    const totalStores = stores.length;
+    const startTime = Date.now();
+
+    console.log('');
+    console.log('='.repeat(60));
+    console.log('데이터 생성 진행 상황');
+    console.log('='.repeat(60));
 
     for (const store of stores) {
       const storeId = store.id;
+      processedStores++;
 
       // 기존 데이터 확인 (중복 방지)
       const existingLevels = await client.query(
@@ -89,11 +99,14 @@ async function createStoreRegularLevelsDummy() {
       );
 
       if (parseInt(existingLevels.rows[0].count) > 0) {
-        console.log(`⏭️  매장 ${storeId}는 이미 레벨 시스템이 설정되어 있음 - 건너뜀`);
+        skippedStores++;
+        console.log(`⏭️  [${processedStores}/${totalStores}] 매장 ${storeId} - 이미 설정됨 (건너뜀)`);
         continue;
       }
 
       // 각 등급별로 데이터 삽입
+      console.log(`🔄 [${processedStores}/${totalStores}] 매장 ${storeId} - 레벨 시스템 생성 중...`);
+      
       for (const levelData of levels) {
         await client.query(`
           INSERT INTO store_regular_levels (
@@ -117,13 +130,45 @@ async function createStoreRegularLevelsDummy() {
         insertCount++;
       }
 
-      if (insertCount % 100 === 0) {
-        console.log(`📝 진행 중... ${insertCount}개 레벨 데이터 생성됨`);
+      console.log(`✅ [${processedStores}/${totalStores}] 매장 ${storeId} - 4개 레벨 생성 완료`);
+
+      // 10개 매장마다 진행률 요약 출력
+      if (processedStores % 10 === 0) {
+        const progress = ((processedStores / totalStores) * 100).toFixed(1);
+        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+        const estimatedTotal = (elapsed / processedStores * totalStores).toFixed(1);
+        const remaining = (estimatedTotal - elapsed).toFixed(1);
+        
+        console.log('');
+        console.log('─'.repeat(60));
+        console.log(`📊 진행률: ${progress}% (${processedStores}/${totalStores} 매장)`);
+        console.log(`📝 생성된 레벨: ${insertCount}개`);
+        console.log(`⏭️  건너뛴 매장: ${skippedStores}개`);
+        console.log(`⏱️  경과 시간: ${elapsed}초`);
+        console.log(`⏳ 예상 남은 시간: ${remaining}초`);
+        console.log('─'.repeat(60));
+        console.log('');
       }
     }
 
+    console.log('');
+    console.log('='.repeat(60));
+    console.log('데이터 생성 완료');
+    console.log('='.repeat(60));
+
     await client.query('COMMIT');
-    console.log(`✅ store_regular_levels 더미 데이터 ${insertCount}건 생성 완료!`);
+    
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    
+    console.log('');
+    console.log(`✅ store_regular_levels 더미 데이터 생성 완료!`);
+    console.log('');
+    console.log(`📊 최종 통계:`);
+    console.log(`   - 처리된 매장: ${processedStores}개`);
+    console.log(`   - 건너뛴 매장: ${skippedStores}개`);
+    console.log(`   - 생성된 레벨: ${insertCount}개`);
+    console.log(`   - 총 소요 시간: ${totalTime}초`);
+    console.log('');
 
     // 결과 확인
     const summary = await client.query(`
