@@ -1,0 +1,117 @@
+
+const pool = require('../db/pool');
+
+/**
+ * 단골 등급 관리 리포지토리
+ */
+class RegularRepository {
+  constructor() {
+    this.pool = pool;
+  }
+  /**
+   * 매장-유저의 활성 단골 기록 조회
+   */
+  async findRegularByStoreAndUser(storeId, userId) {
+    const result = await pool.query(`
+      SELECT * FROM store_regular_customers 
+      WHERE store_id = $1 AND user_id = $2
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [storeId, userId]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * 단골 통계 업데이트 (방문수, 누적금액)
+   */
+  async updateRegularStats(storeId, userId, orderAmount) {
+    await pool.query(`
+      UPDATE store_regular_customers
+      SET visit_count = visit_count + 1,
+          total_spent = total_spent + $3,
+          last_visit = NOW(),
+          updated_at = NOW()
+      WHERE store_id = $1 AND user_id = $2
+    `, [storeId, userId, orderAmount]);
+  }
+
+  /**
+   * 다음 등급 조회
+   */
+  async findNextLevel(storeId, currentLevel) {
+    const result = await pool.query(`
+      SELECT * FROM store_regular_levels
+      WHERE store_id = $1 AND level != $2
+      ORDER BY min_orders ASC, min_spent ASC
+    `, [storeId, currentLevel]);
+
+    // 현재 레벨보다 높은 조건의 다음 레벨 찾기
+    const currentLevelData = await pool.query(`
+      SELECT min_orders, min_spent FROM store_regular_levels
+      WHERE store_id = $1 AND level = $2
+    `, [storeId, currentLevel]);
+
+    if (currentLevelData.rows.length === 0) return null;
+
+    const current = currentLevelData.rows[0];
+    
+    for (const level of result.rows) {
+      if (level.min_orders > current.min_orders || level.min_spent > current.min_spent) {
+        return level;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * 등급 승급 조건 확인
+   */
+  async checkLevelCondition(level, regular) {
+    if (!level) return false;
+    
+    const { min_orders, min_spent } = level;
+    return (regular.visit_count >= min_orders && regular.total_spent >= min_spent);
+  }
+
+  /**
+   * 단골 등급 승급
+   */
+  async promoteRegularLevel({ storeId, userId, nextLevel }) {
+    // 현재 등급 업데이트
+    await pool.query(`
+      UPDATE store_regular_customers
+      SET level_id = $3,
+          updated_at = NOW()
+      WHERE store_id = $1 AND user_id = $2
+    `, [storeId, userId, nextLevel.id]);
+  }
+
+  /**
+   * 매장의 최하위 등급 조회
+   */
+  async findLowestLevel(storeId) {
+    const result = await pool.query(`
+      SELECT * FROM store_regular_levels
+      WHERE store_id = $1
+      ORDER BY min_orders ASC, min_spent ASC
+      LIMIT 1
+    `, [storeId]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * 신규 단골 생성
+   */
+  async createRegular({ storeId, userId, levelId, initialAmount }) {
+    await pool.query(`
+      INSERT INTO store_regular_customers 
+      (store_id, user_id, level_id, visit_count, total_spent, last_visit, created_at, updated_at)
+      VALUES ($1, $2, $3, 1, $4, NOW(), NOW(), NOW())
+    `, [storeId, userId, levelId, initialAmount || 0]);
+  }
+}
+
+module.exports = new RegularRepository();
