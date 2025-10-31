@@ -55,6 +55,199 @@ export const regularPageController = {
   },
 
   /**
+   * 팔로잉 탭 스켈레톤 표시
+   */
+  showFollowingSkeleton() {
+    const followingPane = document.getElementById('followingPane');
+    if (!followingPane) return;
+
+    followingPane.innerHTML = `
+      <div class="following-skeleton">
+        ${Array(3).fill(0).map(() => `
+          <div class="skeleton-store-card">
+            <div class="skeleton-store-image skeleton-loading"></div>
+            <div class="skeleton-store-info">
+              <div class="skeleton-line skeleton-loading" style="width: 60%; height: 20px; margin-bottom: 8px;"></div>
+              <div class="skeleton-line skeleton-loading" style="width: 40%; height: 16px; margin-bottom: 12px;"></div>
+              <div class="skeleton-line skeleton-loading" style="width: 80%; height: 14px;"></div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <style>
+        .following-skeleton {
+          padding: 16px;
+        }
+
+        .skeleton-store-card {
+          display: flex;
+          gap: 12px;
+          padding: 16px;
+          background: white;
+          border-radius: 12px;
+          margin-bottom: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .skeleton-store-image {
+          width: 80px;
+          height: 80px;
+          border-radius: 8px;
+          flex-shrink: 0;
+        }
+
+        .skeleton-store-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .skeleton-line {
+          border-radius: 4px;
+        }
+
+        .skeleton-loading {
+          background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+          background-size: 200% 100%;
+          animation: skeleton-loading 1.5s infinite;
+        }
+
+        @keyframes skeleton-loading {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      </style>
+    `;
+  },
+
+  /**
+   * 팔로잉 탭 실제 컨텐츠 렌더링
+   */
+  renderFollowingContent() {
+    const followingPane = document.getElementById('followingPane');
+    if (!followingPane) return;
+
+    // TODO: 추후 실제 데이터로 대체
+    const dummyData = [
+      {
+        id: 1,
+        name: '맛있는 김밥',
+        category: '분식',
+        distance: '0.3km',
+        rating: 4.5,
+        image: 'TableLink.png'
+      },
+      {
+        id: 2,
+        name: '정통 양념치킨',
+        category: '치킨',
+        distance: '0.5km',
+        rating: 4.8,
+        image: 'TableLink.png'
+      },
+      {
+        id: 3,
+        name: '행복한 카페',
+        category: '카페',
+        distance: '0.7km',
+        rating: 4.3,
+        image: 'TableLink.png'
+      }
+    ];
+
+    followingPane.innerHTML = `
+      <div class="following-content">
+        ${dummyData.map(store => `
+          <div class="following-store-card" onclick="renderStore(${store.id})">
+            <img src="${store.image}" alt="${store.name}" class="store-image">
+            <div class="store-info">
+              <h3 class="store-name">${store.name}</h3>
+              <div class="store-meta">
+                <span class="store-category">${store.category}</span>
+                <span class="store-distance">• ${store.distance}</span>
+              </div>
+              <div class="store-rating">
+                <span class="star-icon">⭐</span>
+                <span class="rating-value">${store.rating}</span>
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+
+      <style>
+        .following-content {
+          padding: 16px;
+        }
+
+        .following-store-card {
+          display: flex;
+          gap: 12px;
+          padding: 16px;
+          background: white;
+          border-radius: 12px;
+          margin-bottom: 12px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .following-store-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .store-image {
+          width: 80px;
+          height: 80px;
+          border-radius: 8px;
+          object-fit: cover;
+          flex-shrink: 0;
+        }
+
+        .store-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+
+        .store-name {
+          font-size: 16px;
+          font-weight: 700;
+          color: #1f2937;
+          margin: 0 0 6px 0;
+        }
+
+        .store-meta {
+          font-size: 13px;
+          color: #6b7280;
+          margin-bottom: 8px;
+        }
+
+        .store-category {
+          font-weight: 600;
+        }
+
+        .store-rating {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #f59e0b;
+        }
+
+        .star-icon {
+          font-size: 16px;
+        }
+      </style>
+    `;
+  },
+
+  /**
    * 이벤트 리스너 설정
    */
   setupEventListeners() {
@@ -74,11 +267,22 @@ export const regularPageController = {
     }
 
     if (followingTab) {
-      followingTab.addEventListener('click', () => {
+      followingTab.addEventListener('click', async () => {
         followingTab.classList.add('active');
         nearbyTab?.classList.remove('active');
         followingPane.style.display = 'block';
         nearbyPane.style.display = 'none';
+
+        // 스켈레톤 표시
+        this.showFollowingSkeleton();
+
+        // TODO: 추후 실제 API 호출로 대체
+        // const followingData = await regularPageService.getFollowingStores(userId);
+        
+        // 임시: setTimeout으로 데이터 로딩 시뮬레이션
+        setTimeout(() => {
+          this.renderFollowingContent();
+        }, 800);
       });
     }
 
