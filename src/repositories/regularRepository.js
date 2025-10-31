@@ -14,7 +14,7 @@ class RegularRepository {
   async findRegularByStoreAndUser(storeId, userId) {
     const result = await pool.query(`
       SELECT * FROM store_regular_customers 
-      WHERE store_id = $1 AND user_id = $2
+      WHERE store_id = $1 AND user_id = $2 AND is_processing_level = TRUE
       ORDER BY created_at DESC
       LIMIT 1
     `, [storeId, userId]);
@@ -32,7 +32,7 @@ class RegularRepository {
           total_spent = total_spent + $3,
           last_visit = NOW(),
           updated_at = NOW()
-      WHERE store_id = $1 AND user_id = $2
+      WHERE store_id = $1 AND user_id = $2 AND is_processing_level = TRUE
     `, [storeId, userId, orderAmount]);
   }
 
@@ -49,7 +49,7 @@ class RegularRepository {
         min_spent,
         benefits,
         grade,
-        condition_operator
+        condition_operater as condition_operator
       FROM store_regular_levels
       WHERE store_id = $1 AND level != $2
       ORDER BY grade ASC, min_orders ASC, min_spent ASC
@@ -95,16 +95,43 @@ class RegularRepository {
   }
 
   /**
-   * 단골 등급 승급
+   * 단골 등급 승급 - 기존 레코드 비활성화 및 새 레코드 생성
    */
-  async promoteRegularLevel({ storeId, userId, nextLevel }) {
-    // 현재 등급 업데이트
-    await pool.query(`
-      UPDATE store_regular_customers
-      SET level_id = $3,
-          updated_at = NOW()
-      WHERE store_id = $1 AND user_id = $2
-    `, [storeId, userId, nextLevel.id]);
+  async promoteRegularLevel({ storeId, userId, nextLevel, currentRegular }) {
+    const client = await pool.connect();
+    
+    try {
+      await client.query('BEGIN');
+
+      // 1. 기존 레코드의 is_processing_level을 FALSE로 설정
+      await client.query(`
+        UPDATE store_regular_customers
+        SET is_processing_level = FALSE,
+            updated_at = NOW()
+        WHERE store_id = $1 AND user_id = $2 AND is_processing_level = TRUE
+      `, [storeId, userId]);
+
+      // 2. 새 레코드 생성 (기존 통계 상속)
+      await client.query(`
+        INSERT INTO store_regular_customers 
+        (store_id, user_id, level_id, visit_count, total_spent, last_visit, is_processing_level, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW(), NOW())
+      `, [
+        storeId, 
+        userId, 
+        nextLevel.id,
+        currentRegular.visit_count,
+        currentRegular.total_spent,
+        currentRegular.last_visit
+      ]);
+
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   /**

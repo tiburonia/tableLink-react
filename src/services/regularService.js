@@ -69,6 +69,7 @@ class RegularService {
                 storeId,
                 userId,
                 nextLevel,
+                currentRegular: updatedRegular
               });
             } else {
               console.log(`⏳ 승급 조건 미달: ${currentLevel} 유지`);
