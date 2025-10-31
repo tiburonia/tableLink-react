@@ -250,7 +250,18 @@ export const regularPageRepository = {
         title: '영업시간 변경 안내',
         content: '다음주부터 평일 오전 8시부터 영업 시작합니다. 더 좋은 서비스로 찾아뵙겠습니다!',
         postType: 'notice',
-
+        targetTag: '공지사항',
+        hasImage: false,
+        imageUrl: null,
+        likes: 12,
+        comments: 2,
+        hasLiked: false,
+        hasCoupon: false,
+        couponReceived: false,
+        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3일 전
+      }
+    ];
+  },
 
   /**
    * 팔로잉 매장 피드 데이터 조회 (실제 API)
@@ -277,19 +288,6 @@ export const regularPageRepository = {
       console.error('❌ 팔로잉 매장 데이터 조회 실패:', error);
       throw error;
     }
-  }
-
-        targetTag: '공지사항',
-        hasImage: false,
-        imageUrl: null,
-        likes: 12,
-        comments: 2,
-        hasLiked: false,
-        hasCoupon: false,
-        couponReceived: false,
-        createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3일 전
-      }
-    ];
   }
 };
 
