@@ -49,7 +49,7 @@ class RegularRepository {
         min_spent,
         benefits,
         grade,
-        condition_operater as condition_operator
+        condition_operator 
       FROM store_regular_levels
       WHERE store_id = $1 AND level != $2
       ORDER BY grade ASC, min_orders ASC, min_spent ASC
