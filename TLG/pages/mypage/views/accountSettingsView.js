@@ -6,7 +6,7 @@
 export const accountSettingsView = {
   /**
    * 메인 렌더링
-   */
+   */      
   render(data) {
     const main = document.getElementById('main');
     if (!main) {

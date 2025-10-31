@@ -268,7 +268,7 @@ export const regularPageRepository = {
    */
   async getFollowingStoresData(userId) {
     try {
-      const response = await fetch(`/api/users/${userId}/following-stores`);
+      const response = await fetch(`/api/users/${userId}/personalized-feed?type=following`);
       
       if (!response.ok) {
         throw new Error('팔로잉 매장 데이터 조회 실패');
