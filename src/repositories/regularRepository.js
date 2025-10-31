@@ -111,15 +111,27 @@ class RegularRepository {
         WHERE store_id = $1 AND user_id = $2 AND is_processing_level = TRUE
       `, [storeId, userId]);
 
-      // 2. 새 레코드 생성 (기존 통계 상속)
+      // 2. 다음 레벨의 next_level 조회
+      const nextNextLevelResult = await client.query(`
+        SELECT id 
+        FROM store_regular_levels
+        WHERE store_id = $1 AND grade > $2
+        ORDER BY grade ASC
+        LIMIT 1
+      `, [storeId, nextLevel.grade]);
+
+      const nextNextLevelId = nextNextLevelResult.rows.length > 0 ? nextNextLevelResult.rows[0].id : null;
+
+      // 3. 새 레코드 생성 (기존 통계 상속)
       await client.query(`
         INSERT INTO store_regular_customers 
-        (store_id, user_id, level_id, visit_count, total_spent, last_visit, is_processing_level, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, TRUE, NOW(), NOW())
+        (store_id, user_id, level_id, next_level, visit_count, total_spent, last_visit, is_processing_level, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE, NOW(), NOW())
       `, [
         storeId, 
         userId, 
         nextLevel.id,
+        nextNextLevelId,
         currentRegular.visit_count,
         currentRegular.total_spent,
         currentRegular.last_visit
@@ -152,11 +164,24 @@ class RegularRepository {
    * 신규 단골 생성
    */
   async createRegular({ storeId, userId, levelId, initialAmount }) {
+    // 현재 레벨의 다음 레벨 ID 조회
+    const nextLevelResult = await pool.query(`
+      SELECT id 
+      FROM store_regular_levels
+      WHERE store_id = $1 AND grade > (
+        SELECT grade FROM store_regular_levels WHERE id = $2
+      )
+      ORDER BY grade ASC
+      LIMIT 1
+    `, [storeId, levelId]);
+
+    const nextLevelId = nextLevelResult.rows.length > 0 ? nextLevelResult.rows[0].id : null;
+
     await pool.query(`
       INSERT INTO store_regular_customers 
-      (store_id, user_id, level_id, visit_count, total_spent, last_visit, created_at, updated_at)
-      VALUES ($1, $2, $3, 1, $4, NOW(), NOW(), NOW())
-    `, [storeId, userId, levelId, initialAmount || 0]);
+      (store_id, user_id, level_id, next_level, visit_count, total_spent, last_visit, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, 1, $5, NOW(), NOW(), NOW())
+    `, [storeId, userId, levelId, nextLevelId, initialAmount || 0]);
   }
 
   /**
