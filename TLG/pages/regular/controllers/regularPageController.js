@@ -130,120 +130,198 @@ export const regularPageController = {
     if (!followingPane) return;
 
     // TODO: 추후 실제 데이터로 대체
-    const dummyData = [
+    const dummyStores = [
+      {
+        storeId: 386,
+        storeName: '본격 로스터리카페',
+        category: '카페',
+        lastVisit: '2일 전',
+        level: 'PLATINUM',
+        points: 12500,
+        coupons: 2
+      },
+      {
+        storeId: 497,
+        storeName: '정통 양념치킨',
+        category: '치킨',
+        lastVisit: '5일 전',
+        level: 'GOLD',
+        points: 8400,
+        coupons: 1
+      },
+      {
+        storeId: 173,
+        storeName: '유명한 본가',
+        category: '한식',
+        lastVisit: '1주일 전',
+        level: 'SILVER',
+        points: 5200,
+        coupons: 0
+      }
+    ];
+
+    const dummyPosts = [
       {
         id: 1,
-        name: '맛있는 김밥',
-        category: '분식',
-        distance: '0.3km',
-        rating: 4.5,
-        image: 'TableLink.png'
+        storeId: 386,
+        storeName: '본격 로스터리카페',
+        storeLogo: '☕',
+        postType: 'event',
+        title: '플래티넘 단골 전용 10% 쿠폰 오픈!',
+        content: '이번 주말 한정으로 단골 손님에게만 10% 즉시할인 쿠폰을 드립니다! 놓치지 마세요!',
+        hasImage: true,
+        imageUrl: 'TableLink.png',
+        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+        likes: 28,
+        comments: 5,
+        hasLiked: false
       },
       {
         id: 2,
-        name: '정통 양념치킨',
-        category: '치킨',
-        distance: '0.5km',
-        rating: 4.8,
-        image: 'TableLink.png'
-      },
-      {
-        id: 3,
-        name: '행복한 카페',
-        category: '카페',
-        distance: '0.7km',
-        rating: 4.3,
-        image: 'TableLink.png'
+        storeId: 497,
+        storeName: '정통 양념치킨',
+        storeLogo: '🍗',
+        postType: 'new_menu',
+        title: '매콤달콤 신메뉴 출시!',
+        content: '새로운 매콤달콤 치킨이 나왔어요! 단골 고객님께 먼저 소개합니다 😋',
+        hasImage: true,
+        imageUrl: 'TableLink.png',
+        createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+        likes: 42,
+        comments: 12,
+        hasLiked: true
       }
     ];
 
     followingPane.innerHTML = `
-      <div class="following-content">
-        ${dummyData.map(store => `
-          <div class="following-store-card" onclick="renderStore(${store.id})">
-            <img src="${store.image}" alt="${store.name}" class="store-image">
-            <div class="store-info">
-              <h3 class="store-name">${store.name}</h3>
-              <div class="store-meta">
-                <span class="store-category">${store.category}</span>
-                <span class="store-distance">• ${store.distance}</span>
+      ${this.renderRecentVisitedSection(dummyStores)}
+      ${this.renderStoreFeedSection(dummyPosts)}
+    `;
+  },
+
+  /**
+   * 최근 방문 매장 섹션 렌더링
+   */
+  renderRecentVisitedSection(stores) {
+    const getLevelIcon = (level) => {
+      const icons = {
+        'PLATINUM': '💎',
+        'GOLD': '🥇',
+        'SILVER': '🥈',
+        'BRONZE': '🥉'
+      };
+      return icons[level] || '🏅';
+    };
+
+    return `
+      <section class="recent-section-minimal">
+        <div class="section-header-compact">
+          <h2 class="section-title">📍 최근 방문</h2>
+        </div>
+        <div class="recent-list-minimal">
+          ${stores.map(store => `
+            <div class="recent-card-minimal" onclick="goToStore(${store.storeId})">
+              <div class="recent-icon-minimal">
+                ${store.category === '카페' ? '☕' : store.category === '치킨' ? '🍗' : '🍜'}
               </div>
-              <div class="store-rating">
-                <span class="star-icon">⭐</span>
-                <span class="rating-value">${store.rating}</span>
+              <div class="recent-details-minimal">
+                <div class="recent-name-row">
+                  <h3 class="recent-name-minimal">${store.storeName}</h3>
+                  <span class="recent-level-minimal">${getLevelIcon(store.level)}</span>
+                </div>
+                <div class="recent-info-row">
+                  <span class="recent-category">${store.category}</span>
+                  <span class="recent-divider">·</span>
+                  <span class="recent-visit">${store.lastVisit}</span>
+                </div>
+              </div>
+              <div class="recent-stats">
+                <div class="recent-points">${store.points.toLocaleString()}P</div>
+                ${store.coupons > 0 ? `<div class="recent-coupons">🎟️ ${store.coupons}</div>` : ''}
               </div>
             </div>
-          </div>
-        `).join('')}
+          `).join('')}
+        </div>
+      </section>
+    `;
+  },
+
+  /**
+   * 매장 소식 피드 섹션 렌더링
+   */
+  renderStoreFeedSection(posts) {
+    const getRelativeTime = (date) => {
+      const now = new Date();
+      const diff = now - new Date(date);
+      const minutes = Math.floor(diff / (1000 * 60));
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      
+      if (minutes < 60) return `${minutes}분 전`;
+      if (hours < 24) return `${hours}시간 전`;
+      return '최근';
+    };
+
+    const getTypeInfo = (postType) => {
+      const typeMap = {
+        'event': { icon: '🎉', color: '#FF8A00', label: '이벤트' },
+        'new_menu': { icon: '🍽️', color: '#10b981', label: '신메뉴' },
+        'promotion': { icon: '🎁', color: '#f59e0b', label: '프로모션' },
+        'notice': { icon: '📢', color: '#6366f1', label: '공지사항' }
+      };
+      return typeMap[postType] || { icon: '📝', color: '#64748b', label: '소식' };
+    };
+
+    return `
+      <div class="feed-list">
+        ${posts.map(post => {
+          const relativeTime = getRelativeTime(post.createdAt);
+          const typeInfo = getTypeInfo(post.postType);
+          const truncatedContent = post.content.length > 80 ? post.content.substring(0, 80) + '...' : post.content;
+
+          return `
+            <article class="feed-post-card instagram-style" data-action="goto-feed">
+              <div class="post-header-compact">
+                <div class="post-header-left">
+                  <span class="store-avatar">${post.storeLogo || '🏪'}</span>
+                  <div class="post-header-info">
+                    <h4 class="post-compact-store-name">${post.storeName}</h4>
+                    <span class="post-compact-time">${relativeTime}</span>
+                  </div>
+                </div>
+                <span class="post-type-badge-compact" style="background: ${typeInfo.color}20; color: ${typeInfo.color};">
+                  ${typeInfo.icon}
+                </span>
+              </div>
+
+              ${post.hasImage ? `
+                <div class="post-image-large">
+                  <img 
+                    src="${post.imageUrl || '/TableLink.png'}" 
+                    alt="${post.title}"
+                    onerror="this.src='/TableLink.png'"
+                  >
+                </div>
+              ` : ''}
+
+              <div class="post-content-compact">
+                <h3 class="post-compact-title-large">${post.title}</h3>
+                <p class="post-compact-preview-large">${truncatedContent}</p>
+              </div>
+
+              <div class="post-actions-compact">
+                <button class="action-btn-compact" onclick="event.stopPropagation()">
+                  <span class="action-icon">${post.hasLiked ? '❤️' : '🤍'}</span>
+                  <span class="action-text">좋아요 ${post.likes}</span>
+                </button>
+                <button class="action-btn-compact" onclick="event.stopPropagation()">
+                  <span class="action-icon">💬</span>
+                  <span class="action-text">댓글 ${post.comments}</span>
+                </button>
+              </div>
+            </article>
+          `;
+        }).join('')}
       </div>
-
-      <style>
-        .following-content {
-          padding: 16px;
-        }
-
-        .following-store-card {
-          display: flex;
-          gap: 12px;
-          padding: 16px;
-          background: white;
-          border-radius: 12px;
-          margin-bottom: 12px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .following-store-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .store-image {
-          width: 80px;
-          height: 80px;
-          border-radius: 8px;
-          object-fit: cover;
-          flex-shrink: 0;
-        }
-
-        .store-info {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-        }
-
-        .store-name {
-          font-size: 16px;
-          font-weight: 700;
-          color: #1f2937;
-          margin: 0 0 6px 0;
-        }
-
-        .store-meta {
-          font-size: 13px;
-          color: #6b7280;
-          margin-bottom: 8px;
-        }
-
-        .store-category {
-          font-weight: 600;
-        }
-
-        .store-rating {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 14px;
-          font-weight: 600;
-          color: #f59e0b;
-        }
-
-        .star-icon {
-          font-size: 16px;
-        }
-      </style>
     `;
   },
 
