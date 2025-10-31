@@ -22,4 +22,8 @@ router.post('/favorite/toggle', userController.toggleFavorite.bind(userControlle
 // 전화번호로 회원 조회
 router.get('/search-by-phone', userController.searchByPhone.bind(userController));
 
+// 개인화된 피드 조회
+const feedController = require('../controllers/feedController');
+router.get('/:userId/personalized-feed', feedController.getPersonalizedFeed.bind(feedController));
+
 module.exports = router;
