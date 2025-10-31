@@ -107,7 +107,10 @@ async function createStoreRegularLevelsDummy() {
       // 각 등급별로 데이터 삽입
       console.log(`🔄 [${processedStores}/${totalStores}] 매장 ${storeId} - 레벨 시스템 생성 중...`);
       
-      for (const levelData of levels) {
+      for (let i = 0; i < levels.length; i++) {
+        const levelData = levels[i];
+        const nextLevelData = i < levels.length - 1 ? levels[i + 1] : null;
+        
         try {
           await client.query(`
             INSERT INTO store_regular_levels (
@@ -116,9 +119,10 @@ async function createStoreRegularLevelsDummy() {
               min_orders, 
               min_spent, 
               benefits,
-              grade
+              grade,
+              next_level
             )
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (store_id, level) DO NOTHING
           `, [
             storeId,
@@ -126,7 +130,8 @@ async function createStoreRegularLevelsDummy() {
             levelData.min_orders,
             levelData.min_spent,
             JSON.stringify(levelData.benefits),
-            levelData.grade
+            levelData.grade,
+            nextLevelData ? nextLevelData.level : null
           ]);
 
           insertCount++;
