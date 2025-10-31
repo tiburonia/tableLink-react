@@ -41,14 +41,23 @@ class RegularRepository {
    */
   async findNextLevel(storeId, currentLevel) {
     const result = await pool.query(`
-      SELECT * FROM store_regular_levels
+      SELECT 
+        id,
+        store_id,
+        level,
+        min_orders,
+        min_spent,
+        benefits,
+        grade,
+        condition_operator
+      FROM store_regular_levels
       WHERE store_id = $1 AND level != $2
-      ORDER BY min_orders ASC, min_spent ASC
+      ORDER BY grade ASC, min_orders ASC, min_spent ASC
     `, [storeId, currentLevel]);
 
     // 현재 레벨보다 높은 조건의 다음 레벨 찾기
     const currentLevelData = await pool.query(`
-      SELECT min_orders, min_spent FROM store_regular_levels
+      SELECT grade, min_orders, min_spent FROM store_regular_levels
       WHERE store_id = $1 AND level = $2
     `, [storeId, currentLevel]);
 
@@ -56,8 +65,9 @@ class RegularRepository {
 
     const current = currentLevelData.rows[0];
     
+    // grade가 더 높은 첫 번째 레벨 반환
     for (const level of result.rows) {
-      if (level.min_orders > current.min_orders || level.min_spent > current.min_spent) {
+      if (level.grade > current.grade) {
         return level;
       }
     }
@@ -66,13 +76,22 @@ class RegularRepository {
   }
 
   /**
-   * 등급 승급 조건 확인
+   * 등급 승급 조건 확인 (condition_operator 고려)
    */
   async checkLevelCondition(level, regular) {
     if (!level) return false;
     
-    const { min_orders, min_spent } = level;
-    return (regular.visit_count >= min_orders && regular.total_spent >= min_spent);
+    const { min_orders, min_spent, condition_operator } = level;
+    const ordersCondition = regular.visit_count >= min_orders;
+    const spentCondition = regular.total_spent >= min_spent;
+
+    // condition_operator에 따라 AND/OR 조건 적용
+    if (condition_operator === 'OR') {
+      return ordersCondition || spentCondition;
+    } else {
+      // 기본값은 AND (condition_operator가 'AND'이거나 null인 경우)
+      return ordersCondition && spentCondition;
+    }
   }
 
   /**

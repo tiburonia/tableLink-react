@@ -39,32 +39,42 @@ class RegularService {
         // 3️⃣ 통계 업데이트
         await regularRepository.updateRegularStats(storeId, userId, finalAmount);
 
-        // 3️⃣ 등급 승급 확인
+        // 4️⃣ 등급 승급 확인
         const currentLevelId = existingRegular.level_id;
         
         // 현재 레벨 정보 조회
         const currentLevelResult = await regularRepository.pool.query(
-          'SELECT level FROM store_regular_levels WHERE id = $1',
+          'SELECT level, grade FROM store_regular_levels WHERE id = $1',
           [currentLevelId]
         );
 
         if (currentLevelResult.rows.length > 0) {
           const currentLevel = currentLevelResult.rows[0].level;
+          const currentGrade = currentLevelResult.rows[0].grade;
           const nextLevel = await regularRepository.findNextLevel(storeId, currentLevel);
 
           if (nextLevel) {
+            console.log(`🔍 승급 조건 확인 - 현재: ${currentLevel}(Grade ${currentGrade}), 다음: ${nextLevel.level}(Grade ${nextLevel.grade})`);
+            console.log(`📋 다음 레벨 조건: 주문 ${nextLevel.min_orders}회 ${nextLevel.condition_operator || 'AND'} 누적 ${nextLevel.min_spent}원`);
+            
             // 업데이트된 통계로 다시 조회
             const updatedRegular = await regularRepository.findRegularByStoreAndUser(storeId, userId);
+            console.log(`📊 현재 통계: 주문 ${updatedRegular.visit_count}회, 누적 ${updatedRegular.total_spent}원`);
+            
             const eligible = await regularRepository.checkLevelCondition(nextLevel, updatedRegular);
 
             if (eligible) {
-              console.log('🎉 등급 승급:', currentLevel, '→', nextLevel.level);
+              console.log(`🎉 등급 승급: ${currentLevel} → ${nextLevel.level}`);
               await regularRepository.promoteRegularLevel({
                 storeId,
                 userId,
                 nextLevel,
               });
+            } else {
+              console.log(`⏳ 승급 조건 미달: ${currentLevel} 유지`);
             }
+          } else {
+            console.log(`✅ 최고 등급 도달: ${currentLevel}`);
           }
         }
       } else {
