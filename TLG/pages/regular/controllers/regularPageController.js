@@ -125,12 +125,12 @@ export const regularPageController = {
   /**
    * 팔로잉 탭 실제 컨텐츠 렌더링
    */
-  renderFollowingContent() {
+  renderFollowingContent(recentVisited = null, posts = null) {
     const followingPane = document.getElementById('followingPane');
     if (!followingPane) return;
 
-    // TODO: 추후 실제 데이터로 대체
-    const dummyStores = [
+    // 실제 데이터가 없으면 더미 데이터 사용
+    const dummyStores = recentVisited || [
       {
         storeId: 386,
         storeName: '본격 로스터리카페',
@@ -160,7 +160,7 @@ export const regularPageController = {
       }
     ];
 
-    const dummyPosts = [
+    const dummyPosts = posts || [
       {
         id: 1,
         storeId: 386,
@@ -354,13 +354,27 @@ export const regularPageController = {
         // 스켈레톤 표시
         this.showFollowingSkeleton();
 
-        // TODO: 추후 실제 API 호출로 대체
-        // const followingData = await regularPageService.getFollowingStores(userId);
-        
-        // 임시: setTimeout으로 데이터 로딩 시뮬레이션
-        setTimeout(() => {
+        try {
+          // 사용자 정보 가져오기
+          const userInfo = window.getUserInfoSafely ? window.getUserInfoSafely() : window.userInfo;
+          
+          if (!userInfo || !userInfo.userId) {
+            throw new Error('사용자 정보를 찾을 수 없습니다');
+          }
+
+          // 실제 API 호출
+          const followingData = await regularPageService.getFollowingStoresData(userInfo.userId);
+          
+          if (followingData.success) {
+            this.renderFollowingContent(followingData.recentVisited, followingData.posts);
+          } else {
+            throw new Error(followingData.error || '데이터 로딩 실패');
+          }
+        } catch (error) {
+          console.error('❌ 팔로잉 탭 로딩 실패:', error);
+          // 에러 발생 시 더미 데이터로 폴백
           this.renderFollowingContent();
-        }, 800);
+        }
       });
     }
 

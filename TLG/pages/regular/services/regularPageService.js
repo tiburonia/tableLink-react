@@ -80,6 +80,29 @@ export const regularPageService = {
       'BRONZE': '🥉'
     };
     return icons[level] || '🏅';
+  },
+
+  /**
+   * 팔로잉 매장 데이터 가져오기
+   */
+  async getFollowingStoresData(userId) {
+    try {
+      const data = await regularPageRepository.getFollowingStoresData(userId);
+      
+      return {
+        success: true,
+        recentVisited: data.recentVisited || [],
+        posts: data.posts || []
+      };
+    } catch (error) {
+      console.error('❌ 팔로잉 매장 데이터 조회 실패:', error);
+      return {
+        success: false,
+        recentVisited: [],
+        posts: [],
+        error: error.message
+      };
+    }
   }
 };
 
