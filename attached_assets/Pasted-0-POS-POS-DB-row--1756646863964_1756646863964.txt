@@ -1,0 +1,336 @@
+0) 한줄 요약 (방향 고정)
+
+POS가 마스터: 모든 주문/결제의 기준 데이터는 POS DB.
+
+세션(=영수증/체크) 단위로 묶고, 아이템은 단품(row) 단위.
+
+결제는 별도 payments, 일부 환불은 아이템에 분배(payment_allocations).
+
+paid_orders, user_paid_orders는 뷰로 대체(단일 진실원천 유지).
+
+1) 코어 스키마 (MVP 안전판)
+1-1. 체크(영수증) = 한 테이블 방문/주문 묶음
+CREATE TYPE check_status AS ENUM ('open','closed','canceled');
+
+CREATE TABLE checks (
+  id            BIGSERIAL PRIMARY KEY,
+  store_id      INT NOT NULL REFERENCES stores(id),
+  table_number  INT,
+  user_id       VARCHAR(50) REFERENCES users(id),
+  guest_phone   VARCHAR(20),
+  channel       VARCHAR(20) NOT NULL DEFAULT 'DINE_IN', -- DINE_IN | TAKEOUT | DELIVERY(TLD)
+  source        VARCHAR(20) NOT NULL DEFAULT 'POS',     -- POS | TLL | ADMIN
+  status        check_status NOT NULL DEFAULT 'open',
+  opened_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  closed_at     TIMESTAMP,
+  notes         TEXT
+);
+CREATE INDEX idx_checks_store_status ON checks(store_id, status);
+CREATE INDEX idx_checks_user ON checks(user_id);
+
+1-2. 주문(증분) = 한 번의 “추가 주문” 묶음
+CREATE TYPE order_status AS ENUM ('pending','confirmed','void');
+
+CREATE TABLE orders (
+  id         BIGSERIAL PRIMARY KEY,
+  check_id   BIGINT NOT NULL REFERENCES checks(id) ON DELETE CASCADE,
+  source     VARCHAR(20) NOT NULL DEFAULT 'POS', -- POS | TLL
+  status     order_status NOT NULL DEFAULT 'pending',
+  ext_key    VARCHAR(100),  -- TLL 중복방지용 idem 키 (UNIQUE 권장)
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (ext_key)
+);
+CREATE INDEX idx_orders_check ON orders(check_id);
+
+1-3. 주문 라인(단품) = KDS/부분취소의 최소 단위
+
+quantity=1 권장. 여러 개 주문이면 라인을 여러 개 만들기.
+
+CREATE TYPE item_status AS ENUM ('queued','cooking','ready','served','canceled');
+
+CREATE TABLE order_lines (
+  id           BIGSERIAL PRIMARY KEY,
+  order_id     BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  menu_id      INT,
+  menu_name    VARCHAR(255) NOT NULL,
+  unit_price   INT NOT NULL,
+  status       item_status NOT NULL DEFAULT 'queued',
+  cook_station VARCHAR(50),       -- FRY/GRILL/DRINK 등
+  notes        TEXT,
+  created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_lines_order ON order_lines(order_id);
+CREATE INDEX idx_lines_status ON order_lines(status);
+
+1-4. 가격 조정(쿠폰/프로모션/수기할인)
+CREATE TYPE adj_scope AS ENUM ('CHECK','LINE');
+CREATE TYPE adj_type  AS ENUM ('COUPON','PROMO','MANUAL','POINT');
+
+CREATE TABLE adjustments (
+  id          BIGSERIAL PRIMARY KEY,
+  check_id    BIGINT REFERENCES checks(id) ON DELETE CASCADE,
+  line_id     BIGINT REFERENCES order_lines(id) ON DELETE CASCADE,
+  scope       adj_scope NOT NULL,
+  adj_type    adj_type NOT NULL,
+  value_type  VARCHAR(10) NOT NULL, -- 'amount' | 'percent'
+  value       NUMERIC(10,2) NOT NULL,
+  created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CHECK ((scope='CHECK' AND line_id IS NULL) OR (scope='LINE' AND line_id IS NOT NULL))
+);
+CREATE INDEX idx_adj_check ON adjustments(check_id);
+CREATE INDEX idx_adj_line  ON adjustments(line_id);
+
+1-5. 결제/환불 (KRP 연동)
+CREATE TYPE pay_status AS ENUM ('authorized','paid','void','refunded','failed');
+
+CREATE TABLE payments (
+  id             BIGSERIAL PRIMARY KEY,
+  check_id       BIGINT NOT NULL REFERENCES checks(id) ON DELETE CASCADE,
+  method         VARCHAR(30) NOT NULL,    -- card/cash/point/kakao 등
+  amount         INT NOT NULL,            -- +결제 / -환불(부분환불은 allocation으로)
+  status         pay_status NOT NULL,
+  krp_provider   VARCHAR(30),             -- PG사/프로바이더
+  krp_txn_id     VARCHAR(100),
+  idempotency_key VARCHAR(100),           -- 결제중복 방지
+  paid_at        TIMESTAMP,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE (krp_provider, krp_txn_id),
+  UNIQUE (idempotency_key)
+);
+CREATE INDEX idx_pay_check ON payments(check_id);
+
+(선택) 결제-아이템 배분: 부분환불/부분결제 추적
+CREATE TABLE payment_allocations (
+  payment_id BIGINT NOT NULL REFERENCES payments(id) ON DELETE CASCADE,
+  line_id    BIGINT NOT NULL REFERENCES order_lines(id) ON DELETE CASCADE,
+  amount     INT NOT NULL,
+  PRIMARY KEY (payment_id, line_id)
+);
+
+1-6. 이벤트 로그(감사/복구용)
+CREATE TABLE order_events (
+  id         BIGSERIAL PRIMARY KEY,
+  check_id   BIGINT REFERENCES checks(id),
+  order_id   BIGINT REFERENCES orders(id),
+  line_id    BIGINT REFERENCES order_lines(id),
+  actor      VARCHAR(20) NOT NULL,   -- POS|TLL|KDS|SYSTEM
+  event_type VARCHAR(50) NOT NULL,   -- CREATED|LINE_CANCELED|STATUS_CHANGED|PAID...
+  payload    JSONB,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_evt_check ON order_events(check_id);
+
+
+paid_orders, user_paid_orders는 삭제 대신 아래 VIEW로 대체(하단 3-3 참고).
+
+2) 흐름 고정 (역할 분리)
+
+TLL: checks(OPEN) 생성 → orders + order_lines insert → order.status=confirmed
+
+POS: 확인/수정, 합계 계산(라인+조정) → 결제 승인 요청(KRP)
+
+KDS: order_lines만 구독(폴링/푸시) → queued→cooking→ready→served
+
+KRP: 결제 결과를 payments로 기록 → 성공 시 checks.status=closed (또는 부분결제면 open 유지)
+
+부분취소/환불: order_lines.status='canceled' + 필요 시 payments(음수 or refund status) + payment_allocations.
+
+3) 마이그레이션 로드맵 (끊김 최소화)
+3-1. 새 테이블 추가 (기존과 병행)
+
+위 1) 코어 스키마 전부 생성
+
+임시 동작: 신규 API는 새 스키마로 기록, 기존 화면은 구 스키마/뷰로 읽기
+
+3-2. 데이터 이관 (핵심 포인트)
+
+checks 생성: orders.session_id 또는 (store_id, table_number) 기준으로 방문 묶음 만들기
+
+-- 예시: 세션 기준 체크 생성
+INSERT INTO checks (store_id, table_number, user_id, guest_phone, channel, source, status, opened_at)
+SELECT DISTINCT o.store_id, o.table_number, o.user_id, o.guest_phone, 
+       'DINE_IN', 'POS',
+       CASE WHEN o.order_status IN ('paid','completed') THEN 'closed' ELSE 'open' END,
+       MIN(o.created_at)
+FROM orders o
+GROUP BY o.store_id, o.table_number, o.user_id, o.guest_phone, 
+         CASE WHEN o.order_status IN ('paid','completed') THEN 'closed' ELSE 'open' END;
+
+
+orders → orders(신규): 체크 매핑해서 만들어 넣기
+
+INSERT INTO orders (check_id, source, status, created_at)
+SELECT c.id,
+       'POS',
+       CASE WHEN o.order_status='pending' THEN 'pending'
+            WHEN o.order_status IN ('confirmed','completed','paid') THEN 'confirmed'
+            ELSE 'void' END,
+       o.created_at
+FROM orders o
+JOIN checks c ON c.store_id=o.store_id AND c.table_number=o.table_number
+ AND ((c.user_id IS NOT DISTINCT FROM o.user_id) OR (c.guest_phone IS NOT DISTINCT FROM o.guest_phone));
+
+
+order_items → order_lines: 수량 분해( quantity→여러 row )
+
+INSERT INTO order_lines (order_id, menu_name, unit_price, status, created_at)
+SELECT o2.id, oi.menu_name, oi.unit_price, 'queued', oi.created_at
+FROM order_items oi
+JOIN orders o1 ON o1.id=oi.order_id
+JOIN orders o2 ON o2.check_id = (
+  SELECT o2c.check_id FROM orders o2c WHERE o2c.created_at=o1.created_at ORDER BY o2c.id LIMIT 1
+)
+CROSS JOIN generate_series(1, GREATEST(1, oi.quantity));
+
+
+위 매핑은 상황에 맞게 보정 필요. 핵심은 quantity를 라인 여러 개로 쪼개는 것.
+
+paid_orders → payments:
+
+INSERT INTO payments (check_id, method, amount, status, paid_at, created_at)
+SELECT c.id, po.payment_method, po.final_amount, 'paid', po.payment_date, po.created_at
+FROM paid_orders po
+JOIN checks c ON c.store_id=po.store_id AND c.table_number=po.table_number
+ AND ((c.user_id IS NOT DISTINCT FROM po.user_id) OR (c.guest_phone IS NOT DISTINCT FROM po.guest_phone));
+
+3-3. 호환성 뷰(구 스키마 API 안깨기)
+CREATE VIEW paid_orders_view AS
+SELECT
+  p.id,
+  ch.store_id,
+  ch.user_id,
+  ch.guest_phone,
+  ch.table_number,
+  -- 필요하면 order_lines 집계해서 JSONB로 합성
+  p.amount AS final_amount,
+  p.method AS payment_method,
+  p.paid_at AS payment_date,
+  p.created_at
+FROM payments p
+JOIN checks ch ON ch.id=p.check_id
+WHERE p.status='paid';
+
+CREATE VIEW user_paid_orders_view AS
+SELECT
+  p.id,
+  ch.user_id,
+  ch.store_id,
+  s.name AS store_name,
+  ch.table_number,
+  p.amount AS final_amount,
+  p.method AS payment_method,
+  p.paid_at AS payment_date,
+  p.created_at
+FROM payments p
+JOIN checks ch ON ch.id=p.check_id
+JOIN stores s ON s.id=ch.store_id
+WHERE ch.user_id IS NOT NULL AND p.status='paid';
+
+
+기존 코드가 paid_orders, user_paid_orders를 조회한다면, 우선 뷰 이름을 기존 테이블명으로 맞춰놓고(또는 alias) 코드 교체를 점진적으로 진행.
+
+3-4. 쓰기 경로 전환
+
+TLL/POS 신규 주문 & 결제는 새 스키마만 사용
+
+구 테이블로의 insert 중단
+
+충분히 안정화되면 구 테이블 Drop
+
+4) API 계약(짧고 굵게)
+
+TLL (주문 생성)
+
+POST /checks → {store_id, table_number?, user_id/guest_phone, channel, source:'TLL'}
+
+POST /orders → {check_id, source:'TLL'}
+
+POST /order-lines/bulk → [{order_id, menu_id/name, unit_price, count}] → 서버에서 count만큼 라인 생성
+
+응답에 check_id, order_id[], line_ids[] 반환
+
+idempotency-key 헤더 필수
+
+POS
+
+GET /checks/:id/summary → 합계(라인+조정) 계산 결과
+
+POST /adjustments → 할인/쿠폰 적용
+
+POST /payments → {check_id, method, amount, idempotency_key}
+
+결제 성공 → checks.status='closed'
+
+KDS
+
+GET /kds/lines?store_id=&since=ts&status=queued,cooking
+
+PATCH /kds/lines/:id → status 변환(queued→cooking→ready→served / canceled)
+
+KRP
+
+POST /krp/authorize|capture|refund
+
+콜백: POST /krp/webhook → payments 업데이트
+
+5) 동시성/중복 방지 포인트
+
+주문 중복: orders.ext_key UNIQUE (TLL에서 생성, 재시도 안전)
+
+결제 중복: payments.idempotency_key UNIQUE + (krp_provider, krp_txn_id) UNIQUE
+
+행 잠금: 결제 직전 SELECT ... FOR UPDATE로 checks(id) 잠그고 합계 재계산
+
+트랜잭션: 결제 승인/캡처와 payments insert + checks.status 업데이트를 하나의 트랜잭션으로
+
+6) 인덱스/성능 체크리스트
+
+checks(store_id, status) / checks(user_id)
+
+orders(check_id)
+
+order_lines(order_id) / order_lines(status)
+
+payments(check_id) / (krp_provider, krp_txn_id)
+
+최근 변경분만 KDS가 가져갈 수 있게 order_lines(created_at, status) 범위 인덱스 고려
+
+7) 운영 시나리오 예시
+(A) 후라이드 2개 주문 → 1개만 취소
+
+생성: order_lines 두 줄(각 1개)
+
+취소: 그 중 한 줄 status='canceled'
+
+결제합계: queued|cooking|ready|served만 합산 (canceled 제외)
+
+부분환불: 이미 결제 후라면 payments에 음수 row + payment_allocations(line_id, amount)
+
+(B) 조리 흐름
+
+KDS: queued → cooking → ready → served
+
+취소는 queued/cooking에서만 허용(정책) → ready/served는 환불 절차
+
+8) 기존 스키마 정리 가이드
+
+orders.order_data JSONB → 폐기 (라인 기준 계산으로 대체)
+
+paid_orders, user_paid_orders → 뷰로 우선 대체 후 제거
+
+users.order_list, users.reservation_list 같은 JSONB 누적은 가급적 별도 테이블로 차후 분리
+
+9) 꼭 추가해두면 좋은 것
+
+menus 정규화(지금은 나중 단계): menus(id, store_id, name, price, station, is_active)
+
+menu_options/line_options (옵션 가격 반영 필요 시)
+
+prep_stations 테이블 + menus.station FK (KDS 라우팅 정확도 ↑)
+
+필요하면 위 스키마 그대로 DDL 패키지랑, 네 현재 데이터 기준으로 돌아가는 마이그레이션 SQL을 더 촘촘하게 맞춰서 뽑아줄게.
+지금 당장 실행 순서는 이렇게 가져가:
+
+새 테이블 생성 → 2) 체크/주문/라인 이관 → 3) 결제 이관 → 4) 뷰 준비 → 5) 새 API로 쓰기 전환 → 6) 구 테이블 정리.
+
+이렇게만 깔아두면, TLL·KDS·POS·KRP가 서로 한 축(checks) 으로 안정적으로 합쳐진다

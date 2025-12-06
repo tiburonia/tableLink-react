@@ -1,0 +1,143 @@
+📂 src 폴더 구조 제안
+src/
+  routes/               # HTTP 엔드포인트 라우팅
+    pos.js
+    tll.js
+    kds.js
+    tlm.js
+    ...
+  controllers/          # 요청 단위 제어 (req, res)
+    posController.js
+    tllController.js
+    kdsController.js
+    ...
+  services/             # 비즈니스 로직
+    orderService.js
+    paymentService.js
+    tableService.js
+    ...
+  repositories/         # DB 접근 계층 (SQL/ORM)
+    orderRepository.js
+    tableRepository.js
+    userRepository.js
+    ...
+  models/               # DB 모델 정의 (SQL 스키마 or ORM 모델)
+    Order.js
+    Table.js
+    User.js
+    ...
+  middleware/           # 미들웨어
+    auth.js
+    errorHandler.js
+    validator.js
+  utils/                # 공용 유틸리티
+    db.js               # pool, transaction 관리
+    eventBus.js
+    logger.js
+    ...
+  events/               # 이벤트 핸들러 (KDS 알림, WebSocket 등)
+    orderEvents.js
+    ...
+  config/               # 환경설정
+    dbConfig.js
+    appConfig.js
+  index.js              # 서버 진입점 (Express app)
+  app.js                # Express 설정
+
+📌 각 레이어 역할
+1. routes/
+
+단순히 router.get, router.post만 정의
+
+어떤 URL → 어떤 controller 로 연결할지만 관리
+예: routes/pos.js
+
+const router = require('express').Router();
+const posController = require('../controllers/posController');
+
+router.post('/orders/modify-batch', posController.modifyBatch);
+
+module.exports = router;
+
+2. controllers/
+
+req.body, req.params, res.json() 같은 HTTP 레벨 처리
+
+비즈니스 로직은 service에 위임
+예: controllers/posController.js
+
+const orderService = require('../services/orderService');
+
+exports.modifyBatch = async (req, res, next) => {
+  try {
+    const result = await orderService.modifyBatch(req.body);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    next(err);
+  }
+};
+
+3. services/
+
+순수 비즈니스 로직 담당 (트랜잭션, 이벤트, 조건 분기)
+
+repository를 호출해 데이터 조작
+예: services/orderService.js
+
+const orderRepo = require('../repositories/orderRepository');
+
+exports.modifyBatch = async ({ storeId, tableNumber, modifications }) => {
+  const client = await orderRepo.getClient();
+  try {
+    await client.query('BEGIN');
+    const orderId = await orderRepo.getOrCreateActiveOrder(client, storeId, tableNumber);
+    // ... add/remove 처리 ...
+    await client.query('COMMIT');
+    return { orderId, message: "수정 완료" };
+  } catch (e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+};
+
+4. repositories/
+
+DB SQL 전용 계층 (queryBuilder/ORM)
+
+SQL을 한 곳에 모아두면 나중에 DB 리팩토링하기 편함
+
+5. models/
+
+ORM을 쓸 경우(Entity 정의)
+
+직접 SQL만 쓰면 이 폴더는 선택사항
+
+6. middleware/
+
+인증, 권한 체크, 유효성 검사, 에러 핸들링
+
+7. utils/
+
+재사용 가능한 공통 함수
+
+logger, eventBus, 날짜 포맷터, response formatter
+
+8. events/
+
+KDS 이벤트, WebSocket, Pub/Sub
+
+주문 수정 시 eventBus.emit('order.modified', ...) 같은 로직 분리
+
+9. config/
+
+DB 커넥션, 서버 포트, 환경 변수
+
+📌 요약:
+
+routes: URL만 → controller: HTTP 처리 → service: 비즈니스 로직 → repository: DB
+
+여기에 middleware, utils, config, events까지 모듈화
+
+👉 이렇게 가면 TL 전체(TLL/POS/KDS/TLM) 구조가 커져도, 각 레이어가 분리돼서 관리가 깔끔해져.

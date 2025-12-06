@@ -1,0 +1,232 @@
+~/workspace$ node -e "
+> const pool = require('./src/db/pool');
+> (async () => {
+>   try {
+OM>     console.log('🔍 데이터베이스 정규화 상태 분석\\n');
+>     
+>     // 1. 모든 테이블 목록 조회
+>     const tablesResult = await pool.query(\`
+>       SELECT table_name
+>       FROM information_schema.tables 
+>       WHERE table_schema = 'public'
+>       ORDER BY table_name
+>     \`);
+>     
+>     console.log('📋 현재 테이블 목록:');
+>     tablesResult.rows.forEach((table, index) => {
+>       console.log(\`  \${index + 1}. \${table.table_name}\`);
+>     });
+{>     
+>     // 2. 외래키 관계 분석
+>     console.log('\\n🔗 외래키 관계 (정규화 지표):');
+>     const foreignKeysResult = await pool.query(\`
+>       SELECT 
+>         tc.table_name,
+>         kcu.column_name,
+>         ccu.table_name AS foreign_table_name,
+>         ccu.column_name AS foreign_column_name
+>       FROM information_schema.table_constraints tc
+>       JOIN information_schema.key_column_usage kcu 
+>         ON tc.constraint_name = kcu.constraint_name
+>       JOIN information_schema.constraint_column_usage ccu 
+>         ON tc.constraint_name = ccu.constraint_name
+>       WHERE tc.constraint_type = 'FOREIGN KEY'
+>       ORDER BY tc.table_name, kcu.column_name
+>     \`);
+>     
+ra>     if (foreignKeysResult.rows.length > 0) {
+>       foreignKeysResult.rows.forEach(fk => {
+>         console.log(\`  • \${fk.table_name}.\${fk.column_name} → \${fk.foreign_table_name}.\${fk.foreign_column_name}\`);
+>       });
+>     } else {
+>       console.log('  ❌ 외래키 관계가 없습니다 (비정규화 상태)');
+>     }
+>     
+>     // 3. 주요 테이블들의 정규화 상태 분석
+>     console.log('\\n📊 주요 테이블 정규화 분석:');
+>     
+>     // stores 테이블 분석
+>     const storesColumns = await pool.query(\`
+Tables = tabl>       SELECT column_name, data_type
+ota>       FROM information_schema.columns 
+l>       WHERE table_name = 'stores'
+=>       ORDER BY ordinal_position
+>     \`);
+TS >     
+>     console.log('\\n🏪 stores 테이블:');
+>     if (storesColumns.rows.length > 0) {
+>       const hasAddress = storesColumns.rows.some(col => col.column_name.includes('address'));
+>       const hasCoord = storesColumns.rows.some(col => col.column_name === 'coord');
+>       
+ >       console.log(\`  컬럼 수: \${storesColumns.rows.length}개\`);
+>       console.log(\`  주소 정보: \${hasAddress ? '테이블 내 포함 (비정규화)' : '별도 테이블 (정규화)'}\`);
+>       console.log(\`  좌표 정보: \${hasCoord ? '테이블 내 포함' : '별도 저장'}\`);
+>       
+>       // store_address 테이블 존재 확인
+>       const storeAddressExists = await pool.query(\`
+>         SELECT EXISTS (
+>           SELECT FROM information_schema.tables 
+>           WHERE table_name = 'store_address'
+>         )
+>       \`);
+  >       
+>       if (storeAddressExists.rows[0].exists) {
+>         const addressCount = await pool.query('SELECT COUNT(*) as count FROM store_address');
+>         console.log(\`  ✅ store_address 테이블 존재 (\${addressCount.rows[0].count}개 레코드)\`);
+>       } else {
+>         console.log('  ❌ store_address 테이블 없음');
+>       }
+>     }
+>     
+>     // orders 테이블 분석
+>     const ordersExists = await pool.query(\`
+>       SELECT EXISTS (
+>         SELECT FROM information_schema.tables 
+>         WHERE table_name = 'orders'
+)>       )
+>     \`);
+>     
+>     console.log('\\n📦 orders 테이블:');
+>     if (ordersExists.rows[0].exists) {
+>       const ordersColumns = await pool.query(\`
+>         SELECT column_name, data_type
+>         FROM information_schema.columns 
+>         WHERE table_name = 'orders'
+>         ORDER BY ordinal_position
+>       \`);
+>       
+>       const hasOrderData = ordersColumns.rows.some(col => col.column_name === 'order_data');
+>       const hasJsonb = ordersColumns.rows.some(col => col.data_type === 'jsonb');
+>       
+>       console.log(\`  컬럼 수: \${ordersColumns.rows.length}개\`);
+>       console.log(\`  JSONB 사용: \${hasJsonb ? 'Yes (비정규화 경향)' : 'No'}\`);
+>       console.log(\`  order_data 컬럼: \${hasOrderData ? 'Yes (비정규화)' : 'No'}\`);
+>       
+>       // order_items 테이블 존재 확인
+>       const orderItemsExists = await pool.query(\`
+>         SELECT EXISTS (
+>           SELECT FROM information_schema.tables 
+>           WHERE table_name = 'order_items'
+>         )
+>       \`);
+>       
+>       if (orderItemsExists.rows[0].exists) {
+>         const itemsCount = await pool.query('SELECT COUNT(*) as count FROM order_items');
+>         console.log(\`  ✅ order_items 테이블 존재 (\${itemsCount.rows[0].count}개 레코드) - 정규화됨\`);
+>       } else {
+>         console.log('  ❌ order_items 테이블 없음 - 비정규화 상태');
+>       }
+>     } else {
+>       console.log('  ❌ orders 테이블이 존재하지 않음');
+>     }
+>     
+>     // menu_items 테이블 분석
+>     const menuItemsExists = await pool.query(\`
+>       SELECT EXISTS (
+>         SELECT FROM information_schema.tables 
+>         WHERE table_name = 'menu_items'
+>       )
+>     \`);
+>     
+>     console.log('\\n🍽️ menu_items 테이블:');
+>     if (menuItemsExists.rows[0].exists) {
+>       const menuCount = await pool.query('SELECT COUNT(*) as count FROM menu_items');
+>       const storeMenuRelation = await pool.query(\`
+>         SELECT COUNT(*) as fk_count
+>         FROM information_schema.table_constraints tc
+>         WHERE tc.table_name = 'menu_items' 
+>         AND tc.constraint_type = 'FOREIGN KEY'
+>       \`);
+>       
+>       console.log(\`  레코드 수: \${menuCount.rows[0].count}개\`);
+>       console.log(\`  외래키 수: \${storeMenuRelation.rows[0].fk_count}개\`);
+>       console.log(\`  정규화 상태: \${storeMenuRelation.rows[0].fk_count > 0 ? '정규화됨' : '비정규화'}\`);
+>     } else {
+>       console.log('  ❌ menu_items 테이블이 존재하지 않음');
+>     }
+>     
+>     // 4. 정규화 점수 계산
+>     console.log('\\n📈 정규화 점수 평가:');
+>     
+>     const totalTables = tablesResult.rows.length;
+>     const totalForeignKeys = foreignKeysResult.rows.length;
+>     const hasStoreAddress = await pool.query(\`
+>       SELECT EXISTS (
+>         SELECT FROM information_schema.tables 
+>         WHERE table_name = 'store_address'
+>       )
+>     \`);
+>     const hasOrderItems = await pool.query(\`
+>       SELECT EXISTS (
+>         SELECT FROM information_schema.tables 
+>         WHERE table_name = 'order_items'
+>       )
+>     \`);
+>     
+>     let score = 0;
+>     let maxScore = 10;
+>     
+>     // 외래키 존재 (3점)
+>     if (totalForeignKeys > 0) score += 3;
+>     
+>     // 주소 정보 분리 (2점)
+>     if (hasStoreAddress.rows[0].exists) score += 2;
+>     
+>     // 주문 항목 분리 (2점)
+>     if (hasOrderItems.rows[0].exists) score += 2;
+>     
+>     // 테이블 수 대비 외래키 비율 (3점)
+>     const fkRatio = totalForeignKeys / totalTables;
+>     if (fkRatio > 0.5) score += 3;
+>     else if (fkRatio > 0.3) score += 2;
+>     else if (fkRatio > 0.1) score += 1;
+>     
+>     console.log(\`\\n🏆 정규화 점수: \${score}/\${maxScore}점 (\${Math.round(score/maxScore*100)}%)\`);
+>     
+>     if (score >= 8) {
+>       console.log('✅ 높은 정규화 수준 - 잘 설계된 데이터베이스');
+>     } else if (score >= 6) {
+>       console.log('⚠️ 중간 정규화 수준 - 일부 개선 필요');
+>     } else if (score >= 4) {
+>       console.log('🔶 낮은 정규화 수준 - 상당한 개선 필요');
+>     } else {
+>       console.log('❌ 매우 낮은 정규화 수준 - 전면적인 재설계 필요');
+>     }
+>     
+>     // 5. 개선 권장사항
+>     console.log('\\n💡 개선 권장사항:');
+>     
+>     if (!hasStoreAddress.rows[0].exists) {
+bash: !hasStoreAddress.rows[0].exists: event not found
+>       console.log('  1. stores 테이블에서 주소 정보를 store_address 테이블로  분리');
+>     }
+>     
+>     if (!hasOrderItems.rows[0].exists) {
+bash: !hasOrderItems.rows[0].exists: event not found
+>       console.log('  2. orders 테이블에서 주문 항목을 order_items 테이블로 분 리');
+>     }
+>     
+>     if (totalForeignKeys < totalTables * 0.3) {
+>       console.log('  3. 테이블 간 외래키 관계 설정으로 참조 무결성 강화');
+>     }
+>     
+>     console.log('\\n✅ 정규화 상태 분석 완료');
+>     process.exit(0);
+>     
+>   } catch (error) {
+>     console.error('❌ 분석 중 오류:', error.message);
+>     process.exit(1);
+>   }
+> })();
+> "
+[eval]:200
+    }
+    ^
+
+SyntaxError: Missing catch or finally after try
+    at makeContextifyScript (node:internal/vm:185:14)
+    at node:internal/process/execution:107:22
+    at [eval]-wrapper:6:24
+    at runScript (node:internal/process/execution:101:62)
+    at evalScript (node:internal/process/execution:133:3)
+    at node:internal/main/eval_string:51:3

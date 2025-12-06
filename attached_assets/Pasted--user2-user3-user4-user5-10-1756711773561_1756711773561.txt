@@ -1,0 +1,29 @@
+✅ 사용자 생성: 이영희 (user2)
+✅ 사용자 생성: 박민수 (user3)
+✅ 사용자 생성: 최지연 (user4)
+✅ 사용자 생성: 정태현 (user5)
+🏪 서울 100개 매장 더미데이터 생성 시작...
+📊 기존 매장 수: 1개
+❌ 매장 1 생성 실패: column "description" of relation "stores" does not exist
+❌ 매장 2 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 3 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 4 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 5 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 6 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 7 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 8 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 9 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 10 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 11 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 12 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 13 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 14 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 15 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 16 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 17 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 18 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 19 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 20 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 21 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 22 생성 실패: current transaction is aborted, commands ignored until end of transaction block
+❌ 매장 23 생성 실패: current transaction is abor

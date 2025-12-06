@@ -1,0 +1,88 @@
+❌ Unhandled Rejection at: Promise {
+  <rejected> error: current transaction is aborted, commands ignored until end of transaction block
+      at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+      at async TableRepository.setMainOrder (/home/runner/workspace/src/repositories/tableRepository.js:55:5)
+      at async OrderService.updateStoreTable (/home/runner/workspace/src/services/orderService.js:630:9)
+      at async OrderService.createNewPOSOrder (/home/runner/workspace/src/services/orderService.js:522:5) {
+    length: 145,
+    severity: 'ERROR',
+    code: '25P02',
+    detail: undefined,
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'postgres.c',
+    line: '1500',
+    routine: 'exec_parse_message'
+  }
+} reason: error: current transaction is aborted, commands ignored until end of transaction block
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async TableRepository.setMainOrder (/home/runner/workspace/src/repositories/tableRepository.js:55:5)
+    at async OrderService.updateStoreTable (/home/runner/workspace/src/services/orderService.js:630:9)
+    at async OrderService.createNewPOSOrder (/home/runner/workspace/src/services/orderService.js:522:5) {
+  length: 145,
+  severity: 'ERROR',
+  code: '25P02',
+  detail: undefined,
+  hint: undefined,
+  position: undefined,
+  internalPosition: undefined,
+  internalQuery: undefined,
+  where: undefined,
+  schema: undefined,
+  table: undefined,
+  column: undefined,
+  dataType: undefined,
+  constraint: undefined,
+  file: 'postgres.c',
+  line: '1500',
+  routine: 'exec_parse_message'
+}
+❌ modifyBatch 트랜잭션 실패: {
+  storeId: 497,
+  tableNumber: 3208,
+  modifications: { add: { '후라이드치킨': 3 }, remove: {}, totalChanges: 1 },
+  error: 'invalid input syntax for type integer: "{}"',
+  stack: 'error: invalid input syntax for type integer: "{}"\n' +
+    '    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17\n' +
+    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\n' +
+    '    at async OrderRepository.getNextBatchNo (/home/runner/workspace/src/repositories/orderRepository.js:232:20)\n' +
+    '    at async OrderService.processAddItems (/home/runner/workspace/src/services/orderService.js:531:24)\n' +
+    '    at async OrderService.modifyBatch (/home/runner/workspace/src/services/orderService.js:170:9)\n' +
+    '    at async modifyBatch (/home/runner/workspace/src/controllers/posController.js:93:22)'
+}
+
+=== 📍 에러 발생 ===
+🌐 URL: POST /api/pos/orders/modify-batch
+📊 Status: 500
+💬 Message: invalid input syntax for type integer: "{}"
+🔍 Code: 22P02
+📚 Stack Trace:
+error: invalid input syntax for type integer: "{}"
+    at /home/runner/workspace/node_modules/pg/lib/client.js:545:17
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async OrderRepository.getNextBatchNo (/home/runner/workspace/src/repositories/orderRepository.js:232:20)
+    at async OrderService.processAddItems (/home/runner/workspace/src/services/orderService.js:531:24)
+    at async OrderService.modifyBatch (/home/runner/workspace/src/services/orderService.js:170:9)
+    at async modifyBatch (/home/runner/workspace/src/controllers/posController.js:93:22)
+📦 Request Body: {
+  "storeId": 497,
+  "tableNumber": 3208,
+  "modifications": {
+    "add": {
+      "후라이드치킨": 3
+    },
+    "remove": {},
+    "totalChanges": 1
+  }
+}
+=== 📍 에러 종료 ===

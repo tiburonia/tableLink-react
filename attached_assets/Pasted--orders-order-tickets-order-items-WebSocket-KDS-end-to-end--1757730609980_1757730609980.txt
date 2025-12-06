@@ -1,0 +1,290 @@
+좋아. 네 스키마(orders, order_tickets, order_items) 그대로 쓰면서 WebSocket 기반 KDS를 end-to-end로 설계해줄게.
+핵심은 초기 로드 = HTTP, 변경/신규 = WebSocket 이벤트야.
+
+1) 전체 아키텍처
+
+DB: orders(주문 묶음) ↔ order_tickets(KDS 카드) ↔ order_items(메뉴)
+
+HTTP API
+
+GET /api/kds/bootstrap : 최초 화면 로딩(진행 중 티켓 + 아이템)
+
+PATCH /api/kds/items/:id : 아이템 상태 변경(백업 경로, 혹시 WS 실패 대비)
+
+PATCH /api/kds/tickets/:id : 티켓 강제 상태 변경(선택)
+
+WebSocket
+
+네임스페이스/룸: store:{store_id}, 필요 시 store:{store_id}:station:{cook_station}
+
+서버→클라 이벤트: ticket.created, item.updated, ticket.updated, ticket.hidden, ticket.printed
+
+클라→서버 이벤트(액션): item:setStatus, ticket:setStatus, ticket:hide, ticket:print
+
+권한: 매장 단위 토큰(JWT)로 인증 → 해당 store_id 룸에 조인
+
+폴백: WS 불가 시 3~5초 폴링으로 대체
+
+2) 상태 모델
+
+티켓: PENDING → COOKING → DONE (보조: display_status=VISIBLE/HIDDEN, print_status)
+
+아이템: PENDING → COOKING → DONE (또는 CANCELED)
+
+집계 규칙(자동)
+
+모든 item ∈ {DONE,CANCELED} → ticket.status = DONE
+하나라도 COOKING → ticket.status = COOKING
+그 외 → PENDING
+
+
+가능하면 ENUM/체크제약으로 상태값 제한 권장.
+
+3) 데이터 컨트랙트 (WS/HTTP 공통)
+// Ticket payload
+{
+  "ticket_id": 123,
+  "order_id": 456,
+  "store_id": 1,
+  "batch_no": 1,
+  "table_label": "A-3",
+  "status": "PENDING",
+  "display_status": "VISIBLE",
+  "print_status": "WAITING",
+  "payment_type": "POSTPAID",
+  "created_at": "2025-09-12T19:32:00Z",
+  "version": 3,
+  "items": [
+    {
+      "id": 987,
+      "menu_name": "치즈돈까스",
+      "quantity": 2,
+      "item_status": "PENDING",
+      "cook_station": "FRY"
+    }
+  ]
+}
+
+4) 초기 로드 API
+GET /api/kds/bootstrap?store_id=1&stations=FRY,DRINK
+
+WITH tk AS (
+  SELECT ot.id AS ticket_id, ot.order_id, ot.batch_no, ot.status,
+         ot.display_status, ot.print_status, ot.payment_type,
+         ot.version, ot.created_at, o.store_id, st.label AS table_label
+  FROM order_tickets ot
+  JOIN orders o ON o.id = ot.order_id
+  LEFT JOIN store_tables st ON st.pos_session_id = o.id
+  WHERE o.store_id = $1
+    AND ot.display_status = 'VISIBLE'
+    AND ot.status IN ('PENDING','COOKING','DONE') -- 탭에 따라 조정
+  ORDER BY ot.created_at ASC
+)
+SELECT tk.*,
+       json_agg(json_build_object(
+         'id', oi.id,
+         'menu_name', oi.menu_name,
+         'quantity', oi.quantity,
+         'item_status', oi.item_status,
+         'cook_station', oi.cook_station
+       ) ORDER BY oi.id) AS items
+FROM tk
+JOIN order_items oi ON oi.ticket_id = tk.ticket_id
+WHERE ( $2::text[] IS NULL OR oi.cook_station = ANY($2::text[]) )
+GROUP BY tk.ticket_id, tk.order_id, tk.batch_no, tk.status, tk.display_status,
+         tk.print_status, tk.payment_type, tk.version, tk.created_at,
+         tk.store_id, tk.table_label;
+
+5) WebSocket 이벤트 설계
+서버→클라 (broadcast)
+
+ticket.created: 새 티켓(또는 추가주문 배치) 등장
+
+item.updated: 특정 아이템 상태가 바뀜
+
+ticket.updated: 집계 결과로 티켓 상태/버전 변경
+
+ticket.hidden: 완료 후 자동 숨김 처리
+
+ticket.printed: 프린터 결과 반영(PRINTED/FAILED)
+
+클라→서버 (action)
+
+item:setStatus
+
+{ "item_id": 987, "next": "COOKING" }
+
+
+ticket:setStatus
+
+{ "ticket_id": 123, "next": "DONE", "if_version": 3 }
+
+
+ticket:hide / ticket:print
+
+6) 상태 변경 트랜잭션 (핵심 SQL)
+-- 클라에서 item:setStatus 수신 시
+BEGIN;
+
+UPDATE order_items
+SET item_status = $1
+WHERE id = $2;
+
+WITH counts AS (
+  SELECT ticket_id,
+         COUNT(*) FILTER (WHERE item_status IN ('PENDING','COOKING')) AS outstanding,
+         COUNT(*) FILTER (WHERE item_status = 'COOKING') AS cooking_cnt
+  FROM order_items
+  WHERE ticket_id = (SELECT ticket_id FROM order_items WHERE id = $2)
+  GROUP BY ticket_id
+)
+UPDATE order_tickets ot
+SET status = CASE
+               WHEN c.outstanding = 0 THEN 'DONE'
+               WHEN c.cooking_cnt > 0 THEN 'COOKING'
+               ELSE 'PENDING'
+             END,
+    version = ot.version + 1
+FROM counts c
+WHERE ot.id = c.ticket_id
+RETURNING ot.id, ot.status, ot.version;
+
+COMMIT;
+
+
+서버는 커밋 후:
+
+같은 store:{store_id} 룸에 item.updated와 ticket.updated를 순서 보장해 브로드캐스트.
+
+낙관적 락: ticket:setStatus는 WHERE id=$id AND version=$if_version으로 업데이트. 변경 실패 시 409/에러 이벤트로 “리프레시 필요” 전달.
+
+7) 서버 코드 뼈대 (Node.js + Socket.IO 예시)
+import { Server } from "socket.io";
+import express from "express";
+import http from "http";
+import jwt from "jsonwebtoken";
+import { pool } from "./db.js"; // pg Pool
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, { path: "/ws" });
+
+// 인증 & 룸 조인
+io.use((socket, next) => {
+  try {
+    const token = socket.handshake.auth?.token;
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    socket.data.store_id = payload.store_id;
+    next();
+  } catch (e) { next(e); }
+});
+
+io.on("connection", (socket) => {
+  const storeRoom = `store:${socket.data.store_id}`;
+  socket.join(storeRoom);
+
+  socket.on("item:setStatus", async ({ item_id, next }) => {
+    // 1) 트랜잭션으로 item 업데이트 + ticket 집계
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `UPDATE order_items SET item_status=$1 WHERE id=$2`,
+        [next, item_id]
+      );
+
+      const { rows } = await client.query(`
+        WITH counts AS (
+          SELECT ticket_id,
+                 COUNT(*) FILTER (WHERE item_status IN ('PENDING','COOKING')) AS outstanding,
+                 COUNT(*) FILTER (WHERE item_status='COOKING') AS cooking_cnt
+          FROM order_items WHERE ticket_id=(SELECT ticket_id FROM order_items WHERE id=$1)
+          GROUP BY ticket_id
+        )
+        UPDATE order_tickets ot
+        SET status = CASE WHEN c.outstanding=0 THEN 'DONE'
+                          WHEN c.cooking_cnt>0 THEN 'COOKING'
+                          ELSE 'PENDING' END,
+            version = ot.version + 1
+        FROM counts c
+        WHERE ot.id=c.ticket_id
+        RETURNING ot.id AS ticket_id, ot.status, ot.version
+      `, [item_id]);
+
+      await client.query("COMMIT");
+
+      // 2) 브로드캐스트
+      io.to(storeRoom).emit("item.updated", { item_id, item_status: next });
+      io.to(storeRoom).emit("ticket.updated", rows[0]);
+    } catch (e) {
+      await client.query("ROLLBACK");
+      socket.emit("error", { code: "ITEM_STATUS_FAIL", message: e.message });
+    } finally {
+      client.release();
+    }
+  });
+
+  socket.on("disconnect", () => {});
+});
+
+server.listen(3000);
+
+8) 클라이언트 흐름(요약)
+
+부팅
+
+GET /api/kds/bootstrap로 현재 티켓들 로드
+
+JWT로 WebSocket 연결 → store:{store_id} 룸 자동 조인
+
+실시간 반영
+
+ticket.created 수신 → 카드 추가
+
+item.updated 수신 → 카드 내부 라인 상태 갱신
+
+ticket.updated 수신 → 카드 헤더 상태/색상 변경, DONE이면 하단 이동
+
+조작
+
+버튼 탭 → item:setStatus/ticket:setStatus 송신
+
+실패 이벤트 오면(버전 충돌/권한) → 재요청 or 전체 리프레시
+
+정리
+
+DONE 후 X분 경과 시 서버에서 display_status='HIDDEN'로 배치 업데이트 → ticket.hidden 브로드캐스트 → UI에서 제거
+
+서버가 가끔 꺼져 있어도, 다음 부팅 시 “청소 배치” 한 번 실행
+
+9) 성능/안정화 팁
+
+쿼리 인덱스:
+
+order_tickets (order_id), orders (store_id), order_items (ticket_id, cook_station)
+
+전송량 절감:
+
+변경된 엔티티만 델타 이벤트로 보내고, 초기 로드는 전체
+
+리플레이 보호:
+
+액션 이벤트에 request_id(UUID) 넣고 멱등 처리
+
+관찰성:
+
+이벤트 로그 테이블(간단한 append-only)로 운영 이슈 추적
+
+폴백 전략:
+
+WS 끊기면 폴링 모드로 자동 스위칭
+
+10) 화면 레이아웃 요약(적용 포인트)
+
+헤더: 매장/시간/스테이션 필터(토글)
+
+그리드: 2~3열 카드, 오래된 순 정렬, 신규 카드 깜빡임
+
+카드: 헤더(테이블·경과시간·티켓상태) / 바디(아이템 상태 리스트) / 푸터(시작·완료·숨김)
+
+색상: PENDING=회색, COOKING=주황, DONE=초록(하단 이동 후 자동 숨김)

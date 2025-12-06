@@ -1,0 +1,95 @@
+neondb=> \d orders
+                                           Table "public.orders"
+     Column     |            Type             | Collation | Nullable |               Default               
+----------------+-----------------------------+-----------+----------+-------------------------------------
+ id             | integer                     |           | not null | nextval('ordrers_id_seq'::regclass)
+ store_id       | integer                     |           | not null | 
+ user_id        | integer                     |           |          | 
+ guest_phone    | character varying           |           |          | 
+ source         | character varying(20)       |           | not null | 
+ status         | character varying(20)       |           | not null | 'OPEN'::character varying
+ payment_status | character varying(20)       |           | not null | 'UNPAID'::character varying
+ created_at     | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ updated_at     | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+  total_price   | integer                     |           |          | 0
+Indexes:
+    "ordrers_pkey" PRIMARY KEY, btree (id)
+Check constraints:
+    "chk_user_or_guest" CHECK (user_id IS NOT NULL AND guest_phone IS NULL OR user_id IS NULL AND guest_phone IS NOT NULL)
+Foreign-key constraints:
+    "FK_guest_phone" FOREIGN KEY (guest_phone) REFERENCES guest(phone)
+    "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id)
+    "FK_user_id" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+Referenced by:
+    TABLE "order_tickets" CONSTRAINT "FK_order_id" FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    TABLE "order_adjustments" CONSTRAINT "FK_order_id" FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    TABLE "payments" CONSTRAINT "FK_order_id" FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    TABLE "reviews" CONSTRAINT "FK_order_id" FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    TABLE "store_tables" CONSTRAINT "FK_pos_session_id" FOREIGN KEY (pos_session_id) REFERENCES orders(id) ON DELETE SET NULL
+    TABLE "store_point_logs" CONSTRAINT "store_point_logs_related_order_id_fkey" FOREIGN KEY (related_order_id) REFERENCES orders(id)
+
+neondb=> \d order_items
+\d ord                                         Table "public.order_items"
+    Column    |            Type             | Collation | Nullable |                 Default                 
+--------------+-----------------------------+-----------+----------+-----------------------------------------
+ id           | integer                     |           | not null | nextval('order_items_id_seq'::regclass)
+ ticket_id    | integer                     |           | not null | 
+ menu_id      | integer                     |           | not null | 
+ menu_name    | character varying(100)      |           |          | 
+ quantity     | integer                     |           | not null | 1
+ unit_price   | integer                     |           |          | 0
+ total_price  | integer                     |           | not null | 
+ item_status  | character varying(20)       |           |          | 'PENDING'::character varying
+ created_at   | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ cook_station | character varying(50)       |           |          | 
+Indexes:
+    "order_items_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "FK_menu_id" FOREIGN KEY (menu_id) REFERENCES store_menu(id)
+    "FK_ticket_id" FOREIGN KEY (ticket_id) REFERENCES order_tickets(id)
+Referenced by:
+    TABLE "order_adjustments" CONSTRAINT "FK_item_id" FOREIGN KEY (item_id) REFERENCES order_items(id) ON DELETE CASCADE
+
+neondb=> \d order_tickets
+\d orde                                          Table "public.order_tickets"
+     Column     |            Type             | Collation | Nullable |                  Default                  
+----------------+-----------------------------+-----------+----------+-------------------------------------------
+ id             | integer                     |           | not null | nextval('order_tickets_id_seq'::regclass)
+ order_id       | integer                     |           | not null | 
+ batch_no       | integer                     |           | not null | 
+ status         | character varying(20)       |           |          | 'PENDING'::character varying
+ created_at     | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ version        | integer                     |           | not null | 1
+ print_status   | character varying(20)       |           |          | 'WAITING'::character varying
+ display_status | character varying(20)       |           |          | 'VISIBLE'::character varying
+ payment_type   | character varying(20)       |           | not null | 'POSTPAID'::character varying
+ source         | character varying(20)       |           | not null | 
+Indexes:
+    "order_tickets_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "FK_order_id" FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "order_items" CONSTRAINT "FK_ticket_id" FOREIGN KEY (ticket_id) REFERENCES order_tickets(id)
+    TABLE "payments" CONSTRAINT "FK_ticket_id" FOREIGN KEY (ticket_id) REFERENCES order_tickets(id) ON DELETE CASCADE
+
+neondb=> \d order_adjustments
+                                          Table "public.order_adjustments"
+    Column     |            Type             | Collation | Nullable |                    Default                    
+---------------+-----------------------------+-----------+----------+-----------------------------------------------
+ id            | integer                     |           | not null | nextval('order_adjustments_id_seq'::regclass)
+ order_id      | integer                     |           | not null | 
+ ticket_id     | integer                     |           |          | 
+ item_id       | integer                     |           |          | 
+ scope         | character varying(10)       |           | not null | 
+ kind          | character varying(20)       |           | not null | 
+ method        | character varying(20)       |           | not null | 
+ code          | character varying(50)       |           |          | 
+ amount_signed | integer                     |           | not null | 
+ meta          | jsonb                       |           |          | 
+ created_at    | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "order_adjustments_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "FK_item_id" FOREIGN KEY (item_id) REFERENCES order_items(id) ON DELETE CASCADE
+    "FK_order_id" FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+    "FK_ticket_id" FOREIGN KEY (ticket_id) REFERENCES guest(id) ON DELETE CASCADE

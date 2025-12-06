@@ -1,0 +1,140 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결제 완료 - TableLink</title>
+    <link rel="stylesheet" href="/shared/css/toss-success.css">
+</head>
+<body>
+    <div class="container">
+        <div class="status-icon">⏳</div>
+        <h1>결제 처리 중...</h1>
+        <p>잠시만 기다려주세요.</p>
+    </div>
+
+    <script>
+        // URL 파라미터 파싱 함수
+        function getUrlParams() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return {
+                paymentKey: urlParams.get('paymentKey'),
+                orderId: urlParams.get('orderId'),
+                amount: urlParams.get('amount')
+            };
+        }
+
+        // 상태 표시 함수
+        function showStatus(message) {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="status-icon">⏳</div>
+                    <h1>${message}</h1>
+                    <p>잠시만 기다려주세요.</p>
+                `;
+            }
+        }
+
+        // 성공 표시 함수
+        function showSuccess(data) {
+            const { orderId, amount } = data;
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="status-icon">✅</div>
+                    <h1>결제 완료!</h1>
+                    <div class="success-info">
+                        <p><strong>주문번호:</strong> ${orderId}</p>
+                        <p><strong>결제금액:</strong> ₩${parseInt(amount).toLocaleString()}</p>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn primary" onclick="goBack()">TableLink로 돌아가기</button>
+                    </div>
+                `;
+            }
+        }
+
+        // 에러 표시 함수
+        function showError(message) {
+            const container = document.querySelector('.container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="status-icon">❌</div>
+                    <h1>결제 처리 실패</h1>
+                    <div class="error-info">
+                        <p>${message}</p>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn primary" onclick="goBack()">TableLink로 돌아가기</button>
+                    </div>
+                `;
+            }
+        }
+
+        // TLL 결제 성공 처리
+        async function processTLLPaymentSuccess() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const paymentKey = urlParams.get('paymentKey');
+                const orderId = urlParams.get('orderId');
+                const amount = urlParams.get('amount');
+                const isGuest = urlParams.get('isGuest') === 'true';
+
+                if (!paymentKey || !orderId || !amount) {
+                    throw new Error('결제 정보가 올바르지 않습니다.');
+                }
+
+                console.log('🔄 TLL 결제 성공 처리 시작:', { paymentKey, orderId, amount, isGuest });
+                showStatus('결제 승인 처리 중...');
+
+                // 비회원/회원에 따라 API 엔드포인트 선택
+                const apiEndpoint = isGuest ? '/api/toss/confirm-guest' : '/api/toss/confirm';
+                console.log(`📡 API 호출: ${apiEndpoint}`);
+
+                // 토스페이먼츠 결제 승인 직접 호출
+                const confirmResponse = await fetch(apiEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paymentKey, orderId, amount: parseInt(amount) })
+                });
+
+                if (!confirmResponse.ok) {
+                    const errorData = await confirmResponse.json();
+                    throw new Error(errorData.error || '결제 승인 실패');
+                }
+
+                const result = await confirmResponse.json();
+                console.log('✅ 결제 승인 완료:', result);
+
+                showSuccess({ paymentKey, orderId, amount });
+
+            } catch (error) {
+                console.error('❌ TLL 결제 성공 처리 실패:', error);
+                showError(`결제 처리 실패: ${error.message}`);
+            }
+        }
+
+        // TableLink로 돌아가기
+        function goBack() {
+            try {
+                if (window.opener && !window.opener.closed) {
+                    window.opener.location.href = '/';
+                    window.close();
+                } else {
+                    window.location.href = '/';
+                }
+            } catch (e) {
+                window.location.href = '/';
+            }
+        }
+
+        // 페이지 로드 시 실행
+        console.log('📱 결제 성공 페이지 로드');
+        document.addEventListener('DOMContentLoaded', () => {
+            processTLLPaymentSuccess();
+        });
+    </script>
+</body>
+</html>

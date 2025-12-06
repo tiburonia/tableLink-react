@@ -1,0 +1,39 @@
+renderKDS.js:284  GET https://c3cd60d0-a020-4438-8222-48fd197c8241-00-3cmjhf4fegs5f.pike.replit.dev:5000/api/orders/kds/1 500 (Internal Server Error)
+loadInitialData @ renderKDS.js:284
+initialize @ renderKDS.js:1423
+window.renderKDS @ renderKDS.js:1710
+startKDS @ kds.html?store=1:253
+(anonymous) @ kds.html?store=1:198Understand this error
+renderKDS.js:306 ❌ KDS 초기 데이터 로드 실패: Error: HTTP 500: {"success":false,"error":"KDS 주문 조회 실패"}
+    at Object.loadInitialData (renderKDS.js:293:17)
+    at async Object.initialize (renderKDS.js:1423:25)
+    at async window.renderKDS (renderKDS.js:1710:7)
+    at async startKDS (kds.html?store=1:253:21)
+    at async HTMLDocument.<anonymous> (kds.html?store=1:198:17)
+loadInitialData @ renderKDS.js:306
+await in loadInitialData
+initialize @ renderKDS.js:1423
+window.renderKDS @ renderKDS.js:1710
+startKDS @ kds.html?store=1:253
+(anonymous) @ kds.html?store=1:198Understand this error
+renderKDS.js:1444 ❌ KDS 시스템 초기화 실패: Error: HTTP 500: {"success":false,"error":"KDS 주문 조회 실패"}
+    at Object.loadInitialData (renderKDS.js:293:17)
+    at async Object.initialize (renderKDS.js:1423:25)
+    at async window.renderKDS (renderKDS.js:1710:7)
+    at async startKDS (kds.html?store=1:253:21)
+    at async HTMLDocument.<anonymous> (kds.html?store=1:198:17)
+initialize @ renderKDS.js:1444
+await in initialize
+window.renderKDS @ renderKDS.js:1710
+startKDS @ kds.html?store=1:253
+(anonymous) @ kds.html?store=1:198Understand this error
+kds.html?store=1:260 ❌ KDS 시작 실패: TypeError: Cannot read properties of null (reading 'style')
+    at startKDS (kds.html?store=1:254:61)
+    at async HTMLDocument.<anonymous> (kds.html?store=1:198:17)
+startKDS @ kds.html?store=1:260
+await in startKDS
+(anonymous) @ kds.html?store=1:198Understand this error
+kds.html?store=1:269 Uncaught (in promise) TypeError: Cannot set properties of null (setting 'textContent')
+    at showError (kds.html?store=1:269:34)
+    at startKDS (kds.html?store=1:261:17)
+    at async HTMLDocument.<anonymous> (kds.html?store=1:198:17)

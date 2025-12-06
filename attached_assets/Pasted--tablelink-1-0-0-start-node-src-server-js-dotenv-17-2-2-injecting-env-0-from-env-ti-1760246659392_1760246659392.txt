@@ -1,0 +1,39 @@
+
+> tablelink@1.0.0 start
+> node src/server.js
+
+[dotenv@17.2.2] injecting env (0) from .env -- tip: ⚙️  write to custom object with { processEnv: myObject }
+❌ 라우터 로드 실패: /home/runner/workspace/src/services/orderService.js:892
+  }_order_id !== null) {
+             ^^^
+
+SyntaxError: Unexpected token '!=='
+    at wrapSafe (node:internal/modules/cjs/loader:1472:18)
+    at Module._compile (node:internal/modules/cjs/loader:1501:20)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+    at Module.load (node:internal/modules/cjs/loader:1275:32)
+    at Module._load (node:internal/modules/cjs/loader:1096:12)
+    at Module.require (node:internal/modules/cjs/loader:1298:19)
+    at require (node:internal/modules/helpers:182:18)
+    at Object.<anonymous> (/home/runner/workspace/src/controllers/posController.js:2:22)
+    at Module._compile (node:internal/modules/cjs/loader:1529:14)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+세부 내용: Unexpected token '!=='
+[dotenv@17.2.2] injecting env (0) from .env -- tip: 📡 auto-backup env with Radar: https://dotenvx.com/radar
+❌ 이벤트 기반 서비스 초기화 실패: /home/runner/workspace/src/services/paymentService.js:234
+        } else if (!hasSpareOrder) {
+        ^
+
+SyntaxError: Missing catch or finally after try
+    at wrapSafe (node:internal/modules/cjs/loader:1472:18)
+    at Module._compile (node:internal/modules/cjs/loader:1501:20)
+    at Module._extensions..js (node:internal/modules/cjs/loader:1613:10)
+    at Module.load (node:internal/modules/cjs/loader:1275:32)
+    at Module._load (node:internal/modules/cjs/loader:1096:12)
+    at Module.require (node:internal/modules/cjs/loader:1298:19)
+    at require (node:internal/modules/helpers:182:18)
+    at initializeServices (/home/runner/workspace/src/services/init.js:6:28)
+    at Object.<anonymous> (/home/runner/workspace/src/server.js:33:1)
+    at Module._compile (node:internal/modules/cjs/loader:1529:14)
+
+=== 🚀 TableLink 서버 시작 ===

@@ -1,0 +1,84 @@
+ POS SSE 연결 완료: 매장 497
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+📡 SSE 연결 제거: pos:497 (현재 0개 연결)
+🏪 매장 497 기본 정보 조회 요청
+✅ 매장 497 기본 정보 조회 완료: 정통 양념
+🪑 매장 497 테이블 조회 요청
+📊 매장 497 store_tables에서 10개 테이블 발견
+⚠️ 체크 조회 실패, 빈 배열로 처리: relation "checks" does not exist
+✅ store_tables 기반으로 10개 테이블 생성
+✅ 매장 정통 양념 (497) 테이블 10개 조회 완료
+📊 사용중: 0개, 빈 테이블: 10개
+📊 매장 497 활성 주문 조회 (교차 주문 지원)
+✅ 매장 497 활성 주문 2개 조회 완료 (교차 주문 포함)
+🔍 테이블 상태 조회: 매장 497, 테이블 3206
+✅ 테이블 3206 상태 조회 완료: {
+  processing_order_id: 197,
+  spare_processing_order_id: 197,
+  isTLLMixedOrder: true
+}
+🔍 테이블 상태 조회: 매장 497, 테이블 3207
+🔍 테이블 상태 조회: 매장 497, 테이블 3208
+🔍 테이블 상태 조회: 매장 497, 테이블 3209
+🔍 테이블 상태 조회: 매장 497, 테이블 3210
+🔍 테이블 상태 조회: 매장 497, 테이블 3211
+🔍 테이블 상태 조회: 매장 497, 테이블 3212
+✅ 테이블 3207 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+🔍 테이블 상태 조회: 매장 497, 테이블 3213
+✅ 테이블 3213 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+🔍 테이블 상태 조회: 매장 497, 테이블 3214
+✅ 테이블 3214 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+🔍 테이블 상태 조회: 매장 497, 테이블 3215
+✅ 테이블 3215 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+✅ PostgreSQL 연결 성공
+✅ PostgreSQL 연결 성공
+✅ PostgreSQL 연결 성공
+🔗 TLL 연동 교차주문 아이템 조회: 매장 497, 테이블 3206
+✅ PostgreSQL 연결 성공
+✅ PostgreSQL 연결 성공
+✅ 테이블 3209 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+✅ 테이블 3208 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+✅ 테이블 3212 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+✅ 테이블 3210 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+✅ 테이블 3211 상태 조회 완료: {
+  processing_order_id: null,
+  spare_processing_order_id: null,
+  isTLLMixedOrder: false
+}
+✅ TLL 연동 교차주문 아이템 조회 완료: 테이블 3206, 주문 197
+📊 아이템 분포: TLL 2개, POS 2개, 총액 69000원
+📡 POS SSE 연결 요청: 매장 497
+📡 SSE 연결 추가: pos:497 (현재 1개 연결)
+✅ POS SSE 연결 완료: 매장 497

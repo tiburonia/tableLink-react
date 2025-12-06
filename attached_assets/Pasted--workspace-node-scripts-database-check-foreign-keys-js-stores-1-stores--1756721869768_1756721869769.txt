@@ -1,0 +1,109 @@
+~/workspace$ node scripts/database/check-foreign-keys.js
+🔍 stores 테이블 외래 키 관계 확인
+
+1️⃣ stores 테이블 존재 확인:
+✅ stores 테이블 존재 확인
+
+2️⃣ stores 테이블을 참조하는 외래 키들:
+📋 stores를 참조하는 테이블들:
+  • carts.store_id → stores.id
+    제약조건: carts_store_id_fkey
+  • checks.store_id → stores.id
+    제약조건: checks_store_id_fkey
+  • favorites.store_id → stores.id
+    제약조건: favorites_store_id_fkey
+  • menu_groups.store_id → stores.id
+    제약조건: menu_groups_store_id_fkey
+  • menu_items.store_id → stores.id
+    제약조건: menu_items_store_id_fkey
+  • prep_stations.store_id → stores.id
+    제약조건: prep_stations_store_id_fkey
+  • reservations.store_id → stores.id
+    제약조건: reservations_store_id_fkey
+  • reviews.store_id → stores.id
+    제약조건: reviews_store_id_fkey
+  • store_address.store_id → stores.id
+    제약조건: store_address_store_id_fkey
+  • store_holidays.store_id → stores.id
+    제약조건: store_holidays_store_id_fkey
+  • store_hours.store_id → stores.id
+    제약조건: store_hours_store_id_fkey
+  • store_promotions.store_id → stores.id
+    제약조건: store_promotions_store_id_fkey
+  • store_tables.store_id → stores.id
+    제약조건: store_tables_store_id_fkey
+  • waitlists.store_id → stores.id
+    제약조건: waitlists_store_id_fkey
+
+3️⃣ stores 테이블이 참조하는 외래 키들:
+✅ PostgreSQL 데이터베이스 연결 
+ℹ️ stores가 참조하는 외래 키가 없습니다.
+
+4️⃣ 관련 테이블들 존재 확인:
+  ✅ store_address
+      레코드 수: 101개
+      📍 store_id 컬럼: bigint (NOT NULL)
+      🔗 외래키 제약조건:
+        - store_id → stores.id (store_address_store_id_fkey)
+  ✅ store_tables
+      레코드 수: 25개
+      📍 store_id 컬럼: bigint (NOT NULL)
+      🔗 외래키 제약조건:
+        - store_id → stores.id (store_tables_store_id_fkey)
+  ✅ store_promotions
+      레코드 수: 50개
+      📍 store_id 컬럼: integer (NOT NULL)
+      🔗 외래키 제약조건:
+        - store_id → stores.id (store_promotions_store_id_fkey)
+  ✅ reviews
+      레코드 수: 0개
+      📍 store_id 컬럼: bigint (NOT NULL)
+      🔗 외래키 제약조건:
+        - user_id → users.id (reviews_user_id_fkey)
+        - check_id → checks.id (reviews_check_id_fkey)
+        - store_id → stores.id (reviews_store_id_fkey)
+  ✅ orders
+      레코드 수: 0개
+      ⚠️ store_id 컬럼 없음
+      🔗 외래키 제약조건:
+        - check_id → checks.id (orders_check_id_fkey)
+  ✅ regular_levels
+      레코드 수: 8248개
+      📍 store_id 컬럼: integer (NOT NULL)
+      ⚠️ 외래키 제약조건 없음
+  ✅ favorites
+      레코드 수: 0개
+      📍 store_id 컬럼: bigint (NOT NULL)
+      🔗 외래키 제약조건:
+        - user_id → users.id (favorites_user_id_fkey)
+        - store_id → stores.id (favorites_store_id_fkey)
+
+5️⃣ stores 테이블 기본 정보:
+  총 매장 수: 101개
+
+6️⃣ stores 테이블 컬럼 구조:
+  • id (bigint) - NOT NULL
+  • name (character varying) - NOT NULL
+  • category (character varying) - NULL
+  • is_open (boolean) - NULL
+  • rating_average (numeric) - NULL
+  • review_count (integer) - NULL
+  • favorite_count (integer) - NULL
+  • description (text) - NULL
+  • created_at (timestamp without time zone) - NULL
+  • updated_at (timestamp without time zone) - NULL
+
+7️⃣ stores 테이블 인덱스:
+  • idx_stores_category
+    CREATE INDEX idx_stores_category ON public.stores USING btree (category)
+  • idx_stores_created
+    CREATE INDEX idx_stores_created ON public.stores USING btree (created_at)
+  • idx_stores_is_open
+    CREATE INDEX idx_stores_is_open ON public.stores USING btree (is_open)
+  • idx_stores_rating
+    CREATE INDEX idx_stores_rating ON public.stores USING btree (rating_average)
+  • stores_pkey
+    CREATE UNIQUE INDEX stores_pkey ON public.stores USING btree (id)
+
+🎯 외래 키 관계 확인 완료!
+~/workspace$ 

@@ -1,0 +1,317 @@
+                                  Table "public.store_addresses"
+     Column     |            Type             | Collation | Nullable |                   Default                   
+----------------+-----------------------------+-----------+----------+---------------------------------------------
+ id             | integer                     |           | not null | nextval('store_addresses_id_seq'::regclass)
+ store_id       | integer                     |           | not null | 
+ road_address   | character varying(200)      |           |          | 
+ jibun_address  | character varying(200)      |           |          | 
+ detail_address | character varying(100)      |           |          | 
+ postal_code    | character varying(20)       |           |          | 
+ sido           | character varying(50)       |           |          | 
+ sigungu        | character varying(50)       |           |          | 
+ eupmyeondong   | character varying(50)       |           |          | 
+ legal_code     | character varying(20)       |           |          | 
+ latitude       | double precision            |           | not null | 
+ longitude      | double precision            |           | not null | 
+ geom           | geometry(Point,4326)        |           | not null | 
+ created_at     | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ updated_at     | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "store_addresses_pkey" PRIMARY KEY, btree (id)
+    "idx_store_geom" gist (geom)
+    "idx_store_legal_code" btree (legal_code)
+    "store_addresses_store_id_key" UNIQUE CONSTRAINT, btree (store_id)
+Foreign-key constraints:
+    "store_addresses_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+
+               Sequence "public.store_addresses_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_addresses.id
+
+ Index "public.store_addresses_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.store_addresses"
+
+Index "public.store_addresses_store_id_key"
+  Column  |  Type   | Key? | Definition 
+----------+---------+------+------------
+ store_id | integer | yes  | store_id
+unique, btree, for table "public.store_addresses"
+
+                                           Table "public.store_info"
+      Column      |         Type          | Collation | Nullable |                   Default                    
+------------------+-----------------------+-----------+----------+----------------------------------------------
+ store_id         | integer               |           | not null | nextval('store_info_store_id_seq'::regclass)
+ name             | character varying(50) |           | not null | 
+ category         | character varying(50) |           |          | 
+ store_tel_number | integer               |           |          | 
+ rating_average   | integer               |           |          | 0
+ review_count     | integer               |           |          | 0
+ favoratite_count | integer               |           |          | 0
+Indexes:
+    "store_info_pkey" PRIMARY KEY, btree (store_id)
+Foreign-key constraints:
+    "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id)
+
+     Index "public.store_info_pkey"
+  Column  |  Type   | Key? | Definition 
+----------+---------+------+------------
+ store_id | integer | yes  | store_id
+primary key, btree, for table "public.store_info"
+
+              Sequence "public.store_info_store_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_info.store_id
+
+                                       Table "public.store_menu"
+    Column    |          Type          | Collation | Nullable |                Default                 
+--------------+------------------------+-----------+----------+----------------------------------------
+ id           | integer                |           | not null | nextval('store_menu_id_seq'::regclass)
+ store_id     | integer                |           | not null | 
+ name         | character varying(100) |           | not null | 
+ description  | text                   |           |          | 
+ price        | integer                |           | not null | 
+ cook_station | character varying(50)  |           | not null | 
+Indexes:
+    "store_menu_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "order_items" CONSTRAINT "FK_menu_id" FOREIGN KEY (menu_id) REFERENCES store_menu(id)
+
+                 Sequence "public.store_menu_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_menu.id
+
+    Index "public.store_menu_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.store_menu"
+
+                                           Table "public.store_point_logs"
+      Column      |            Type             | Collation | Nullable |                   Default                    
+------------------+-----------------------------+-----------+----------+----------------------------------------------
+ id               | integer                     |           | not null | nextval('store_point_logs_id_seq'::regclass)
+ user_id          | integer                     |           | not null | 
+ store_id         | integer                     |           | not null | 
+ change_type      | character varying(20)       |           | not null | 
+ amount           | integer                     |           | not null | 
+ balance_after    | integer                     |           | not null | 
+ reason           | text                        |           |          | 
+ related_order_id | integer                     |           |          | 
+ created_at       | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "store_point_logs_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "store_point_logs_related_order_id_fkey" FOREIGN KEY (related_order_id) REFERENCES orders(id)
+    "store_point_logs_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id)
+    "store_point_logs_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id)
+
+              Sequence "public.store_point_logs_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_point_logs.id
+
+ Index "public.store_point_logs_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.store_point_logs"
+
+                                        Table "public.store_points"
+   Column   |            Type             | Collation | Nullable |                 Default                  
+------------+-----------------------------+-----------+----------+------------------------------------------
+ id         | integer                     |           | not null | nextval('store_points_id_seq'::regclass)
+ user_id    | integer                     |           | not null | 
+ store_id   | integer                     |           | not null | 
+ balance    | integer                     |           |          | 0
+ updated_at | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "store_points_pkey" PRIMARY KEY, btree (id)
+    "store_points_user_id_store_id_key" UNIQUE CONSTRAINT, btree (user_id, store_id)
+Foreign-key constraints:
+    "store_points_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    "store_points_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
+                Sequence "public.store_points_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_points.id
+
+   Index "public.store_points_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.store_points"
+
+Index "public.store_points_user_id_store_id_key"
+  Column  |  Type   | Key? | Definition 
+----------+---------+------+------------
+ user_id  | integer | yes  | user_id
+ store_id | integer | yes  | store_id
+unique, btree, for table "public.store_points"
+
+                                         Table "public.store_regular_customers"
+    Column    |            Type             | Collation | Nullable |                       Default                       
+--------------+-----------------------------+-----------+----------+-----------------------------------------------------
+ id           | integer                     |           | not null | nextval('store_regular_customers_id_seq'::regclass)
+ user_id      | integer                     |           | not null | 
+ store_id     | integer                     |           | not null | 
+ level_id     | integer                     |           |          | 
+ visist_count | integer                     |           |          | 0
+ total_spent  | integer                     |           |          | 0
+ last_visit   | timestamp without time zone |           |          | 
+ created_at   | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ updated_at   | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "store_regular_customers_pkey" PRIMARY KEY, btree (id)
+    "UQ_store_regular_customer" UNIQUE CONSTRAINT, btree (user_id, store_id)
+Foreign-key constraints:
+    "FK_user_id" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    "fk_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+
+           Sequence "public.store_regular_customers_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_regular_customers.id
+
+Index "public.store_regular_customers_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.store_regular_customers"
+
+                                        Table "public.store_regular_events"
+   Column   |            Type             | Collation | Nullable |                     Default                      
+------------+-----------------------------+-----------+----------+--------------------------------------------------
+ id         | integer                     |           | not null | nextval('store_regular_events_id_seq'::regclass)
+ user_id    | integer                     |           | not null | 
+ store_id   | integer                     |           | not null | 
+ event_type | character varying(20)       |           | not null | 
+ metadata   | jsonb                       |           | not null | 
+ created_at | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "store_regular_events_pkey" PRIMARY KEY, btree (id)
+    "idx_regular_events_type" btree (event_type)
+    "idx_regular_events_user_store" btree (user_id, store_id)
+Foreign-key constraints:
+    "store_regular_events_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    "store_regular_events_user_id_fkey" FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+
+            Sequence "public.store_regular_events_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_regular_events.id
+
+Index "public.store_regular_events_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.store_regular_events"
+
+                                     Table "public.store_regular_levels"
+   Column   |         Type          | Collation | Nullable |                     Default                      
+------------+-----------------------+-----------+----------+--------------------------------------------------
+ id         | integer               |           | not null | nextval('store_regular_levels_id_seq'::regclass)
+ store_id   | integer               |           | not null | 
+ level      | character varying(20) |           | not null | 
+ min_orders | integer               |           |          | 
+ min_spent  | integer               |           |          | 
+ benefits   | jsonb                 |           |          | 
+Indexes:
+    "constraint_2" PRIMARY KEY, btree (id)
+    "UK_store_regular_level" UNIQUE CONSTRAINT, btree (store_id, level)
+Foreign-key constraints:
+    "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+
+            Sequence "public.store_regular_levels_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_regular_levels.id
+
+                                          Table "public.store_tables"
+     Column     |            Type             | Collation | Nullable |                 Default                  
+----------------+-----------------------------+-----------+----------+------------------------------------------
+ id             | integer                     |           | not null | nextval('store_tables_id_seq'::regclass)
+ store_id       | integer                     |           | not null | 
+ table_name     | character varying(50)       |           | not null | 
+ capacity       | integer                     |           | not null | 2
+ status         | character varying(20)       |           | not null | 'AVAILABLE'::character varying
+ qr_code        | character varying(255)      |           |          | 
+ pos_session_id | integer                     |           |          | 
+ x_coord        | integer                     |           |          | 
+ y_coord        | integer                     |           |          | 
+ created_at     | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+ updated_at     | timestamp without time zone |           |          | CURRENT_TIMESTAMP
+Indexes:
+    "store_tables_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "FK_pos_session_id" FOREIGN KEY (pos_session_id) REFERENCES orders(id) ON DELETE SET NULL
+    "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+Referenced by:
+    TABLE "reservations" CONSTRAINT "FK_table_id" FOREIGN KEY (table_id) REFERENCES store_tables(id)
+
+                Sequence "public.store_tables_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.store_tables.id
+
+   Index "public.store_tables_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.store_tables"
+
+                                        Table "public.stores"
+   Column   |            Type             | Collation | Nullable |              Default               
+------------+-----------------------------+-----------+----------+------------------------------------
+ id         | integer                     |           | not null | nextval('stores_id_seq'::regclass)
+ name       | character varying(50)       |           |          | 
+ is_open    | boolean                     |           | not null | true
+ created_at | timestamp without time zone |           | not null | CURRENT_TIMESTAMP
+Indexes:
+    "stores_pkey" PRIMARY KEY, btree (id)
+Referenced by:
+    TABLE "store_menu" CONSTRAINT "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "orders" CONSTRAINT "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id)
+    TABLE "store_info" CONSTRAINT "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id)
+    TABLE "store_tables" CONSTRAINT "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "reservations" CONSTRAINT "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "reviews" CONSTRAINT "FK_store_id" FOREIGN KEY (id) REFERENCES stores(id)
+    TABLE "favorites" CONSTRAINT "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "store_regular_levels" CONSTRAINT "FK_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "coupons" CONSTRAINT "coupons_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id)
+    TABLE "store_regular_customers" CONSTRAINT "fk_store_id" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "store_addresses" CONSTRAINT "store_addresses_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "store_point_logs" CONSTRAINT "store_point_logs_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id)
+    TABLE "store_points" CONSTRAINT "store_points_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+    TABLE "store_regular_events" CONSTRAINT "store_regular_events_store_id_fkey" FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE
+
+                   Sequence "public.stores_id_seq"
+  Type   | Start | Minimum |  Maximum   | Increment | Cycles? | Cache 
+---------+-------+---------+------------+-----------+---------+-------
+ integer |     1 |       1 | 2147483647 |         1 | no      |     1
+Owned by: public.stores.id
+
+      Index "public.stores_pkey"
+ Column |  Type   | Key? | Definition 
+--------+---------+------+------------
+ id     | integer | yes  | id
+primary key, btree, for table "public.stores"
+
+neondb=> 
