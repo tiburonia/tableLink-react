@@ -1,0 +1,31 @@
+.home-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 1rem;
+}
+
+.home-page__container {
+  text-align: center;
+  color: white;
+}
+
+.home-page__title {
+  margin: 0 0 1rem;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.home-page__subtitle {
+  margin: 0 0 2rem;
+  font-size: 1.25rem;
+  opacity: 0.9;
+}
+
+.home-page__actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}

@@ -100,6 +100,7 @@ try {
   const auditRoutes = require('./routes/audit');
   const usersRouter = require('./routes/users');
   const notificationsRoutes = require('./routes/notifications');
+  const databaseRoutes = require('./routes/database');
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
@@ -130,6 +131,9 @@ try {
   // SSE 라우트 추가
   const sseRoutes = require('./routes/sse');
   app.use('/api/sse', sseRoutes);
+  
+  // 데이터베이스 라우트 추가 (vite-project와 통신)
+  app.use('/api/db', databaseRoutes);
 
   console.log('✅ 새 시스템 라우터 로드 완료');
 } catch (error) {

@@ -6,13 +6,17 @@ const app = require('./app');
 const setupSocketHandlers = require('./socket/handlers');
 const initializeServices = require('./services/init');
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Database pool
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 });
+
+// 데이터베이스 라우트에 Pool 전달
+const databaseRoutes = require('./routes/database');
+databaseRoutes.setPool(pool);
 
 // Create HTTP server and Socket.IO
 const server = createServer(app);

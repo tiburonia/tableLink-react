@@ -1,0 +1,148 @@
+.db-test {
+  padding: 20px;
+  max-width: 600px;
+  margin: 20px auto;
+}
+
+.db-test h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.db-loading {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.db-loading p {
+  color: #999;
+  font-size: 14px;
+}
+
+.db-status {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.status-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 2px solid #ddd;
+  background: #f9f9f9;
+}
+
+.status-card.success {
+  border-color: #4caf50;
+  background: #e8f5e9;
+}
+
+.status-card.error {
+  border-color: #f44336;
+  background: #ffebee;
+}
+
+.status-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.status-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.error-message {
+  margin: 0;
+  font-size: 12px;
+  color: #f44336;
+}
+
+.db-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+}
+
+.stat-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1976d2;
+}
+
+.db-info {
+  padding: 16px;
+  background: #f5f5f5;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+}
+
+.db-info h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.db-info p {
+  margin: 8px 0;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.5;
+}
+
+.db-info strong {
+  color: #333;
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .db-test {
+    padding: 12px;
+  }
+
+  .db-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .status-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .status-icon {
+    font-size: 40px;
+  }
+}

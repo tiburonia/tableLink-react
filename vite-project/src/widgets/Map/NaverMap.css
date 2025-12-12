@@ -1,0 +1,178 @@
+.naver-map-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+}
+
+.naver-map {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* 지도 컨트롤 버튼 */
+.map-controls {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+
+.map-control-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: white;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.map-control-btn:hover {
+  background-color: #f5f5f5;
+  border-color: #999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
+}
+
+.map-control-btn:active {
+  transform: scale(0.95);
+}
+
+.map-control-btn.zoom-in {
+  color: #1976d2;
+}
+
+.map-control-btn.zoom-out {
+  color: #1976d2;
+}
+
+/* 정보창 스타일 */
+.store-info-window {
+  padding: 12px;
+  min-width: 200px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+.store-info-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+}
+
+.store-info-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  flex: 1;
+}
+
+.store-rating {
+  font-size: 12px;
+  color: #ff9800;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.store-info-content {
+  margin: 8px 0;
+  font-size: 12px;
+  color: #666;
+  line-height: 1.6;
+}
+
+.store-info-content p {
+  margin: 4px 0;
+}
+
+.store-category {
+  color: #1976d2;
+  font-weight: 500;
+}
+
+.store-address {
+  color: #666;
+}
+
+.store-phone {
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+.store-select-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.store-select-btn:hover {
+  background-color: #1565c0;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+}
+
+.store-select-btn:active {
+  background-color: #0d47a1;
+  transform: scale(0.98);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 640px) {
+  .map-controls {
+    right: 12px;
+    top: 12px;
+  }
+
+  .map-control-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .store-info-window {
+    min-width: 160px;
+    padding: 10px;
+  }
+
+  .store-info-name {
+    font-size: 13px;
+  }
+
+  .store-info-content {
+    font-size: 11px;
+  }
+
+  .store-select-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
