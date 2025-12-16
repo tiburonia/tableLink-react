@@ -24,6 +24,7 @@ body {
   background: #fff;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.04);
 }
 
 .mobile-content {
@@ -223,6 +224,7 @@ body {
 }
 
 .store-card {
+  margin-bottom: 12px;
   display: flex;
   gap: 12px;
   padding: 12px;
@@ -578,6 +580,7 @@ body {
   font-weight: 500;
   transition: all 0.2s ease;
   padding: 8px 0;
+  text-decoration: none;
 }
 
 .nav-item:hover {

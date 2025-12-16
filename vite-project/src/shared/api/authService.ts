@@ -12,7 +12,7 @@ async function safeJson(res: Response) {
 export const authService = {
   login: async (id: string, password: string): Promise<{ success: boolean; message?: string; user?: any }> => {
     try {
-      const res = await fetch(`${API_BASE}/api/db/login`, {
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, password }),
@@ -22,10 +22,23 @@ export const authService = {
         return { success: false, message: data?.error || '로그인 실패' }
       }
       // 로그인 성공 시 사용자 정보 저장
-      localStorage.setItem('user_id', data.user_id || id)
-      localStorage.setItem('user_name', data.name || '')
+      const user = {
+        user_id: data.user.id,
+        user_pk: data.user.userId,
+        name: data.user.name,
+        phone: data.user.phone,
+        email: data.user.email,
+        address: data.user.address,
+        birth: data.user.birth,
+        gender: data.user.gender
+      }
+
+      localStorage.setItem('user', JSON.stringify(user))
+      localStorage.setItem('user_id', user.user_id)
+      localStorage.setItem('user_name', user.name || '')
       localStorage.setItem('is_logged_in', 'true')
-      return { success: true, user: data }
+
+      return { success: true, user: data.user }
     } catch (err) {
       console.error('authService.login error', err)
       return { success: false, message: '서버 연결 실패' }
@@ -34,7 +47,7 @@ export const authService = {
 
   register: async (id: string, name: string, password: string, phone?: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/db/register`, {
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, name, password, phone }),

@@ -5,7 +5,7 @@
  * Node.js 백엔드 API를 통해 데이터베이스 작업 수행
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/db';
+const API_BASE_URL =  'https://stunning-broccoli-7vwxrrpqr7vj29pj-5000.app.github.dev/api/db';
 
 // =============================================================================
 // STORES API FUNCTIONS

@@ -7,10 +7,11 @@ export const LoginPage = () => {
   const navigate = useNavigate()
   const { formData, setFormData, errors, isLoading, handleSubmit } = useLoginForm(() => {
     // 로그인 성공 시 페이지 새로고침으로 상태 반영
-    window.location.href = '/'
+  navigate("/")
   })
 
   return (
+    <div className="mobile-app">
     <div className="login-page">
       <div className="login-page__container">
         <LoginForm
@@ -25,6 +26,7 @@ export const LoginPage = () => {
           generalError={errors.general}
         />
       </div>
+    </div>
     </div>
   )
 }

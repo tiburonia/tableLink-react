@@ -1,20 +1,24 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { LoginPage } from '@/pages/Login'
 import { MainPage } from '@/pages/Main/MainPage'
 import { authService } from '@/shared/api/authService'
+import { StorePage } from '@/pages/Store'
+import { PaymentPage } from '@/pages/Main/components/PaymentPage'
 
-// 로그인 여부에 따라 다른 페이지 렌더링
-const RootPage = () => {
-  const isLoggedIn = authService.isAuthenticated()
-  return isLoggedIn ? <MainPage /> : <LoginPage />
-}
 
 export const AppRouter = () => {
+  const isLoggedIn = authService.isAuthenticated()
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<RootPage />} />
-        <Route path="*" element={<RootPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/main/*" element={isLoggedIn ? <MainPage /> : <Navigate to="/login" replace />} />
+        <Route path="/payment/success" element={<PaymentPage />} />
+        <Route path="/payment/fail" element={<PaymentPage />} />
+        <Route path="/rs/:storeId" element={isLoggedIn ? <StorePage /> : <Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={isLoggedIn ? "/main" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
   )
