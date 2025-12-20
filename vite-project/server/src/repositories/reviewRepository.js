@@ -28,7 +28,7 @@ class ReviewRepository {
         AND r.status = 'VISIBLE'
       ORDER BY r.created_at DESC
       LIMIT $2 OFFSET $3
-    `, [storeId, limit, offset]);
+    `, [storeId, limit, offset]);``
 
     return result.rows.map(review => ({
       id: review.id,

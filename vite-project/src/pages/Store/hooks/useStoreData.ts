@@ -25,10 +25,14 @@ export const useStoreData = (storeId: string | undefined) => {
         
         const result = await storeService.getStoreById(storeId, userPk)
 
+        console.log('🔍 API 응답:', result)
+
         if (result.success && result.store) {
+          console.log('✅ 매장 데이터:', result.store)
           setStore(result.store)
           setIsFavorite(result.store.isFavorite || false)
         } else {
+          console.error('❌ 매장 로딩 실패:', result.message)
           setError(result.message || '매장 정보를 불러올 수 없습니다.')
         }
       } catch (err) {

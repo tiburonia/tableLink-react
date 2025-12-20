@@ -520,7 +520,7 @@ window.MapPanelUI = {
 
       console.log(`📱 개별 매장 API 호출: 네이버줌=${naverZoom} → 카카오레벨=${kakaoLevel}, bbox=${bbox}`);
 
-      const response = await fetch(`/api/clusters/clusters?${params}`);
+      const response = await fetch(`/api/clusters?${params}`);
 
       if (!response.ok) {
         const errorText = await response.text();

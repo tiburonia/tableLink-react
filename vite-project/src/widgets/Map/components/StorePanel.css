@@ -186,6 +186,13 @@
   -webkit-box-orient: vertical;
 }
 
+.store-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .store-card-category {
   display: inline-flex;
   align-items: center;
@@ -196,6 +203,26 @@
   font-size: 13px;
   font-weight: 600;
   color: #4b5563;
+}
+
+.store-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.store-status.open {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.store-status.closed {
+  background: #fee2e2;
+  color: #991b1b;
 }
 
 .category-icon {

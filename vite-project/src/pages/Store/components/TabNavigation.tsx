@@ -1,4 +1,4 @@
-type TabType = 'info' | 'menu' | 'review'
+type TabType = 'main' | 'menu' | 'review' |'regular' | 'info'
 
 interface TabNavigationProps {
   activeTab: TabType
@@ -9,28 +9,39 @@ export const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) =>
   return (
     <div className="tab-navigation">
       <button 
-        className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`}
-        onClick={() => onTabChange('info')}
+        className={`tab-btn ${activeTab === 'main' ? 'active' : ''}`}
+        onClick={() => onTabChange('main')}
       >
-        홈
+        <span className="tab-icon">🏠</span>
+        <span className="tab-label">홈</span>
       </button>
-      <button className="tab-btn">
-        단골혜택
+      <button 
+        className={`tab-btn ${activeTab === 'regular' ? 'active' : ''}`}
+        onClick={() => onTabChange('regular')}
+      >
+        <span className="tab-icon">👑</span>
+        <span className="tab-label">단골혜택</span>
       </button>
       <button 
         className={`tab-btn ${activeTab === 'menu' ? 'active' : ''}`}
         onClick={() => onTabChange('menu')}
       >
-        메뉴
+        <span className="tab-icon">🍽️</span>
+        <span className="tab-label">메뉴</span>
       </button>
       <button 
         className={`tab-btn ${activeTab === 'review' ? 'active' : ''}`}
         onClick={() => onTabChange('review')}
       >
-        리뷰
+        <span className="tab-icon">💬</span>
+        <span className="tab-label">리뷰</span>
       </button>
-      <button className="tab-btn">
-        매장정보
+      <button 
+        className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`}
+        onClick={() => onTabChange('info')}
+      >
+        <span className="tab-icon">ℹ️</span>
+        <span className="tab-label">매장정보</span>
       </button>
     </div>
   )

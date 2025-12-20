@@ -3,8 +3,8 @@ export interface MenuItemData {
   name: string
   price: number
   description: string
-  image: string
-  popular?: boolean
+  image?: string
+  cookStation?: string
 }
 
 interface MenuItemProps {

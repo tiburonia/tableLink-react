@@ -11,7 +11,7 @@ export const mapDataRepository = {
   async fetchViewportStores(level, bbox) {
     try {
       const response = await fetch(
-        `/api/clusters/clusters?level=${level}&bbox=${bbox}`
+        `/api/clusters?level=${level}&bbox=${bbox}`
       );
 
       if (!response.ok) {

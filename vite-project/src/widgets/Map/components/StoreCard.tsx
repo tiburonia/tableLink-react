@@ -40,9 +40,16 @@ export const StoreCard = ({ store, onClick }: StoreCardProps) => {
       <div className="store-card-header">
         <div className="store-card-title">
           <div className="store-card-name">{store.name}</div>
-          <div className="store-card-category">
-            <span className="category-icon">{getCategoryIcon(store.category)}</span>
-            <span className="category-text">{store.category || '기타'}</span>
+          <div className="store-card-meta">
+            <div className="store-card-category">
+              <span className="category-icon">{getCategoryIcon(store.category)}</span>
+              <span className="category-text">{store.category || '기타'}</span>
+            </div>
+            {store.isOpen !== undefined && (
+              <span className={`store-status ${store.isOpen ? 'open' : 'closed'}`}>
+                {store.isOpen ? '영업 중' : '영업 종료'}
+              </span>
+            )}
           </div>
         </div>
       </div>

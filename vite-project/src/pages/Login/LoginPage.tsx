@@ -1,13 +1,14 @@
-import { useNavigate } from 'react-router-dom'
+import {  useNavigate } from 'react-router-dom'
 import { useLoginForm } from './hooks/index'
 import { LoginForm } from './ui/index'
 import './LoginPage.css'
 
-export const LoginPage = () => {
+export const LoginPage = ({ setIsLoggedIn }: { setIsLoggedIn: React.Dispatch<React.SetStateAction<boolean>> }) => {
   const navigate = useNavigate()
   const { formData, setFormData, errors, isLoading, handleSubmit } = useLoginForm(() => {
-    // 로그인 성공 시 페이지 새로고침으로 상태 반영
-  navigate("/")
+    // 로그인 성공 시 메인 페이지로 이동
+    setIsLoggedIn(true);
+    navigate('/main')
   })
 
   return (

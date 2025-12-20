@@ -4,9 +4,9 @@ import './BottomNavigation.css'
 export const BottomNavigation = () => {
   const navItems = [
     { id: '/main', label: '홈', icon: '🏠' },
-    { id: '/main/qr', label: 'QR 주문', icon: '📱' },
-    { id: '/main/map', label: '내주변', icon: '🗺️' },
-    { id: '/main/mypage', label: '마이페이지', icon: '👤' },
+    { id: '/qr', label: 'QR 주문', icon: '📱' },
+    { id: '/map', label: '내주변', icon: '🗺️' },
+    { id: '/mypage', label: '마이페이지', icon: '👤' },
   ]
 
   return (

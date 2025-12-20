@@ -1,20 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
 import { HomePage } from './components/HomePage'
-import { MapPage } from './components/MapPage'
-import { QRPage } from './components/QRPage'
-import { OrderPage } from './components/OrderPage'
-import { PayPage } from './components/PayPage'
-import { PaymentPage } from './components/PaymentPage'
-import { MyPage } from './components/MyPage'
 import { BottomNavigation } from './components/BottomNavigation'
 import { storeService } from '@/shared/api'
 import type { Store, FilterState } from './types'
 import './MainPage.css'
 
 export const MainPage = () => {
-  const navigate = useNavigate()
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<FilterState>({
     category: 'all',
@@ -81,16 +72,6 @@ export const MainPage = () => {
     loadStores()
   }, [])
 
-  const handleLogout = () => {
-    localStorage.clear()
-  
-    navigate('/login')
-  }
-
-  const handleStoreSelect = (store: Store) => {
-    setSelectedStore(store)
-  }
-
   if (loading) {
     return (
       <div className="mobile-app">
@@ -105,29 +86,13 @@ export const MainPage = () => {
   return (
     <div className="mobile-app">
       <div className="mobile-content">
-        <Routes>
-          <Route
-            index
-            element={
-              <HomePage
-                stores={stores}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                filters={filters}
-                setFilters={setFilters}
-              />
-            }
-          />
-          <Route
-            path="map"
-            element={<MapPage stores={stores} selectedStore={selectedStore} onStoreSelect={handleStoreSelect} />}
-          />
-          <Route path="qr" element={<QRPage />} />
-          <Route path="p/:storeId" element={<OrderPage />} />
-          <Route path="pay" element={<PayPage />} />
-          <Route path="payment/*" element={<PaymentPage />} />
-          <Route path="mypage" element={<MyPage onLogout={handleLogout} />} />
-        </Routes>
+        <HomePage
+          stores={stores}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          filters={filters}
+          setFilters={setFilters}
+        />
       </div>
       <BottomNavigation />
     </div>

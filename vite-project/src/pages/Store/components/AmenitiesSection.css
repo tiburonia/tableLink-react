@@ -1,0 +1,96 @@
+/* Amenities Section */
+.amenities-section {
+  background: white;
+  padding: 24px 20px;
+  margin-bottom: 8px;
+}
+
+.amenities-section .section-header {
+  margin-bottom: 20px;
+}
+
+.amenities-section .section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0;
+}
+
+.amenities-section .section-icon {
+  font-size: 20px;
+}
+
+/* Amenities Grid */
+.amenities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.amenity-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: default;
+  min-height: 100px;
+}
+
+.amenity-card:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+}
+
+.amenity-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.amenity-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: grayscale(0%);
+}
+
+.amenity-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #495057;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .amenities-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+  }
+
+  .amenity-card {
+    padding: 16px 8px;
+    min-height: 90px;
+  }
+
+  .amenity-icon {
+    font-size: 28px;
+  }
+
+  .amenity-icon img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .amenity-name {
+    font-size: 12px;
+  }
+}

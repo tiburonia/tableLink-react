@@ -83,7 +83,8 @@ app.all('/api', (req, res) => {
       '/api/tll',
       '/api/toss',
       '/api/clusters',
-      '/api/krp'
+      '/api/krp',
+      '/api/map'
     ]
   });
 });
@@ -113,6 +114,7 @@ try {
   const usersRouter = require('./routes/users');
   const notificationsRoutes = require('./routes/notifications');
   const databaseRoutes = require('./routes/database');
+  const mapRoutes = require('./routes/map');
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
@@ -122,11 +124,11 @@ try {
   app.use('/api/kds', kdsRoutes);
   app.use('/api/payments', krpRoutes);
   app.use('/api/toss', tossRoutes);
-  app.use('/api/clusters', storesClustersRouter);
   app.use('/api/store-feeds', storeFeedsRouter); // store-feeds 라우트 마운트
 
   // 라우터 등록
   app.use('/api/auth', authRoutes);
+  app.use('/api/clusters', storesClustersRouter); // clusters 라우트를 stores보다 먼저 등록
   app.use('/api/stores', storesRoutes);
   app.use('/api/users', usersRouter);
   app.use('/api/orders', ordersRoutes);
@@ -136,6 +138,7 @@ try {
   app.use('/api/regular-levels', regularLevelsRoutes);
   app.use('/api/audit', auditRoutes);
   app.use('/api/notifications', notificationsRoutes);
+  app.use('/api/map', mapRoutes);
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes);

@@ -37,10 +37,10 @@ router.get('/clusters', async (req, res) => {
     }
 
     // 레벨 유효성 검사
-    if (isNaN(mapLevel) || mapLevel < 1 || mapLevel > 14) {
+    if (isNaN(mapLevel) || mapLevel < 1 || mapLevel > 19) {
       return res.status(400).json({
         success: false,
-        error: '지도 레벨이 유효하지 않습니다 (1-14 사이여야 함)'
+        error: '지도 레벨이 유효하지 않습니다 (1-19 사이여야 함)'
       });
     }
 

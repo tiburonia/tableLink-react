@@ -382,7 +382,7 @@ class PaymentService {
    * 토스페이먼츠 API 승인 요청
    */
   async requestTossPaymentConfirm(paymentKey, orderId, amount) {
-    const secretKey = process.env.TOSS_SECRET_KEY || 'test_sk_zXLkKEypNArWmo50nX3lmeaxYG5R';
+    const secretKey = process.env.TOSS_SECRET_KEY || 'test_sk_E92LAa5PVb90GdoNyvBY37YmpXyJ';
     const authHeader = Buffer.from(secretKey + ':').toString('base64');
 
     const response = await fetch('https://api.tosspayments.com/v1/payments/confirm', {

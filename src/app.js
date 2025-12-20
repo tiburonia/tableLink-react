@@ -71,7 +71,8 @@ app.all('/api', (req, res) => {
       '/api/tll',
       '/api/toss',
       '/api/clusters',
-      '/api/krp'
+      '/api/krp',
+      '/api/map'
     ]
   });
 });
@@ -101,6 +102,7 @@ try {
   const usersRouter = require('./routes/users');
   const notificationsRoutes = require('./routes/notifications');
   const databaseRoutes = require('./routes/database');
+  const mapRoutes = require('./routes/map');
 
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
@@ -124,6 +126,7 @@ try {
   app.use('/api/regular-levels', regularLevelsRoutes);
   app.use('/api/audit', auditRoutes);
   app.use('/api/notifications', notificationsRoutes);
+  app.use('/api/map', mapRoutes);
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes);

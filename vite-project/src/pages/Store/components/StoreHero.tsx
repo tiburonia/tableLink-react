@@ -6,28 +6,19 @@ interface StoreHeroProps {
     sigungu?: string
     eupmyeondong?: string
   } | null
+  image?: string
 }
 
-export const StoreHero = ({ name, category, region }: StoreHeroProps) => {
+export const StoreHero = ({ name, category, region, image }: StoreHeroProps) => {
   return (
     <div className="store-hero">
-      <div className="store-hero-bg"></div>
-      <div className="store-hero-overlay"></div>
-      <div className="store-hero-info">
-        {region && (
-          <div className="store-breadcrumb">
-            <span className="breadcrumb-item">{region.sido || '서울'}</span>
-            <span className="breadcrumb-separator">›</span>
-            <span className="breadcrumb-item">{region.sigungu || region.eupmyeondong || '강남구'}</span>
-            {category && (
-              <>
-                <span className="breadcrumb-separator">›</span>
-                <span className="breadcrumb-item">{category}</span>
-              </>
-            )}
-          </div>
-        )}
-        <h2 className="store-name">{name}</h2>
+      <div className="img-wrapper">
+        <img 
+          src={'https://postfiles.pstatic.net/MjAyMzExMDJfMjEw/MDAxNjk4ODk5Nzc1OTEw.PXJ58KOpSo85IcyT40R-DkuyAYyqd_3e_7PSCLkd16gg.YwvgyvIFfAbHmPvlmOHtIjyK3Ec642xF2q7VjQ56cbkg.JPEG.wjseo0529/KakaoTalk_20231023_131607151.jpg?type=w386'} 
+          alt={name}
+          className="store-hero-image"
+        />
+        <div className="header-overlay"></div>
       </div>
     </div>
   )

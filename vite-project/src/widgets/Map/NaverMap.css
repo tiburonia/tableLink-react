@@ -316,3 +316,114 @@
     font-size: 14px;
   }
 }
+
+/* Cluster Marker Styles */
+.cluster-marker {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cluster-marker-inner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  border: 3px solid white;
+  transition: all 0.2s ease;
+}
+
+.cluster-marker:hover .cluster-marker-inner {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.cluster-count {
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* 클러스터 크기별 스타일 */
+.cluster-marker.large .cluster-marker-inner {
+  width: 56px;
+  height: 56px;
+}
+
+.cluster-marker.large .cluster-count {
+  font-size: 18px;
+}
+
+.cluster-marker.medium .cluster-marker-inner {
+  width: 48px;
+  height: 48px;
+}
+
+.cluster-marker.medium .cluster-count {
+  font-size: 16px;
+}
+
+/* Loading Overlay */
+.map-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 24px 32px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error Message */
+.map-error {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 90%;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.error-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.error-message {
+  line-height: 1.4;
+}

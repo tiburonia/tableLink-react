@@ -1,0 +1,102 @@
+
+> tablelink@1.0.0 start
+> node src/server.js
+
+✅ 새 시스템 라우터 로드 완료
+✅ 이벤트 기반 서비스 초기화 완료 (KDS, Payment)
+
+=== 🚀 TableLink 서버 시작 ===
+📍 포트: 3000
+🌐 로컬: http://localhost:3000
+🌍 개발서버: https://[프로젝트ID].replit.dev (Webview 참고)
+🔧 환경: development
+📊 메모리: 14MB
+🏗️ 시스템: POS/TLL/KRP 통합
+🔌 WebSocket: 활성화
+📡 PostgreSQL: 연결됨
+=== ✅ 서버 준비 완료 ===
+
+✅ PostgreSQL 연결 성공
+✅ PostgreSQL 연결 테스트 성공
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+✅ PostgreSQL LISTEN 설정 완료 - 4개 채널 구독
+❌ PostgreSQL LISTEN 연결 오류: Error: Connection terminated unexpectedly
+    at Connection.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/client.js:136:73)
+    at Object.onceWrapper (node:events:633:28)
+    at Connection.emit (node:events:519:28)
+    at Socket.<anonymous> (/workspaces/tableLink-react/node_modules/pg/lib/connection.js:62:12)
+    at Socket.emit (node:events:531:35)
+    at TCP.<anonymous> (node:net:346:12)
+👋 서버 종료 중...
+👋 Socket.IO 서버 종료됨.
