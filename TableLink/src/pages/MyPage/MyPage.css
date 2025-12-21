@@ -1,0 +1,245 @@
+/* MyPage Styles - extracted from TLG mypage.css */
+
+/* 상단 헤더 */
+.mypage-top-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: #fff;
+  border-bottom: 1px solid #eee;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.login-link {
+  font-size: 20px;
+  font-weight: 1000;
+  color: #333;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.login-link img {
+  vertical-align: middle;
+}
+
+/* Hero Card - 등급/포인트 정보 */
+.mypage-hero-card {
+  margin: 16px 16px 8px 16px;
+  border-radius: 24px;
+  padding: 28px 24px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+  box-shadow: 0 8px 24px rgba(255, 138, 0, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+  width: fit-content;
+}
+
+.hero-emoji {
+  font-size: 20px;
+}
+
+.hero-level {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.hero-title {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.hero-title strong {
+  color: #FF8A00;
+  font-weight: 800;
+}
+
+.hero-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.hero-stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-icon {
+  font-size: 18px;
+}
+
+.stat-text {
+  font-size: 14px;
+  color: #4b5563;
+  font-weight: 500;
+}
+
+.stat-text strong {
+  color: #1f2937;
+  font-weight: 700;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.hero-btn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.hero-btn.outline {
+  background: white;
+  color: #FF8A00;
+  border: 2px solid #FF8A00;
+}
+
+.hero-btn.outline:active {
+  background: #fff5eb;
+}
+
+.hero-btn.filled {
+  background: #FF8A00;
+  color: white;
+}
+
+.hero-btn.filled:active {
+  background: #e67a00;
+}
+
+/* 정보 섹션 */
+.mypage-info-section {
+  background-color: #fff;
+  margin-top: 8px;
+  padding: 20px 0;
+  border-top: 8px solid #f5f5f5;
+}
+
+.section-title-simple {
+  font-size: 13px;
+  color: #999;
+  font-weight: 600;
+  margin: 0 0 12px 0;
+  padding: 0 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* 간단 메뉴 리스트 */
+.simple-menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.simple-menu-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f5f5f5;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.simple-menu-list li:last-child {
+  border-bottom: none;
+}
+
+.simple-menu-list li:active {
+  background-color: #f8f9fa;
+}
+
+.simple-menu-list li span:first-child {
+  font-size: 15px;
+  color: #333;
+  font-weight: 500;
+}
+
+.arrow-icon {
+  font-size: 20px;
+  color: #ccc;
+  font-weight: 300;
+}
+
+/* 로딩 및 에러 상태 */
+.mypage-loading,
+.mypage-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  min-height: 400px;
+}
+
+.loading-spinner {
+  font-size: 18px;
+  color: #666;
+}
+
+.mypage-error h2 {
+  font-size: 20px;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.mypage-error p {
+  color: #999;
+  margin-bottom: 20px;
+}
+
+.retry-btn {
+  padding: 10px 20px;
+  background: #297efc;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.retry-btn:hover {
+  background: #1e6edb;
+}
+
+/* 반응형 */
+@media (max-width: 380px) {
+  .mypage-hero-card {
+    margin: 12px;
+    padding: 24px 16px;
+  }
+}

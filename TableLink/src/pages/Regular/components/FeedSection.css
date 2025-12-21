@@ -1,0 +1,167 @@
+/* 피드 섹션 */
+.feed-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 탭 */
+.feed-tabs {
+  position: sticky;
+  top: 0;
+  background: white;
+  padding: 12px 16px 8px 16px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  z-index: 99;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.feed-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.feed-tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 16px;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.feed-tab.active {
+  background: #111827;
+  color: white;
+}
+
+.feed-tab:hover {
+  background: #e5e7eb;
+}
+
+.feed-tab.active:hover {
+  background: #1f2937;
+}
+
+.tab-icon {
+  font-size: 14px;
+}
+
+/* 피드 컨텐츠 */
+.feed-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 20px;
+}
+
+.feed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+/* 로딩 상태 */
+.feed-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #6b7280;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f4f6;
+  border-top-color: #111827;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.feed-loading p {
+  font-size: 14px;
+  margin: 0;
+}
+
+/* 에러 상태 */
+.feed-error {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.error-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.feed-error h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.feed-error p {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.retry-btn {
+  padding: 10px 24px;
+  background: #111827;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retry-btn:hover {
+  background: #1f2937;
+  transform: translateY(-1px);
+}
+
+/* Empty State */
+.feed-empty {
+  text-align: center;
+  padding: 80px 20px;
+}
+
+.empty-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.feed-empty h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.feed-empty p {
+  margin: 0;
+  font-size: 14px;
+  color: #9ca3af;
+}

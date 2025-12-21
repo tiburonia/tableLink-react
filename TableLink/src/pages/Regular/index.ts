@@ -1,0 +1,1 @@
+export { RegularPage } from './RegularPage'
