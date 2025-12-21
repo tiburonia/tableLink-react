@@ -1,85 +1,30 @@
 /**
- * 알림 페이지
+ * NotificationPage - 알림 페이지
+ * 
+ * FSD 원칙: 페이지는 조립만 한다
+ * - useState ❌
+ * - useEffect ❌
+ * - API 호출 ❌
  */
 
-import { useState, useEffect } from 'react';
-import type { Notification, NotificationType } from './services/notificationService';
-import { getNotifications, markAllAsRead } from './services/notificationService';
-import { NotificationCard } from './components/NotificationCard';
-import { BottomNavigation } from '../Main/components/BottomNavigation';
-import './NotificationPage.css';
+import { useNotificationPage, NotificationCard } from '@/features/notification';
+import { BottomNavigation } from '@/widgets/Layout';
+import styles from './NotificationPage.module.css';
 
 export const NotificationPage = () => {
-  const [currentTab, setCurrentTab] = useState<NotificationType>('all');
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const tabs = [
-    { id: 'all' as NotificationType, label: '전체', icon: '📢' },
-    { id: 'order' as NotificationType, label: '주문', icon: '🍽️' },
-    { id: 'promotion' as NotificationType, label: '프로모션', icon: '🎁' },
-    { id: 'system' as NotificationType, label: '시스템', icon: '⚙️' }
-  ];
-
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      const userInfo = localStorage.getItem('user')
-      const userId = userInfo ? JSON.parse(userInfo).user_pk : 0;
-      if (!userId) {
-        setError('로그인이 필요합니다.');
-        setIsLoading(false);
-        return;
-      }
-
-      const data = await getNotifications(userId, currentTab);
-      
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-      setIsLoading(false);
-    };
-
-    loadData();
-  }, [currentTab]);
-
-  const loadNotifications = async () => {
-    setIsLoading(true);
-    setError(null);
-
-    const userId = parseInt(localStorage.getItem('userId') || '0');
-    if (!userId) {
-      setError('로그인이 필요합니다.');
-      setIsLoading(false);
-      return;
-    }
-
-    const data = await getNotifications(userId, currentTab);
-    
-    setNotifications(data.notifications);
-    setUnreadCount(data.unreadCount);
-    setIsLoading(false);
-  };
-
-  const handleMarkAllAsRead = async () => {
-    const userId = parseInt(localStorage.getItem('userId') || '0');
-    if (!userId) return;
-
-    const success = await markAllAsRead(userId);
-    if (success) {
-      setNotifications(prev => 
-        prev.map(n => ({ ...n, isRead: true }))
-      );
-      setUnreadCount(0);
-    }
-  };
-
-  const handleNotificationRead = () => {
-    loadNotifications();
-  };
+  // Hook에서 모든 상태와 로직을 가져옴
+  const {
+    currentTab,
+    notifications,
+    unreadCount,
+    isLoading,
+    error,
+    tabs,
+    handleTabChange,
+    handleMarkAllAsRead,
+    handleNotificationRead,
+    refetch,
+  } = useNotificationPage();
 
   if (isLoading) {
     return (
@@ -101,7 +46,7 @@ export const NotificationPage = () => {
           <div className="notification-error">
             <div className="error-icon">⚠️</div>
             <h3>{error}</h3>
-            <button onClick={loadNotifications} className="retry-btn">
+            <button onClick={refetch} className="retry-btn">
               다시 시도
             </button>
           </div>
@@ -130,7 +75,7 @@ export const NotificationPage = () => {
               <button
                 key={tab.id}
                 className={`notification-tab ${currentTab === tab.id ? 'active' : ''}`}
-                onClick={() => setCurrentTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
               >
                 <span className="tab-icon">{tab.icon}</span>
                 <span className="tab-label">{tab.label}</span>

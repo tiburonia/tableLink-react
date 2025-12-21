@@ -1,2 +1,3 @@
 export { authService } from './authService'
-export { storeService } from './storeService'
+export { storeService } from '@/entities/store'
+export { reviewService } from './reviewService'

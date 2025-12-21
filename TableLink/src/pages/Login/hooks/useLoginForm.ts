@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { authService } from '@/shared/api'
+import type { User } from '@/entities/user'
 
 interface LoginFormData {
   Id: string
@@ -12,7 +13,7 @@ interface LoginErrors {
   general?: string
 }
 
-export const useLoginForm = (onLoginSuccess?: () => void) => {
+export const useLoginForm = (onLoginSuccess?: (user: User) => void) => {
   const [formData, setFormData] = useState<LoginFormData>({
     Id: '',
     password: '',
@@ -42,10 +43,10 @@ export const useLoginForm = (onLoginSuccess?: () => void) => {
 
     try {
       const result = await authService.login(formData.Id, formData.password)
-      if (result.success) {
+      if (result.success && result.user) {
         console.log('로그인 성공:', formData.Id)
         if (onLoginSuccess) {
-          onLoginSuccess()
+          onLoginSuccess(result.user as User)
         }
       } else {
         setErrors({ general: result.message || '로그인에 실패했습니다' })

@@ -1,0 +1,54 @@
+.card {
+  background: white;
+  border-radius: var(--radius-lg, 12px);
+  transition: all 0.2s ease;
+}
+
+/* Padding variants */
+.padding-none {
+  padding: 0;
+}
+
+.padding-sm {
+  padding: var(--spacing-sm, 12px);
+}
+
+.padding-md {
+  padding: var(--spacing-md, 16px);
+}
+
+.padding-lg {
+  padding: var(--spacing-lg, 24px);
+}
+
+/* Shadow variants */
+.shadow-none {
+  box-shadow: none;
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+
+.shadow-sm {
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.shadow-md {
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+}
+
+.shadow-lg {
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+}
+
+/* Interactive states */
+.clickable {
+  cursor: pointer;
+}
+
+.hover:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0, 0, 0, 0.1));
+}
+
+.clickable:active {
+  transform: translateY(0);
+}

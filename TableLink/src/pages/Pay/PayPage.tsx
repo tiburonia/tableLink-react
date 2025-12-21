@@ -1,83 +1,29 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { payController } from './controllers/payController'
-import { payService, type PaymentInfo } from './services/payService'
-import './PayPage.css'
+/**
+ * PayPage - 결제 페이지
+ * 
+ * FSD 원칙: 페이지는 조립만 한다
+ * - useState ❌
+ * - useEffect ❌
+ * - API 호출 ❌
+ */
+
+import { usePayPage } from '@/features/payment'
+import styles from './PayPage.module.css'
 
 export const PayPage = () => {
-  const navigate = useNavigate()
-  const location = useLocation()
-  
-  const [paymentInfo, setPaymentInfo] = useState<PaymentInfo | null>(null)
-  const [selectedMethod, setSelectedMethod] = useState('kakaopay')
-  const [loading, setLoading] = useState(true)
-  const [processing, setProcessing] = useState(false)
-
-  // 결제 정보 로드
-  useEffect(() => {
-    loadPaymentData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadPaymentData = async () => {
-    try {
-      setLoading(true)
-
-      // location.state에서 주문 데이터 가져오기
-      const orderData = location.state as {
-        storeId: string
-        userPk: number
-        storeName: string
-        tableNumber: number
-        items: Array<{
-          id: string
-          name: string
-          price: number
-          quantity: number
-          image?: string
-        }>
-      } | null
-
-      if (!orderData) {
-        // state가 없으면 세션에서 가져오기 시도
-        const sessionData = payService.getPaymentSession()
-        if (sessionData) {
-          setPaymentInfo(sessionData)
-        } else {
-          alert('주문 정보를 찾을 수 없습니다.')
-          navigate('/main')
-        }
-        return
-      }
-
-      // 결제 정보 로드
-      const info = await payController.loadPaymentInfo({
-        ...orderData,
-        userPk: orderData.userPk
-      })
-      setPaymentInfo(info)
-    } catch (error) {
-      console.error('결제 정보 로드 실패:', error)
-      alert('결제 정보를 불러오는데 실패했습니다.')
-      navigate(-1)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handlePayment = async () => {
-    if (!paymentInfo) return
-
-    try {
-      setProcessing(true)
-      await payController.proceedPayment(selectedMethod, paymentInfo)
-    } catch (error) {
-      console.error('결제 실패:', error)
-      setProcessing(false)
-    }
-  }
-
-  const paymentMethods = payService.getAvailablePaymentMethods()
+  // Feature Hook에서 모든 상태와 로직을 가져옴
+  const {
+    paymentInfo,
+    selectedMethod,
+    loading,
+    processing,
+    paymentMethods,
+    formattedInfo,
+    selectMethod,
+    handlePayment,
+    goBack,
+    formatAmount,
+  } = usePayPage()
 
   if (loading) {
     return (
@@ -88,11 +34,9 @@ export const PayPage = () => {
     )
   }
 
-  if (!paymentInfo) {
+  if (!paymentInfo || !formattedInfo) {
     return null
   }
-
-  const formattedInfo = payController.formatPaymentInfo(paymentInfo)
 
   return (
 
@@ -100,7 +44,7 @@ export const PayPage = () => {
       <div className="mobile-content">
       {/* 헤더 */}
       <header className="pay-header">
-        <button className="back-button" onClick={() => navigate(-1)}>
+        <button className="back-button" onClick={goBack}>
           ← 뒤로
         </button>
         <h1 className="pay-title">결제하기</h1>
@@ -134,7 +78,7 @@ export const PayPage = () => {
                   <span className="item-quantity">x{item.quantity}</span>
                 </div>
                 <span className="item-price">
-                  {payService.formatAmount(item.price * item.quantity)}원
+                  {formatAmount(item.price * item.quantity)}원
                 </span>
               </div>
             ))}
@@ -169,7 +113,7 @@ export const PayPage = () => {
                 className={`payment-method ${
                   selectedMethod === method.id ? 'selected' : ''
                 } ${!method.available ? 'disabled' : ''}`}
-                onClick={() => method.available && setSelectedMethod(method.id)}
+                onClick={() => method.available && selectMethod(method.id)}
                 disabled={!method.available}
               >
                 <span className="method-icon">{method.icon}</span>

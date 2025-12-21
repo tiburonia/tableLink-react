@@ -1,5 +1,5 @@
 export { MapControls } from './MapControls'
-export { StoreInfoWindow } from './StoreInfoWindow'
+export { createStoreInfoWindowContent as StoreInfoWindow } from './StoreInfoWindow'
 export { StorePanel } from './StorePanel'
 export { FilterBar } from './FilterBar'
 export { FilterBottomSheet } from './FilterBottomSheet'

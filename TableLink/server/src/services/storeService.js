@@ -36,7 +36,7 @@ class StoreService {
     const table = await tableRepository.getStoreTable(numericStoreId)
 
     //매장 리뷰 조회 (최근 5개)
-    const review = await reviewRepository.getStoreReviews(numericStoreId, 5, 0)
+    const review = await reviewRepository.getStoreReviews(numericStoreId, 2, 0)
 
     //매장 프로모션 조회 >> store_regular_levels
     const promotion = await storeRepository.getStorePromotion(numericStoreId)

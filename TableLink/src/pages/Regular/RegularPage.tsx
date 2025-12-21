@@ -1,128 +1,83 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { regularService } from './services/regularService'
-import { RegularHeader } from './components/RegularHeader'
-import { SummarySection } from './components/SummarySection'
-import { StoreList } from './components/StoreList'
-import { FavoriteList } from './components/FavoriteList'
-import { SidePanel } from './components/SidePanel'
-import { FeedSection } from './components/FeedSection'
-import './RegularPage.css'
-import { BottomNavigation } from '../Main/components/BottomNavigation'
+/**
+ * RegularPage - 단골/즐겨찾기 페이지
+ * 
+ * FSD 원칙: 페이지는 조립만 한다
+ * - useState ❌
+ * - useEffect ❌
+ * - API 호출 ❌
+ */
 
-interface RegularSummary {
-  totalPoints: number
-  totalCoupons: number
-  unwrittenReviews: number
-  totalStores: number
-}
-
-interface RegularStore {
-  storeId: number
-  storeName: string
-  level: string
-  points: number
-  visitCount: number
-  lastVisit: string
-  category: string
-}
-
-interface FavoriteStore {
-  storeId: number
-  storeName: string
-  category: string
-  rating: number
-  distance: string
-}
+import { useRegularPage } from '@/features/regular-benefits'
+import { RegularHeader } from './ui/RegularHeader'
+import { SummarySection } from './ui/SummarySection'
+import { StoreList } from './ui/StoreList'
+import { FavoriteList } from './ui/FavoriteList'
+import { SidePanel } from './ui/SidePanel'
+import { FeedSection } from '@/features/feed'
+import { BottomNavigation } from '@/widgets/Layout'
+import styles from './RegularPage.module.css'
 
 export const RegularPage = () => {
-  const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'regular' | 'favorite' | 'feed'>('regular')
-  const [summary, setSummary] = useState<RegularSummary | null>(null)
-  const [stores, setStores] = useState<RegularStore[]>([])
-  const [favoriteStores, setFavoriteStores] = useState<FavoriteStore[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [isSidePanelOpen, setIsSidePanelOpen] = useState(false)
-
-  useEffect(() => {
-    loadData()
-  }, [])
-
-  const loadData = async () => {
-    try {
-      setLoading(true)
-      setError(null)
-
-      const result = await regularService.getRegularStoresData()
-
-      if (result.success) {
-        setSummary(result.summary)
-        setStores(result.stores)
-        setFavoriteStores(result.favoriteStores)
-      } else {
-        setError(result.error || '데이터를 불러올 수 없습니다')
-      }
-    } catch (err) {
-      setError('데이터를 불러오는 중 오류가 발생했습니다')
-      console.error('Regular data load error:', err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleStoreClick = (storeId: number) => {
-    navigate(`/rs/${storeId}`)
-  }
-
-  const handleRemoveFavorite = async (storeId: number) => {
-    if (confirm('즐겨찾기에서 삭제하시겠습니까?')) {
-      // TODO: API 호출로 즐겨찾기 제거
-      setFavoriteStores((prev) => prev.filter((store) => store.storeId !== storeId))
-    }
-  }
+  // Hook에서 모든 상태와 로직을 가져옴
+  const {
+    activeTab,
+    summary,
+    stores,
+    favoriteStores,
+    loading,
+    error,
+    isSidePanelOpen,
+    handleTabChange,
+    handleStoreClick,
+    handleRemoveFavorite,
+    openSidePanel,
+    closeSidePanel,
+    refetch,
+    getUserId,
+  } = useRegularPage()
 
   if (loading) {
     return (
-        <div className='mobile-app'>
-        <div className='mobile-content'>
-      <div className="regular-page-loading">
-        <div className="loading-spinner"></div>
+        <div className={styles.mobileApp}>
+        <div className={styles.mobileContent}>
+      <div className={styles.regularPageLoading}>
+        <div className={styles.loadingSpinner}></div>
         <p>로딩 중...</p>
       </div>
       </div>
-      </div>
-    )
+      <BottomNavigation />
+      </div>)
   }
 
   if (error) {
     return (
-    <div className='mobile-app'>
-    <div className='mobile-content'>
-      <div className="regular-page-error">
+    <div className={styles.mobileApp}>
+    <div className={styles.mobileContent}>
+      <div className={styles.regularPageError}>
         <h2>오류가 발생했습니다</h2>
         <p>{error}</p>
-        <button onClick={loadData} className="retry-button">
+        <button onClick={refetch} className={styles.retryButton}>
           다시 시도
         </button>
       </div>
       </div>
+      <BottomNavigation />
       </div>
     )
   }
 
   return (
-    <div className="mobile-app">
-      <div className="mobile-content">
+    <div className={styles.mobileApp}>
+      <div className={styles.mobileContent}>
         <RegularHeader
           activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onMenuClick={() => setIsSidePanelOpen(true)}
+          onTabChange={handleTabChange}
+          onMenuClick={openSidePanel}
         />
 
-        <div className="regular-content">
+        <div className={styles.regularContent}>
           {activeTab === 'feed' ? (
-            <FeedSection userId={parseInt(localStorage.getItem('userId') || '1')} />
+            <FeedSection userId={getUserId()} />
           ) : (
             <>
               {summary && <SummarySection summary={summary} />}
@@ -141,7 +96,7 @@ export const RegularPage = () => {
         </div>
       </div>
 
-      <SidePanel isOpen={isSidePanelOpen} onClose={() => setIsSidePanelOpen(false)} />
+      <SidePanel isOpen={isSidePanelOpen} onClose={closeSidePanel} />
 
       <BottomNavigation />
     </div>

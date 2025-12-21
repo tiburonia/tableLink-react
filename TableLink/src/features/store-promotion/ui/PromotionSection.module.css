@@ -1,0 +1,372 @@
+/* 프로모션 섹션 */
+.promotionSection {
+  padding: var(--spacing-lg) 16px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+.promotionSection .sectionHeader {
+  margin-bottom: 20px;
+}
+
+.promotionSection .sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.promotionSection .sectionIcon {
+  font-size: var(--font-size-xl);
+}
+
+.promotionLoading {
+  text-align: center;
+  padding: 40px 0;
+  color: #999;
+}
+
+/* 프로모션 카테고리 */
+.promotionCategory {
+  margin-bottom: 32px;
+}
+
+.promotionCategory:last-child {
+  margin-bottom: 0;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.categoryIcon {
+  font-size: var(--font-size-lg);
+}
+
+.categoryTitle {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+/* 쿠폰 컨테이너 */
+.couponsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 쿠폰 카드 */
+.couponCard {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.couponCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.3);
+}
+
+.couponCard:active {
+  transform: translateY(0);
+}
+
+/* 쿠폰 비주얼 영역 */
+.couponVisual {
+  position: relative;
+  width: 100px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.couponBadge {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: #fff;
+  z-index: 2;
+}
+
+.couponDeco {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.15), transparent);
+}
+
+/* 쿠폰 정보 */
+.couponInfo {
+  flex: 1;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.couponName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.couponDesc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+.couponConditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.conditionItem {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.15);
+  padding: var(--spacing-xs) 8px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.couponPeriod {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 2px;
+}
+
+/* 쿠폰 다운로드 버튼 */
+.couponDownloadBtn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  color: #667eea;
+  border: none;
+  border-radius: 20px;
+  padding: var(--spacing-sm) 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.couponDownloadBtn:hover {
+  background: #fff;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.couponDownloadBtn:active {
+  transform: scale(0.98);
+}
+
+/* 할인 컨테이너 */
+.discountsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 할인 카드 */
+.discountCard {
+  position: relative;
+  display: flex;
+  background: #fff;
+  border: 2px solid #f0f0f0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.discountCard:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+  transform: translateY(-2px);
+}
+
+.discountCard:active {
+  transform: translateY(0);
+}
+
+/* 할인 비주얼 영역 */
+.discountVisual {
+  position: relative;
+  width: 90px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ffd89b 0%, #ff9a76 100%);
+  padding: 12px;
+}
+
+.discountBadge {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.discountTag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.2);
+  padding: var(--spacing-xs) 10px;
+  border-radius: var(--radius-lg);
+  letter-spacing: 0.5px;
+}
+
+/* 할인 정보 */
+.discountInfo {
+  flex: 1;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.discountName {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.discountDesc {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.4;
+}
+
+.discountConditions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.conditionBadge {
+  font-size: 11px;
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+  padding: var(--spacing-xs) 8px;
+  border-radius: var(--radius-sm);
+}
+
+.discountMeta {
+  margin-top: 4px;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #999;
+}
+
+.metaItem svg {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* 쿠폰 다운로드 성공 토스트 */
+.couponSuccessToast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: #10b981;
+  color: #fff;
+  padding: 12px 20px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+  z-index: 9999;
+  transition: transform 0.3s ease-out, opacity 0.3s;
+  opacity: 0;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.couponSuccessToast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.toastIcon {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+
+.toastText {
+  white-space: nowrap;
+}
+
+/* 반응형 */
+@media (max-width: 480px) {
+  .couponVisual {
+    width: 80px;
+  }
+
+  .couponBadge {
+    font-size: var(--font-size-lg);
+  }
+
+  .couponInfo {
+    padding: 14px;
+  }
+
+  .couponName {
+    font-size: var(--font-size-sm);
+  }
+
+  .couponDesc {
+    font-size: var(--font-size-xs);
+  }
+
+  .discountVisual {
+    width: 75px;
+  }
+
+  .discountBadge {
+    font-size: var(--font-size-md);
+  }
+
+  .discountInfo {
+    padding: 14px;
+  }
+
+  .discountName {
+    font-size: var(--font-size-sm);
+  }
+}

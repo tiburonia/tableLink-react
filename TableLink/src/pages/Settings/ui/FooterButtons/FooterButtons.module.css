@@ -1,0 +1,30 @@
+.footerButtons {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  padding: 32px 16px;
+  margin-top: 24px;
+}
+
+.textButton {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 8px 12px;
+  text-decoration: underline;
+  transition: color 0.2s;
+}
+
+.textButton:hover {
+  color: #333;
+}
+
+.textButton:first-child {
+  color: #dc3545;
+}
+
+.textButton:first-child:hover {
+  color: #c82333;
+}

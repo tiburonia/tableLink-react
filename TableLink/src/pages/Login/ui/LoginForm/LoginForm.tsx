@@ -1,5 +1,5 @@
 import { Input, Button } from '@/shared/ui'
-import './LoginForm.css'
+import styles from './LoginForm.module.css'
 
 interface LoginFormProps {
   Id: string
@@ -30,15 +30,15 @@ export const LoginForm = ({
   }
 
   return (
-    <form className="login-form" onSubmit={handleSubmit}>
-      <div className="login-form__header">
-        <h1 className="login-form__title">TableLink</h1>
-        <p className="login-form__subtitle">음식점 주문 관리 시스템</p>
+    <form className={styles.loginForm} onSubmit={handleSubmit}>
+      <div className={styles.loginFormHeader}>
+        <h1 className={styles.loginFormTitle}>TableLink</h1>
+        <p className={styles.loginFormSubtitle}>음식점 주문 관리 시스템</p>
       </div>
 
-      {generalError && <div className="login-form__alert">{generalError}</div>}
+      {generalError && <div className={styles.loginFormAlert}>{generalError}</div>}
 
-      <div className="login-form__content">
+      <div className={styles.loginFormContent}>
         <Input
           label="아이디"
           type="text"
@@ -60,23 +60,23 @@ export const LoginForm = ({
         />
       </div>
 
-      <div className="login-form__actions">
+      <div className={styles.loginFormActions}>
         <Button type="submit" size="lg" isLoading={isLoading}>
           로그인
         </Button>
       </div>
 
-      <div className="login-form__footer">
-        <a href="#" className="login-form__link">
+      <div className={styles.loginFormFooter}>
+        <a href="#" className={styles.loginFormLink}>
           비밀번호를 잊으셨나요?
         </a>
-        <span className="login-form__divider">|</span>
-        <a href="#" className="login-form__link">
+        <span className={styles.loginFormDivider}>|</span>
+        <a href="#" className={styles.loginFormLink}>
           회원가입
         </a>
       </div>
 
-      <div className="login-form__hint">
+      <div className={styles.loginFormHint}>
         <p style={{ fontSize: '0.75rem', color: '#95a5a6', marginTop: '1rem' }}>
           테스트 계정: admin@naver.com / 1234
         </p>

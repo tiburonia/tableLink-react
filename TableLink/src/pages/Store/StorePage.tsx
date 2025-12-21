@@ -1,36 +1,58 @@
-import { useState } from 'react'
+/**
+ * StorePage - 매장 상세 페이지
+ * 
+ * FSD 원칙: 페이지는 조립만 한다
+ * - useState ❌
+ * - useEffect ❌
+ * - API 호출 ❌
+ */
+
 import { useParams } from 'react-router-dom'
+
+// UI Components (페이지 전용)
 import {
   StoreHeader,
   StoreHero,
-  StoreInfo,
   TabNavigation,
-  InfoTab,
-  MenuTab,
-  ReviewTab,
   BottomActions,
   PhotoModal,
   LoadingState,
   ErrorState,
-  RegularTab,
-  StoreInfoTab,
-} from './components'
-import { useStoreData, useStoreTabs } from './hooks'
-import { DUMMY_REVIEWS, DUMMY_MENU, DUMMY_PHOTOS, DUMMY_HOURS } from './constants'
-import './StorePage.css'
+} from './ui'
+
+// Features (FSD Layer)
+import { useStoreView } from '@/features/store-view'
+import { InfoTab } from '@/features/store-info'
+import { MenuTab, type MenuItemData } from '@/features/store-menu'
+import { ReviewTab, type ReviewData } from '@/features/store-review'
+import { RegularTab } from '@/features/regular-benefits'
+import { StoreInfoTab, StoreInfo } from '@/features/store-details'
+
+// Constants
+import { DUMMY_PHOTOS, DUMMY_HOURS } from './model/constants'
+
+import styles from './StorePage.module.css'
 
 export const StorePage = () => {
   const { storeId } = useParams<{ storeId: string }>()
-  const { store, loading, error, isFavorite, toggleFavorite } = useStoreData(storeId)
-  const { activeTab, switchTab } = useStoreTabs('main')
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null)
+  
+  // Feature Hook에서 모든 상태와 로직을 가져옴
+  const {
+    store,
+    loading,
+    error,
+    isFavorite,
+    activeTab,
+    selectedPhoto,
+    switchTab,
+    toggleFavorite,
+    selectPhoto,
+  } = useStoreView(storeId)
 
   if (loading) return <LoadingState />
   if (error || !store) return <ErrorState error={error || '매장 정보를 찾을 수 없습니다.'} />
 
   const handleStoryClick = () => {
-    // TODO: 매장 스토리 페이지로 이동
-    console.log('매장 스토리:', store.name)
     alert('매장 스토리 페이지 준비 중')
   }
 
@@ -39,8 +61,8 @@ export const StorePage = () => {
   }
 
   return (
-    <div className="mobile-app">
-      <div className="store-page">
+    <div className={styles.mobileApp}>
+      <div className={styles.storePage}>
         <StoreHeader onFavoriteClick={toggleFavorite} isFavorite={isFavorite} />
         <StoreHero 
           name={store.name} 
@@ -49,7 +71,6 @@ export const StorePage = () => {
           image={store.image}
         />
         
-        {/* 레거시 시스템의 StoreInfo 섹션 */}
         <StoreInfo
           name={store.name}
           rating={store.rating || 4.5}
@@ -64,29 +85,41 @@ export const StorePage = () => {
           onStoryClick={handleStoryClick}
           onReviewClick={handleReviewClick}
         />
-        
-        
 
         <TabNavigation activeTab={activeTab} onTabChange={switchTab} />
 
-        <div className="tab-content" id="storeTabContent">
+        <div className={styles.tabContent} id="storeTabContent">
           {activeTab === 'main' && (
             <InfoTab 
               store={store} 
               photos={DUMMY_PHOTOS} 
               hours={DUMMY_HOURS}
-              onPhotoClick={setSelectedPhoto}
+              onPhotoClick={selectPhoto}
             />
           )}
-          {activeTab === 'menu' && <MenuTab menu={store.menu} />}
-          {activeTab === 'review' && <ReviewTab reviews={DUMMY_REVIEWS} />}
+          {activeTab === 'menu' && (
+            <MenuTab 
+              menu={(store.menu || []).map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                description: item.description,
+                cookStation: item.cook_station,
+              })) as MenuItemData[]} 
+            />
+          )}
+          {activeTab === 'review' && (
+            <ReviewTab 
+              reviews={(store.reviews || []) as ReviewData[]} 
+            />
+          )}
           {activeTab === 'regular' && <RegularTab storeId={parseInt(store.id)}/>}
           {activeTab === 'info' && <StoreInfoTab store={store} />}
         </div>
 
         <BottomActions storeId={parseInt(store.id)} storeName={store.name} />
         {selectedPhoto && (
-          <PhotoModal photoUrl={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+          <PhotoModal photoUrl={selectedPhoto} onClose={() => selectPhoto(null)} />
         )}
       </div>
     </div>

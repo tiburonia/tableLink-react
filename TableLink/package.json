@@ -16,6 +16,7 @@
   "dependencies": {
     "@tosspayments/payment-sdk": "^1.0.0",
     "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
     "concurrently": "^9.2.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -24,7 +25,8 @@
     "pg": "^8.16.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-router-dom": "^6.20.0"
+    "react-router-dom": "^6.20.0",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

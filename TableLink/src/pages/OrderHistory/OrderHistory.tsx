@@ -1,8 +1,14 @@
-import './OrderHistory.css'
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import type { OrderHistoryData, Order } from './types'
-import { orderService } from './services/orderService'
+/**
+ * OrderHistory - 주문 내역 페이지
+ * 
+ * FSD 원칙: 페이지는 조립만 한다
+ * - useState ❌
+ * - useEffect ❌
+ * - API 호출 ❌
+ */
+
+import styles from './OrderHistory.module.css'
+import { useOrderHistory } from '@/features/order-history'
 
 interface OrderHistoryProps {
   userInfo?: {
@@ -13,65 +19,19 @@ interface OrderHistoryProps {
 }
 
 export const OrderHistory = ({ userInfo }: OrderHistoryProps) => {
-  const [data, setData] = useState<OrderHistoryData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    loadOrderData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userInfo])
-
-  const loadOrderData = async () => {
-    if (!userInfo?.userId) {
-      setError('사용자 정보가 없습니다')
-      setLoading(false)
-      return
-    }
-
-    try {
-      setLoading(true)
-      const orderData = await orderService.loadOrderData(userInfo.userId)
-      setData(orderData)
-      setError(null)
-    } catch (err) {
-      console.error('❌ 주문 내역 로드 실패:', err)
-      setError('주문 내역을 불러올 수 없습니다')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleBack = () => {
-    navigate('/mypage')
-  }
-
-  const handleReorder = (orderId: string | number) => {
-    console.log('🔄 재주문 요청:', orderId)
-    alert('재주문 기능은 준비중입니다.')
-  }
-
-  const handleReviewWrite = (order: Order) => {
-    console.log('✍️ 리뷰 작성:', order)
-    alert('리뷰 작성 기능은 준비중입니다.')
-  }
-
-  const getOrderItemsText = (order: Order) => {
-    const orderData = order.order_data || {}
-    const items = orderData.items || []
-
-    if (items.length === 0) return '메뉴 정보 없음'
-
-    return items.length > 1
-      ? `${items[0].name} 외 ${items.length - 1}건`
-      : items[0]?.name || '메뉴 정보 없음'
-  }
-
-  const formatOrderDate = (dateStr: string) => {
-    const orderDate = new Date(dateStr)
-    return `${orderDate.getMonth() + 1}.${orderDate.getDate()}`
-  }
+  // Hook에서 모든 상태와 로직을 가져옴
+  const {
+    loading,
+    error,
+    orders,
+    handleBack,
+    handleReorder,
+    handleReviewWrite,
+    refetch,
+    getOrderItemsText,
+    formatOrderDate,
+    goToMap,
+  } = useOrderHistory(userInfo)
 
   if (loading) {
     return (
@@ -101,7 +61,7 @@ export const OrderHistory = ({ userInfo }: OrderHistoryProps) => {
     )
   }
 
-  if (error || !data) {
+  if (error || orders.length === 0 && !loading) {
     return (
       <div className="order-history-container">
         <header className="order-header">
@@ -125,7 +85,7 @@ export const OrderHistory = ({ userInfo }: OrderHistoryProps) => {
           <div className="empty-icon">⚠️</div>
           <h3>주문 내역을 불러올 수 없어요</h3>
           <p>{error || '잠시 후 다시 시도해주세요'}</p>
-          <button className="primary-btn" onClick={loadOrderData}>
+          <button className="primary-btn" onClick={refetch}>
             <span>🔄</span>
             다시 시도
           </button>
@@ -133,8 +93,6 @@ export const OrderHistory = ({ userInfo }: OrderHistoryProps) => {
       </div>
     )
   }
-
-  const { orders } = data
 
   if (orders.length === 0) {
     return (
@@ -161,7 +119,7 @@ export const OrderHistory = ({ userInfo }: OrderHistoryProps) => {
           <div className="empty-icon">🍽️</div>
           <h3>아직 주문 내역이 없어요</h3>
           <p>첫 주문을 해보세요!</p>
-          <button className="primary-btn" onClick={() => navigate('/map')}>
+          <button className="primary-btn" onClick={goToMap}>
             <span>🗺️</span>
             매장 찾기
           </button>

@@ -1,0 +1,228 @@
+/* StoreInfo Container */
+.storeInfoContainer {
+  background: white;
+  padding: 20px 20px 24px;
+  position: relative;
+}
+
+.storeInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 이벤트 뱃지 섹션 */
+.storeBadgeSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 32px;
+}
+
+.badgeLeft {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.eventBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: var(--radius-xl);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.eventBadge.new {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.storeStoryBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 13px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.storeStoryBtn:hover {
+  background: var(--color-border-light);
+  border-color: #dee2e6;
+}
+
+.storyIcon {
+  font-size: var(--font-size-sm);
+  line-height: 1;
+}
+
+.storyText {
+  line-height: 1;
+}
+
+/* 카테고리 경로 */
+.storeBreadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #868e96;
+}
+
+.breadcrumbItem {
+  color: #868e96;
+}
+
+.breadcrumbSeparator {
+  color: #ced4da;
+}
+
+/* 매장명과 즐겨찾기 */
+.storeNameRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.storeMainTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0;
+  line-height: 1.3;
+  flex: 1;
+  word-break: keep-all;
+}
+
+.favoriteBtnV2 {
+  width: 40px;
+  height: 40px;
+  background: white;
+  border: 2px solid var(--color-border-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  color: var(--color-text-tertiary);
+}
+
+.favoriteBtnV2:hover {
+  border-color: #ff6b6b;
+  background: #fff5f5;
+}
+
+.favoriteBtnV2.active {
+  border-color: #ff6b6b;
+  background: #fff5f5;
+  color: #ff6b6b;
+}
+
+.favoriteBtnV2 svg {
+  transition: transform 0.2s;
+}
+
+.favoriteBtnV2.active svg {
+  transform: scale(1.1);
+}
+
+/* 별점 및 리뷰 강조 영역 */
+.ratingEmphasisSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ratingDisplay {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.starIcon {
+  font-size: var(--font-size-xl);
+  line-height: 1;
+}
+
+.ratingScore {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.ratingDivider {
+  font-size: var(--font-size-md);
+  color: #ced4da;
+  margin: 0 2px;
+}
+
+.ratingMax {
+  font-size: var(--font-size-md);
+  color: #868e96;
+}
+
+.reviewCountLink {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: var(--spacing-sm) 12px;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-light);
+  border-radius: 20px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.reviewCountLink:hover {
+  background: var(--color-border-light);
+  border-color: #dee2e6;
+}
+
+.chevronIcon {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+/* 한줄 소개 */
+.storeCatchphrase {
+  font-size: var(--font-size-sm);
+  line-height: 1.6;
+  color: #495057;
+  padding: 12px 0 0;
+  border-top: 1px solid #f1f3f5;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .storeMainTitle {
+    font-size: 22px;
+  }
+
+  .ratingScore {
+    font-size: 24px;
+  }
+
+  .ratingEmphasisSection {
+    flex-wrap: wrap;
+  }
+}

@@ -61,7 +61,7 @@ export interface ClusterResponse {
   }
 }
 export interface NaverMapProps {
-  onStoreSelect?: (store: Store) => void
+  onStoreSelect?: (storeId: number) => void
   centerLat?: number
   centerLng?: number
   zoom?: number

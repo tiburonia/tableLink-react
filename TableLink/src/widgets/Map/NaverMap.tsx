@@ -48,7 +48,7 @@ export const NaverMap = ({
       <MapControls map={map} storeCount={features.length} />
       <StorePanel 
         stores={individualStores} 
-        onStoreSelect={(store) => onStoreSelect?.(store)} 
+        onStoreSelect={(store) => onStoreSelect?.(parseInt(store.id))} 
       />
       {loading && (
         <div className="map-loading">

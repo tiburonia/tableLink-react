@@ -1,83 +1,33 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { qrController } from './controllers/qrController'
-import './QRPage.css'
-import { BottomNavigation } from '@/pages/Main/components/BottomNavigation'
+/**
+ * QRPage - QR 주문 페이지
+ * 
+ * FSD 원칙: 페이지는 조립만 한다
+ * - useState ❌
+ * - useEffect ❌
+ * - API 호출 ❌
+ */
 
-interface Store {
-  id: string
-  name: string
-  category?: string
-  address?: string
-}
-
-interface Table {
-  id: number
-  tableName: string
-  isOccupied: boolean
-  status: string
-}
+import { useQRScan } from '@/features/qr-scan'
+import { BottomNavigation } from '@/widgets/Layout'
+import styles from './QRPage.module.css'
 
 export const QRPage = () => {
-  const navigate = useNavigate()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<Store[]>([])
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null)
-  const [selectedTable, setSelectedTable] = useState<number | null>(null)
-  const [tables, setTables] = useState<Table[]>([])
-  const [showResults, setShowResults] = useState(false)
-  const [isSearching, setIsSearching] = useState(false)
-
-  // 매장 검색
-  useEffect(() => {
-    // 매장이 이미 선택된 경우 검색하지 않음
-    // if (selectedStore) {
-    //   return
-    // }
-
-    const searchStores = async () => {
-      if (searchQuery.length >= 2) {
-        setIsSearching(true)
-        await qrController.handleSearch(searchQuery, (stores) => {
-          setSearchResults(stores)
-          setShowResults(true)
-          setIsSearching(false)
-        })
-      } else {
-        setSearchResults([])
-        setShowResults(false)
-        setIsSearching(false)
-      }
-    }
-
-    const timeoutId = setTimeout(searchStores, 300) // 디바운스 300ms
-    return () => clearTimeout(timeoutId)
-  }, [searchQuery, selectedStore])
-
-  // 매장 선택
-  const handleStoreSelect = async (store: Store) => {
-    try {
-      const tables = await qrController.handleStoreSelect(store.id)
-      
-      setSelectedStore(store)
-      setShowResults(false)
-      setSearchResults([]) // 검색 결과 초기화
-      setSearchQuery(store.name)
-      setTables(tables)
-      setSelectedTable(null) // 테이블 선택 초기화
-    } catch (error) {
-      console.error('매장 선택 실패:', error)
-      setSelectedStore(null)
-      setTables([])
-    }
-  }
-
-  // 주문 시작
-  const handleStartOrder = () => {
-    if (selectedStore && selectedTable) {
-      navigate(`/p/${selectedStore.id}?table=${selectedTable}`)
-    }
-  }
+  // Hook에서 모든 상태와 로직을 가져옴
+  const {
+    searchQuery,
+    searchResults,
+    selectedStore,
+    selectedTable,
+    tables,
+    showResults,
+    isSearching,
+    handleSearchChange,
+    handleSearchFocus,
+    handleSearchBlur,
+    handleStoreSelect,
+    handleTableSelect,
+    handleStartOrder,
+  } = useQRScan()
 
   return (
     <div className='mobile-app'>
@@ -101,18 +51,9 @@ export const QRPage = () => {
               className="qr-search-input"
               placeholder="매장 이름을 검색하세요... (최소 2글자)"
               value={searchQuery}
-              onChange={(e) => {
-                const newValue = e.target.value
-                setSearchQuery(newValue)
-                // 검색어가 선택된 매장 이름과 다르면 선택 초기화
-                if (selectedStore && newValue !== selectedStore.name) {
-                  setSelectedStore(null)
-                  setTables([])
-                  setSelectedTable(null)
-                }
-              }}
-              onFocus={() => searchQuery && setShowResults(true)}
-              onBlur={() => setTimeout(() => setShowResults(false), 200)}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              onFocus={handleSearchFocus}
+              onBlur={handleSearchBlur}
             />
             {showResults && !selectedStore && (
               <div className="search-results">
@@ -169,7 +110,7 @@ export const QRPage = () => {
             <select
               className="qr-select"
               value={selectedTable || ''}
-              onChange={(e) => setSelectedTable(Number(e.target.value))}
+              onChange={(e) => handleTableSelect(Number(e.target.value))}
             >
               <option value="">테이블을 선택하세요</option>
               {tables.map((table) => (

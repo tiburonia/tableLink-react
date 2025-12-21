@@ -1,8 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useAuthStore } from '@/features/auth'
 import { LoginPage } from '@/pages/Login'
 import { MainPage } from '@/pages/Main/MainPage'
-import { authService } from '@/shared/api/authService'
 import { StorePage } from '@/pages/Store'
 import { PaymentPage } from '@/pages/Payment'
 import { QRPage } from '@/pages/QR'
@@ -14,39 +13,48 @@ import { OrderHistory } from '@/pages/OrderHistory'
 import { RegularPage } from '@/pages/Regular'
 import { NotificationPage } from '@/pages/Notifications'
 import { SettingsPage } from '@/pages/Settings'
+import { ReviewPage } from '@/pages/Review'
+import { ProtectedRoute } from './ProtectedRoute'
 
 
 export const AppRouter = () => {
-
-  const [isLoggedIn, setIsLoggedIn] = useState(authService.isAuthenticated());
-  const userInfo = authService.getUser();
+  // FSD 원칙: Feature에서 인증 상태 관리
+  const { isAuthenticated, user, logout } = useAuthStore()
 
   const handleLogout = () => {
-    localStorage.clear()
+    logout()
     window.location.href = '/login'
   }
+
+  // userInfo 호환성 유지
+  const userInfo = user ? {
+    userId: user.id,
+    name: user.nickname || user.username,
+    username: user.username,
+  } : undefined
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login" element={<LoginPage setIsLoggedIn={setIsLoggedIn} />} />
-        <Route path="/" element={isLoggedIn ? <Navigate to="/main" replace /> : <Navigate to="/login" replace />} />
-        <Route path="/main" element={isLoggedIn ? <MainPage /> : <Navigate to="/login" replace />} />
-        <Route path="/map" element={isLoggedIn ? <MapPage /> : <Navigate to="/login" replace />} />
-        <Route path="/mypage" element={isLoggedIn ? <MyPage onLogout={handleLogout} userInfo={userInfo} /> : <Navigate to="/login" replace />} />
-        <Route path="/orders" element={isLoggedIn ? <OrderHistory userInfo={userInfo} /> : <Navigate to="/login" replace />} />
-        <Route path="/qr" element={isLoggedIn ? <QRPage /> : <Navigate to="/login" replace />} />
-        <Route path="/rp" element={isLoggedIn ? <RegularPage /> : <Navigate to="/login" replace />} />
-        <Route path="/notifications" element={isLoggedIn ? <NotificationPage /> : <Navigate to="/login" replace />} />
-        <Route path="/setting" element={isLoggedIn ? <SettingsPage onLogout={handleLogout} userInfo={userInfo} /> : <Navigate to="/login" replace />} />
-        <Route path="/p/:storeId" element={isLoggedIn ? <OrderPage /> : <Navigate to="/login" replace />} />
-        <Route path="/pay" element={isLoggedIn ? <PayPage /> : <Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={isAuthenticated ? <Navigate to="/main" replace /> : <Navigate to="/login" replace />} />
+        <Route path="/main" element={<ProtectedRoute><MainPage /></ProtectedRoute>} />
+        <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+        <Route path="/mypage" element={<ProtectedRoute><MyPage onLogout={handleLogout} userInfo={userInfo} /></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><OrderHistory userInfo={userInfo} /></ProtectedRoute>} />
+        <Route path="/qr" element={<ProtectedRoute><QRPage /></ProtectedRoute>} />
+        <Route path="/rp" element={<ProtectedRoute><RegularPage /></ProtectedRoute>} />
+        <Route path="/notifications" element={<ProtectedRoute><NotificationPage /></ProtectedRoute>} />
+        <Route path="/setting" element={<ProtectedRoute><SettingsPage onLogout={handleLogout} userInfo={userInfo} /></ProtectedRoute>} />
+        <Route path="/p/:storeId" element={<ProtectedRoute><OrderPage /></ProtectedRoute>} />
+        <Route path="/pay" element={<ProtectedRoute><PayPage /></ProtectedRoute>} />
         <Route path="/payment/*" element={<PaymentPage />} />
         <Route path="/payment/success" element={<PaymentPage />} />
         <Route path="/payment/fail" element={<PaymentPage />} />
-        <Route path="/rs/:storeId" element={isLoggedIn ? <StorePage /> : <Navigate to="/login" replace />} />
+        <Route path="/rs/:storeId" element={<ProtectedRoute><StorePage /></ProtectedRoute>} />
+        <Route path="/rs/:storeId/rv" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
           
-        <Route path="*" element={<Navigate to={isLoggedIn ? "/main" : "/login"} replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/main" : "/login"} replace />} />
       </Routes>
     </BrowserRouter>
   )

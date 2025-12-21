@@ -1,0 +1,256 @@
+.promotionCard {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  margin: 16px 16px;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.promotionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.promotionTitleSection {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+}
+
+.promotionIconWrapper {
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promotionMainIcon {
+  font-size: 24px;
+}
+
+.promotionTitleInfo {
+  flex: 1;
+}
+
+.promotionTitle {
+  color: white;
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin: 0 0 4px 0;
+}
+
+.promotionSubtitle {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+}
+
+.promotionStatusIndicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.liveDot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+.liveText {
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.promotionContent {
+  margin: 16px 0;
+}
+
+.benefitsLoadingSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonBenefitItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+}
+
+.skeletonIconContainer {
+  flex-shrink: 0;
+}
+
+.skeletonIcon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  animation: shimmer 1.5s infinite;
+}
+
+.skeletonContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonTitle {
+  height: 16px;
+  width: 60%;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.5s infinite;
+}
+
+.skeletonDesc {
+  height: 12px;
+  width: 80%;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  animation: shimmer 1.5s infinite 0.2s;
+}
+
+.skeletonBadge {
+  width: 48px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  animation: shimmer 1.5s infinite 0.4s;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.benefitsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.benefitItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 12px;
+  transition: all 0.3s ease;
+}
+
+.benefitItem:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateX(4px);
+}
+
+.benefitIconContainer {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.benefitIcon {
+  font-size: var(--font-size-xl);
+}
+
+.benefitContent {
+  flex: 1;
+}
+
+.benefitTitle {
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  margin: 0 0 4px 0;
+}
+
+.benefitDesc {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: var(--font-size-xs);
+  margin: 0;
+}
+
+.benefitBadge {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-lg);
+  backdrop-filter: blur(10px);
+}
+
+.promotionFooter {
+  margin-top: 16px;
+}
+
+.promotionDetailBtn {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.promotionDetailBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.btnIcon,
+.btnArrow {
+  font-size: var(--font-size-md);
+}

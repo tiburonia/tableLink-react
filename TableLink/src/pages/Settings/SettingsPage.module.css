@@ -1,0 +1,15 @@
+/* SettingsPage - CSS Module */
+
+.accountSettingsWrapper {
+  width: 100%;
+  min-height: 100vh;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
+}
+
+.accountSettingsContent {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}

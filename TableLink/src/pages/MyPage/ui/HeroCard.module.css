@@ -1,0 +1,106 @@
+.heroCard {
+  margin: 20px;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.heroContent {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 50px;
+  width: fit-content;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.heroEmoji {
+  font-size: 20px;
+}
+
+.heroLevel {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.heroTitle {
+  font-size: 20px;
+  line-height: 1.5;
+  color: #222;
+  margin: 0;
+}
+
+.heroStats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0;
+}
+
+.heroStat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  color: #444;
+}
+
+.statIcon {
+  font-size: 18px;
+}
+
+.statText {
+  flex: 1;
+}
+
+.statText strong {
+  color: #222;
+  font-weight: 700;
+}
+
+.heroActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.heroBtn {
+  flex: 1;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.heroBtn.outline {
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.heroBtn.outline:hover {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.heroBtn.filled {
+  background: #333;
+  color: #fff;
+}
+
+.heroBtn.filled:hover {
+  background: #222;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}

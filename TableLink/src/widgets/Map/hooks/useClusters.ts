@@ -18,7 +18,7 @@ export const useClusters = (
   const [features, setFeatures] = useState<MapFeature[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const fetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isLoadingRef = useRef(false)
 
   const fetchClusters = useCallback(() => {
@@ -38,8 +38,8 @@ export const useClusters = (
         setLoading(true)
         setError(null)
 
-        // 현재 지도의 경계 가져오기
-        const bounds = map.getBounds()
+        // 현재 지도의 경계 가져오기 (타입 단언 사용)
+        const bounds = (map as any).getBounds()
         const sw = bounds.getSW() // 남서쪽 좌표
         const ne = bounds.getNE() // 북동쪽 좌표
 
@@ -99,8 +99,8 @@ export const useClusters = (
     })
 
     return () => {
-      naver.maps.Event.removeListener(idleListener)
-      naver.maps.Event.removeListener(zoomChangedListener)
+      (naver.maps.Event as any).removeListener(idleListener);
+      (naver.maps.Event as any).removeListener(zoomChangedListener)
       if (fetchTimeoutRef.current) {
         clearTimeout(fetchTimeoutRef.current)
       }

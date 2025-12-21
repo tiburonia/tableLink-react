@@ -1,6 +1,5 @@
 
-const orderService = require('../services/orderService');
-
+ import { orderService } from "../services/orderService";
 /**
  * 주문 컨트롤러 - HTTP 요청/응답 처리
  */

@@ -1,2 +1,2 @@
 export { MyPage } from './MyPage'
-export * from './types'
+export * from './model/types'

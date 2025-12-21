@@ -1,4 +1,4 @@
-import type { ReviewData } from '../components/ReviewItem'
+import type { ReviewData } from '@/features/store-review'
 
 // 리뷰 내용 템플릿
 const reviewContents = [
@@ -87,12 +87,14 @@ export const generateDummyReviews = (storeId: number, count: number = 20): Revie
   for (let i = 0; i < count; i++) {
     const createdAt = generateDate()
     const updatedAt = createdAt
+    const score = Math.random() < 0.7 ? (Math.random() < 0.5 ? 5 : 4) : Math.floor(Math.random() * 2) + 3 // 70%는 4-5점
     
     reviews.push({
       id: 1000 + i,
       order_id: 10000 + storeId * 100 + i,
       store_id: storeId,
-      rating: Math.random() < 0.7 ? (Math.random() < 0.5 ? 5 : 4) : Math.floor(Math.random() * 2) + 3, // 70%는 4-5점
+      score,
+      rating: score, // 하위 호환성
       content: reviewContents[Math.floor(Math.random() * reviewContents.length)],
       images: generateImages(storeId, i),
       status: 'VISIBLE',
@@ -116,7 +118,7 @@ export const DUMMY_REVIEWS: ReviewData[] = generateDummyReviews(2, 20)
 // 평균 평점 계산
 export const calculateAverageRating = (reviews: ReviewData[]): number => {
   if (reviews.length === 0) return 0
-  const sum = reviews.reduce((acc, review) => acc + review.rating, 0)
+  const sum = reviews.reduce((acc, review) => acc + (review.score || review.rating || 0), 0)
   return Math.round((sum / reviews.length) * 10) / 10
 }
 
@@ -124,7 +126,8 @@ export const calculateAverageRating = (reviews: ReviewData[]): number => {
 export const getRatingCounts = (reviews: ReviewData[]): Record<number, number> => {
   const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
   reviews.forEach(review => {
-    counts[review.rating] = (counts[review.rating] || 0) + 1
+    const rating = review.score || review.rating || 0
+    counts[rating] = (counts[rating] || 0) + 1
   })
   return counts
 }

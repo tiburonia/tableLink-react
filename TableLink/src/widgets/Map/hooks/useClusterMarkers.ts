@@ -66,7 +66,7 @@ export const useClusterMarkers = (
             map: map,
             icon: {
               content: createClusterMarkerContent(cluster.count).outerHTML,
-              anchor: new naver.maps.Point(20, 20),
+              anchor: new (naver.maps as any).Point(20, 20),
             },
             zIndex: 200,
           })

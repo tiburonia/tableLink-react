@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import './index.css'
+import './shared/styles/variables.css'
 
 // 네이버맵 API 스크립트 동적 로딩
 function loadNaverMapAPI() {
