@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
 import './index.css'
 import './shared/styles/variables.css'
+import './shared/styles/pages.css'
 
 // 네이버맵 API 스크립트 동적 로딩
 function loadNaverMapAPI() {

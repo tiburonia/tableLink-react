@@ -9,7 +9,6 @@
 
 import { useParams, useSearchParams } from 'react-router-dom'
 import { useOrderPage } from '@/features/order-create'
-import styles from './OrderPage.module.css'
 
 export const OrderPage = () => {
   const { storeId } = useParams<{ storeId: string }>()

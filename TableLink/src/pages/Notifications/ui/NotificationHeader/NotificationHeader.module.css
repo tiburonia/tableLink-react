@@ -1,0 +1,88 @@
+.header {
+  position: sticky;
+  top: 0;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  z-index: 10;
+  padding-bottom: 0;
+  flex-shrink: 0;
+}
+
+.headerTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.markAllReadBtn {
+  padding: 8px 16px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.markAllReadBtn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 12px 16px;
+  overflow-x: auto;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 16px;
+  border: none;
+  background: #f3f4f6;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s;
+}
+
+.tabActive {
+  background: #111827;
+  color: white;
+}
+
+.tab:hover {
+  background: #e5e7eb;
+}
+
+.tabActive:hover {
+  background: #1f2937;
+}
+
+.tabIcon {
+  font-size: 14px;
+}
+
+.tabLabel {
+  font-size: 13px;
+}

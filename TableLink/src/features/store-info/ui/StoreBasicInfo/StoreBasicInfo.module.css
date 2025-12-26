@@ -1,0 +1,79 @@
+.section {
+  background: white;
+  padding: 20px 16px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.titleIcon {
+  font-size: 18px;
+}
+
+.infoList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.infoItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 10px;
+}
+
+.infoIcon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.infoContent {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.infoLabel {
+  font-size: 12px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.infoValue {
+  font-size: 14px;
+  color: #374151;
+  font-weight: 500;
+}
+
+.infoLink {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.infoLink:hover {
+  text-decoration: underline;
+}
+
+.statusOpen {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.statusClosed {
+  color: #ef4444;
+  font-weight: 600;
+}

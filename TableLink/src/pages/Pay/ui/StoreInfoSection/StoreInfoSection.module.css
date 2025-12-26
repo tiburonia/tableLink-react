@@ -1,0 +1,41 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.infoCard {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.infoRow:not(:last-child) {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.infoLabel {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.infoValue {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}

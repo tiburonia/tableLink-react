@@ -1,0 +1,6 @@
+export { InfoTab } from './InfoTab'
+export { BusinessHours } from './BusinessHours'
+export { PhotoGallery } from './PhotoGallery'
+export { StoreBasicInfo } from './StoreBasicInfo'
+export { AmenitiesSection } from './AmenitiesSection'
+export { LocationInfo } from './LocationInfo'

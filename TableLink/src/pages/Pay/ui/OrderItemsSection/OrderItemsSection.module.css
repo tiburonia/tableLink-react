@@ -1,0 +1,53 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.orderItems {
+  background: white;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.orderItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.orderItem:not(:last-child) {
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.itemInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.itemName {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.itemQuantity {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.itemPrice {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}

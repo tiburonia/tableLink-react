@@ -1,0 +1,59 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.amountCard {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.amountRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.amountLabel {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.amountValue {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 8px 0;
+}
+
+.totalRow {
+  padding-top: 12px;
+}
+
+.totalRow .amountLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.totalAmount {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ff8a00;
+}

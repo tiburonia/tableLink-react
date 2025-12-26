@@ -68,21 +68,21 @@ export const FeedSection: React.FC<FeedSectionProps> = ({ userId }) => {
 
   if (isLoading) {
     return (
-      <div className="feed-section">
-        <div className="feed-tabs">
+      <div className={styles.feedSection}>
+        <div className={styles.feedTabs}>
           {tabs.map(tab => (
             <button
               key={tab.id}
-              className={`feed-tab ${currentTab === tab.id ? 'active' : ''}`}
+              className={`${styles.feedTab} ${currentTab === tab.id ? styles.active : ''}`}
               onClick={() => handleTabChange(tab.id)}
             >
-              <span className="tab-icon">{tab.icon}</span>
-              <span className="tab-label">{tab.label}</span>
+              <span className={styles.tabIcon}>{tab.icon}</span>
+              <span className={styles.tabLabel}>{tab.label}</span>
             </button>
           ))}
         </div>
-        <div className="feed-loading">
-          <div className="loading-spinner"></div>
+        <div className={styles.feedLoading}>
+          <div className={styles.loadingSpinner}></div>
           <p>피드를 불러오는 중...</p>
         </div>
       </div>
@@ -91,53 +91,53 @@ export const FeedSection: React.FC<FeedSectionProps> = ({ userId }) => {
 
   if (error) {
     return (
-      <div className="feed-section">
-        <div className="feed-tabs">
+      <div className={styles.feedSection}>
+        <div className={styles.feedTabs}>
           {tabs.map(tab => (
             <button
               key={tab.id}
-              className={`feed-tab ${currentTab === tab.id ? 'active' : ''}`}
+              className={`${styles.feedTab} ${currentTab === tab.id ? styles.active : ''}`}
               onClick={() => handleTabChange(tab.id)}
             >
-              <span className="tab-icon">{tab.icon}</span>
-              <span className="tab-label">{tab.label}</span>
+              <span className={styles.tabIcon}>{tab.icon}</span>
+              <span className={styles.tabLabel}>{tab.label}</span>
             </button>
           ))}
         </div>
-        <div className="feed-error">
-          <div className="error-icon">⚠️</div>
+        <div className={styles.feedError}>
+          <div className={styles.errorIcon}>⚠️</div>
           <h3>피드를 불러올 수 없습니다</h3>
           <p>{error}</p>
-          <button onClick={loadFeed} className="retry-btn">다시 시도</button>
+          <button onClick={loadFeed} className={styles.retryBtn}>다시 시도</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="feed-section">
-      <div className="feed-tabs">
+    <div className={styles.feedSection}>
+      <div className={styles.feedTabs}>
         {tabs.map(tab => (
           <button
             key={tab.id}
-            className={`feed-tab ${currentTab === tab.id ? 'active' : ''}`}
+            className={`${styles.feedTab} ${currentTab === tab.id ? styles.active : ''}`}
             onClick={() => handleTabChange(tab.id)}
           >
-            <span className="tab-icon">{tab.icon}</span>
-            <span className="tab-label">{tab.label}</span>
+            <span className={styles.tabIcon}>{tab.icon}</span>
+            <span className={styles.tabLabel}>{tab.label}</span>
           </button>
         ))}
       </div>
 
-      <div className="feed-content">
+      <div className={styles.feedContent}>
         {posts.length === 0 ? (
-          <div className="feed-empty">
-            <div className="empty-icon">📭</div>
+          <div className={styles.feedEmpty}>
+            <div className={styles.emptyIcon}>📭</div>
             <h3>소식이 없어요</h3>
             <p>단골 매장의 새로운 소식을 기다려주세요!</p>
           </div>
         ) : (
-          <div className="feed-list">
+          <div className={styles.feedList}>
             {posts.map(post => (
               <PostCard 
                 key={post.id} 

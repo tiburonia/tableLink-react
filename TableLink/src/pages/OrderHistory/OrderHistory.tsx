@@ -7,7 +7,6 @@
  * - API 호출 ❌
  */
 
-import styles from './OrderHistory.module.css'
 import { useOrderHistory } from '@/features/order-history'
 
 interface OrderHistoryProps {

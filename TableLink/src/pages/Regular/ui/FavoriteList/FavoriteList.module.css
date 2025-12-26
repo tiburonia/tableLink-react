@@ -1,8 +1,41 @@
-.favorite-list {
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.emptyIcon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.emptyState h3 {
+  font-size: 18px;
+  color: #1f2937;
+  margin-bottom: 8px;
+}
+
+.emptyState p {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.favoriteList {
   margin-top: 24px;
 }
 
-.favorite-card {
+.sectionTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 16px;
+  padding: 0 4px;
+}
+
+.favoriteCard {
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -14,23 +47,23 @@
   transition: all 0.2s;
 }
 
-.favorite-card:hover {
+.favoriteCard:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.favorite-content {
+.favoriteContent {
   flex: 1;
   cursor: pointer;
 }
 
-.favorite-header {
+.favoriteHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 8px;
 }
 
-.favorite-name {
+.favoriteName {
   font-size: 16px;
   font-weight: 700;
   color: #1f2937;
@@ -38,7 +71,7 @@
   flex: 1;
 }
 
-.favorite-rating {
+.favoriteRating {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -47,24 +80,32 @@
   color: #f59e0b;
 }
 
-.rating-star {
+.ratingStar {
   font-size: 16px;
 }
 
-.favorite-info {
+.ratingValue {
+  font-weight: 600;
+}
+
+.favoriteInfo {
   display: flex;
   gap: 12px;
   font-size: 14px;
   color: #6b7280;
 }
 
-.favorite-category::after {
+.favoriteCategory::after {
   content: '•';
   margin-left: 12px;
   color: #d1d5db;
 }
 
-.favorite-remove-btn {
+.favoriteDistance {
+  color: #6b7280;
+}
+
+.favoriteRemoveBtn {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
@@ -79,10 +120,10 @@
   transition: all 0.2s;
 }
 
-.favorite-remove-btn:hover {
+.favoriteRemoveBtn:hover {
   background: #fecaca;
 }
 
-.favorite-remove-btn:active {
+.favoriteRemoveBtn:active {
   transform: scale(0.9);
 }

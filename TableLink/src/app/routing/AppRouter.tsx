@@ -3,12 +3,15 @@ import { useAuthStore } from '@/features/auth'
 import { LoginPage } from '@/pages/Login'
 import { MainPage } from '@/pages/Main/MainPage'
 import { StorePage } from '@/pages/Store'
+import { StoreFeedPage } from '@/pages/StoreFeed'
 import { PaymentPage } from '@/pages/Payment'
 import { QRPage } from '@/pages/QR'
 import { OrderPage } from '@/pages/Order'
 import { PayPage } from '@/pages/Pay'
 import { MyPage } from '@/pages/MyPage'
 import { MapPage } from '@/pages/Map'
+import { SearchPage } from '@/pages/Search'
+import { OrderSessionPage } from '@/pages/OrderSession'
 import { OrderHistory } from '@/pages/OrderHistory'
 import { RegularPage } from '@/pages/Regular'
 import { NotificationPage } from '@/pages/Notifications'
@@ -40,6 +43,7 @@ export const AppRouter = () => {
         <Route path="/" element={isAuthenticated ? <Navigate to="/main" replace /> : <Navigate to="/login" replace />} />
         <Route path="/main" element={<ProtectedRoute><MainPage /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />
+        <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
         <Route path="/mypage" element={<ProtectedRoute><MyPage onLogout={handleLogout} userInfo={userInfo} /></ProtectedRoute>} />
         <Route path="/orders" element={<ProtectedRoute><OrderHistory userInfo={userInfo} /></ProtectedRoute>} />
         <Route path="/qr" element={<ProtectedRoute><QRPage /></ProtectedRoute>} />
@@ -52,7 +56,9 @@ export const AppRouter = () => {
         <Route path="/payment/success" element={<PaymentPage />} />
         <Route path="/payment/fail" element={<PaymentPage />} />
         <Route path="/rs/:storeId" element={<ProtectedRoute><StorePage /></ProtectedRoute>} />
+        <Route path="/rs/:storeId/sf" element={<ProtectedRoute><StoreFeedPage /></ProtectedRoute>} />
         <Route path="/rs/:storeId/rv" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
+        <Route path="/ns/:orderId" element={<ProtectedRoute><OrderSessionPage /></ProtectedRoute>} />
           
         <Route path="*" element={<Navigate to={isAuthenticated ? "/main" : "/login"} replace />} />
       </Routes>

@@ -11,37 +11,37 @@ interface SummarySectionProps {
 
 export const SummarySection = ({ summary }: SummarySectionProps) => {
   return (
-    <div className="summary-section">
-      <div className="summary-cards">
-        <div className="summary-card">
-          <div className="summary-icon">💰</div>
-          <div className="summary-content">
-            <div className="summary-label">보유 포인트</div>
-            <div className="summary-value">{summary.totalPoints.toLocaleString()}P</div>
+    <div className={styles.summarySection}>
+      <div className={styles.summaryCards}>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryIcon}>💰</div>
+          <div className={styles.summaryContent}>
+            <div className={styles.summaryLabel}>보유 포인트</div>
+            <div className={styles.summaryValue}>{summary.totalPoints.toLocaleString()}P</div>
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="summary-icon">🎟️</div>
-          <div className="summary-content">
-            <div className="summary-label">쿠폰</div>
-            <div className="summary-value">{summary.totalCoupons}개</div>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryIcon}>🎟️</div>
+          <div className={styles.summaryContent}>
+            <div className={styles.summaryLabel}>쿠폰</div>
+            <div className={styles.summaryValue}>{summary.totalCoupons}개</div>
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="summary-icon">✍️</div>
-          <div className="summary-content">
-            <div className="summary-label">미작성 리뷰</div>
-            <div className="summary-value">{summary.unwrittenReviews}개</div>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryIcon}>✍️</div>
+          <div className={styles.summaryContent}>
+            <div className={styles.summaryLabel}>미작성 리뷰</div>
+            <div className={styles.summaryValue}>{summary.unwrittenReviews}개</div>
           </div>
         </div>
 
-        <div className="summary-card">
-          <div className="summary-icon">🏪</div>
-          <div className="summary-content">
-            <div className="summary-label">단골 매장</div>
-            <div className="summary-value">{summary.totalStores}곳</div>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryIcon}>🏪</div>
+          <div className={styles.summaryContent}>
+            <div className={styles.summaryLabel}>단골 매장</div>
+            <div className={styles.summaryValue}>{summary.totalStores}곳</div>
           </div>
         </div>
       </div>

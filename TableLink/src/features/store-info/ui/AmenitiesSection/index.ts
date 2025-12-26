@@ -1,0 +1,1 @@
+export { AmenitiesSection } from './AmenitiesSection'

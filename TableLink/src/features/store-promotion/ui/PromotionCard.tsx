@@ -1,15 +1,7 @@
 import { useEffect, useState } from 'react'
 import clsx from 'clsx'
+import type { Promotion } from '../model'
 import styles from './PromotionCard.module.css'
-
-interface Promotion {
-  id: number
-  title: string
-  description: string
-  discount_rate?: number
-  type: string
-  is_active: boolean
-}
 
 interface PromotionCardProps {
   storeId: number

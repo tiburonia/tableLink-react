@@ -1,0 +1,55 @@
+/* TabNavigation CSS Module */
+
+.tabNavigation {
+  display: flex;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 64px;
+  z-index: 80;
+}
+
+.tabBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  color: #9ca3af;
+}
+
+.tabBtn:hover {
+  background: #f9fafb;
+}
+
+.tabBtn.active {
+  color: #667eea;
+}
+
+.tabBtn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 3px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 3px 3px 0 0;
+}
+
+.tabIcon {
+  font-size: 20px;
+}
+
+.tabLabel {
+  font-size: 11px;
+  font-weight: 600;
+}

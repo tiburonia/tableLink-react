@@ -29,15 +29,15 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
     <>
       {/* 오버레이 */}
       <div
-        className={`side-panel-overlay ${isOpen ? 'active' : ''}`}
+        className={`${styles.sidePanelOverlay} ${isOpen ? styles.active : ''}`}
         onClick={onClose}
       />
 
       {/* 사이드 패널 */}
-      <div className={`side-panel ${isOpen ? 'active' : ''}`}>
-        <div className="side-panel-header">
-          <div className="side-panel-profile">
-            <div className="side-panel-avatar">
+      <div className={`${styles.sidePanel} ${isOpen ? styles.active : ''}`}>
+        <div className={styles.sidePanelHeader}>
+          <div className={styles.sidePanelProfile}>
+            <div className={styles.sidePanelAvatar}>
               <img
                 src="/TableLink.png"
                 alt="프로필"
@@ -46,12 +46,12 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 }}
               />
             </div>
-            <div className="side-panel-user-info">
-              <h3 className="side-panel-username">{user?.username || '게스트'}</h3>
-              <p className="side-panel-email">{user?.name || ''}</p>
+            <div className={styles.sidePanelUserInfo}>
+              <h3 className={styles.sidePanelUsername}>{user?.username || '게스트'}</h3>
+              <p className={styles.sidePanelEmail}>{user?.name || ''}</p>
             </div>
           </div>
-          <button className="side-panel-close-btn" onClick={onClose}>
+          <button className={styles.sidePanelCloseBtn} onClick={onClose}>
             <svg
               width="24"
               height="24"
@@ -66,12 +66,12 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
           </button>
         </div>
 
-        <nav className="side-panel-nav">
+        <nav className={styles.sidePanelNav}>
           <button
-            className="side-panel-menu-item"
+            className={styles.sidePanelMenuItem}
             onClick={() => handleNavigate('/mypage')}
           >
-            <div className="side-panel-menu-icon">
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -84,9 +84,9 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">내 프로필</span>
+            <span className={styles.sidePanelMenuText}>내 프로필</span>
             <svg
-              className="side-panel-menu-arrow"
+              className={styles.sidePanelMenuArrow}
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -99,10 +99,10 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
           </button>
 
           <button
-            className="side-panel-menu-item"
+            className={styles.sidePanelMenuItem}
             onClick={() => handleNavigate('/main')}
           >
-            <div className="side-panel-menu-icon">
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -115,9 +115,9 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <line x1="4" y1="22" x2="4" y2="15" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">매장 찾기</span>
+            <span className={styles.sidePanelMenuText}>매장 찾기</span>
             <svg
-              className="side-panel-menu-arrow"
+              className={styles.sidePanelMenuArrow}
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -129,8 +129,8 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
             </svg>
           </button>
 
-          <button className="side-panel-menu-item" onClick={onClose}>
-            <div className="side-panel-menu-icon">
+          <button className={styles.sidePanelMenuItem} onClick={onClose}>
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -145,9 +145,9 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">단골 매장</span>
+            <span className={styles.sidePanelMenuText}>단골 매장</span>
             <svg
-              className="side-panel-menu-arrow"
+              className={styles.sidePanelMenuArrow}
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -160,10 +160,10 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
           </button>
 
           <button
-            className="side-panel-menu-item"
+            className={styles.sidePanelMenuItem}
             onClick={() => alert('쿠폰함 기능은 준비 중입니다')}
           >
-            <div className="side-panel-menu-icon">
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -176,9 +176,9 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <line x1="7" y1="7" x2="7.01" y2="7" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">쿠폰함</span>
+            <span className={styles.sidePanelMenuText}>쿠폰함</span>
             <svg
-              className="side-panel-menu-arrow"
+              className={styles.sidePanelMenuArrow}
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -190,13 +190,13 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
             </svg>
           </button>
 
-          <div className="side-panel-divider" />
+          <div className={styles.sidePanelDivider} />
 
           <button
-            className="side-panel-menu-item"
+            className={styles.sidePanelMenuItem}
             onClick={() => alert('설정 기능은 준비 중입니다')}
           >
-            <div className="side-panel-menu-icon">
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -209,9 +209,9 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <path d="M12 1v6m0 6v6m-8.66-8.66l5.2 3M15.46 8.34l5.2-3m-5.2 10.32l5.2 3M9.66 15.66l-5.2 3" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">설정</span>
+            <span className={styles.sidePanelMenuText}>설정</span>
             <svg
-              className="side-panel-menu-arrow"
+              className={styles.sidePanelMenuArrow}
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -224,10 +224,10 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
           </button>
 
           <button
-            className="side-panel-menu-item"
+            className={styles.sidePanelMenuItem}
             onClick={() => handleNavigate('/notifications')}
           >
-            <div className="side-panel-menu-icon">
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -240,9 +240,9 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <path d="M13.73 21a2 2 0 0 1-3.46 0" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">알림</span>
+            <span className={styles.sidePanelMenuText}>알림</span>
             <svg
-              className="side-panel-menu-arrow"
+              className={styles.sidePanelMenuArrow}
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -254,13 +254,13 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
             </svg>
           </button>
 
-          <div className="side-panel-divider" />
+          <div className={styles.sidePanelDivider} />
 
           <button
-            className="side-panel-menu-item"
+            className={styles.sidePanelMenuItem}
             onClick={() => alert('고객센터 기능은 준비 중입니다')}
           >
-            <div className="side-panel-menu-icon">
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -274,9 +274,9 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <line x1="12" y1="17" x2="12.01" y2="17" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">고객센터</span>
+            <span className={styles.sidePanelMenuText}>고객센터</span>
             <svg
-              className="side-panel-menu-arrow"
+              className={styles.sidePanelMenuArrow}
               width="16"
               height="16"
               viewBox="0 0 24 24"
@@ -289,10 +289,10 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
           </button>
 
           <button
-            className="side-panel-menu-item side-panel-menu-item-danger"
+            className={`${styles.sidePanelMenuItem} ${styles.sidePanelMenuItemDanger}`}
             onClick={handleLogout}
           >
-            <div className="side-panel-menu-icon">
+            <div className={styles.sidePanelMenuIcon}>
               <svg
                 width="20"
                 height="20"
@@ -306,12 +306,12 @@ export const SidePanel = ({ isOpen, onClose }: SidePanelProps) => {
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             </div>
-            <span className="side-panel-menu-text">로그아웃</span>
+            <span className={styles.sidePanelMenuText}>로그아웃</span>
           </button>
         </nav>
 
-        <div className="side-panel-footer">
-          <p className="side-panel-version">TableLink v1.0.0</p>
+        <div className={styles.sidePanelFooter}>
+          <p className={styles.sidePanelVersion}>TableLink v1.0.0</p>
         </div>
       </div>
     </>

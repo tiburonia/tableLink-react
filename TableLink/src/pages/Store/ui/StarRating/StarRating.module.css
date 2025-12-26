@@ -1,0 +1,15 @@
+/* StarRating CSS Module */
+
+.starRating {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.star {
+  font-size: 16px;
+  color: #d1d5db;
+}
+
+.star.filled {
+  color: #fbbf24;
+}

@@ -1,0 +1,7 @@
+/* ReviewTab Component Styles */
+
+.reviewTab {
+  display: flex;
+  flex-direction: column;
+  background: white;
+}

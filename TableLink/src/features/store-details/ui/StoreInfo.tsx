@@ -1,4 +1,5 @@
 import clsx from 'clsx'
+import type { RegionInfo } from '../model'
 import styles from './StoreInfo.module.css'
 
 interface StoreInfoProps {
@@ -9,11 +10,7 @@ interface StoreInfoProps {
   hasPromotion?: boolean
   isNew?: boolean
   category?: string | null
-  region?: {
-    sido?: string
-    sigungu?: string
-    eupmyeondong?: string
-  } | null
+  region?: RegionInfo | null
   isFavorite: boolean
   onFavoriteClick: () => void
   onStoryClick?: () => void
@@ -74,7 +71,7 @@ export const StoreInfo = ({
         <div className={styles.storeNameRow}>
           <h1 className={styles.storeMainTitle}>{name}</h1>
           <button
-            className={`favorite-btn-v2 ${isFavorite ? 'active' : ''}`}
+            className={clsx(styles.favoriteBtnV2, isFavorite && styles.active)}
             onClick={onFavoriteClick}
             aria-label="즐겨찾기"
           >

@@ -1,5 +1,5 @@
 /* Side Panel Overlay */
-.side-panel-overlay {
+.sidePanelOverlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -12,13 +12,13 @@
   z-index: 998;
 }
 
-.side-panel-overlay.active {
+.sidePanelOverlay.active {
   opacity: 1;
   visibility: visible;
 }
 
 /* Side Panel */
-.side-panel {
+.sidePanel {
   position: absolute;
   top: 0;
   left: -320px;
@@ -33,12 +33,12 @@
   overflow: hidden;
 }
 
-.side-panel.active {
+.sidePanel.active {
   left: 0;
 }
 
 /* Side Panel Header */
-.side-panel-header {
+.sidePanelHeader {
   padding: 24px 20px;
   background: linear-gradient(135deg, #ff8a00 0%, #ff6200 100%);
   color: white;
@@ -48,14 +48,14 @@
   flex-shrink: 0;
 }
 
-.side-panel-profile {
+.sidePanelProfile {
   display: flex;
   gap: 12px;
   align-items: center;
   flex: 1;
 }
 
-.side-panel-avatar {
+.sidePanelAvatar {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -68,18 +68,18 @@
   flex-shrink: 0;
 }
 
-.side-panel-avatar img {
+.sidePanelAvatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.side-panel-user-info {
+.sidePanelUserInfo {
   flex: 1;
   min-width: 0;
 }
 
-.side-panel-username {
+.sidePanelUsername {
   font-size: 18px;
   font-weight: 700;
   margin: 0 0 4px 0;
@@ -89,7 +89,7 @@
   white-space: nowrap;
 }
 
-.side-panel-email {
+.sidePanelEmail {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.9);
   margin: 0;
@@ -98,7 +98,7 @@
   white-space: nowrap;
 }
 
-.side-panel-close-btn {
+.sidePanelCloseBtn {
   width: 36px;
   height: 36px;
   border-radius: 50%;
@@ -113,22 +113,22 @@
   flex-shrink: 0;
 }
 
-.side-panel-close-btn:hover {
+.sidePanelCloseBtn:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-.side-panel-close-btn:active {
+.sidePanelCloseBtn:active {
   transform: scale(0.95);
 }
 
 /* Side Panel Navigation */
-.side-panel-nav {
+.sidePanelNav {
   flex: 1;
   overflow-y: auto;
   padding: 8px 0;
 }
 
-.side-panel-menu-item {
+.sidePanelMenuItem {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -143,15 +143,15 @@
   text-align: left;
 }
 
-.side-panel-menu-item:hover {
+.sidePanelMenuItem:hover {
   background: #f3f4f6;
 }
 
-.side-panel-menu-item:active {
+.sidePanelMenuItem:active {
   background: #e5e7eb;
 }
 
-.side-panel-menu-icon {
+.sidePanelMenuIcon {
   width: 40px;
   height: 40px;
   border-radius: 10px;
@@ -163,53 +163,53 @@
   flex-shrink: 0;
 }
 
-.side-panel-menu-item:hover .side-panel-menu-icon {
+.sidePanelMenuItem:hover .sidePanelMenuIcon {
   background: #e5e7eb;
   color: #ff8a00;
 }
 
-.side-panel-menu-text {
+.sidePanelMenuText {
   flex: 1;
   font-size: 15px;
   font-weight: 500;
 }
 
-.side-panel-menu-arrow {
+.sidePanelMenuArrow {
   color: #9ca3af;
   flex-shrink: 0;
 }
 
-.side-panel-divider {
+.sidePanelDivider {
   height: 1px;
   background: #e5e7eb;
   margin: 8px 20px;
 }
 
-.side-panel-menu-item-danger {
+.sidePanelMenuItemDanger {
   color: #ef4444;
 }
 
-.side-panel-menu-item-danger .side-panel-menu-icon {
+.sidePanelMenuItemDanger .sidePanelMenuIcon {
   background: #fee2e2;
   color: #ef4444;
 }
 
-.side-panel-menu-item-danger:hover {
+.sidePanelMenuItemDanger:hover {
   background: #fef2f2;
 }
 
-.side-panel-menu-item-danger:hover .side-panel-menu-icon {
+.sidePanelMenuItemDanger:hover .sidePanelMenuIcon {
   background: #fecaca;
 }
 
 /* Side Panel Footer */
-.side-panel-footer {
+.sidePanelFooter {
   padding: 16px 20px;
   border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
 }
 
-.side-panel-version {
+.sidePanelVersion {
   font-size: 12px;
   color: #9ca3af;
   text-align: center;
@@ -217,19 +217,19 @@
 }
 
 /* Scrollbar */
-.side-panel-nav::-webkit-scrollbar {
+.sidePanelNav::-webkit-scrollbar {
   width: 6px;
 }
 
-.side-panel-nav::-webkit-scrollbar-track {
+.sidePanelNav::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.side-panel-nav::-webkit-scrollbar-thumb {
+.sidePanelNav::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 3px;
 }
 
-.side-panel-nav::-webkit-scrollbar-thumb:hover {
+.sidePanelNav::-webkit-scrollbar-thumb:hover {
   background: #9ca3af;
 }

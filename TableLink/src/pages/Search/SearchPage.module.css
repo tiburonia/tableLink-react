@@ -1,0 +1,10 @@
+.searchPage {
+  min-height: 100vh;
+  background: #f9fafb;
+}
+
+.searchContent {
+  padding-top: 68px;
+  padding-bottom: 80px;
+  min-height: 100vh;
+}

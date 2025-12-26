@@ -17,8 +17,8 @@ interface FavoriteListProps {
 export const FavoriteList = ({ stores, onStoreClick, onRemove }: FavoriteListProps) => {
   if (stores.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-icon">⭐</div>
+      <div className={styles.emptyState}>
+        <div className={styles.emptyIcon}>⭐</div>
         <h3>즐겨찾기한 매장이 없습니다</h3>
         <p>자주 가는 매장을 즐겨찾기에 추가해보세요!</p>
       </div>
@@ -26,30 +26,30 @@ export const FavoriteList = ({ stores, onStoreClick, onRemove }: FavoriteListPro
   }
 
   return (
-    <div className="favorite-list">
-      <h2 className="section-title">즐겨찾기 매장</h2>
+    <div className={styles.favoriteList}>
+      <h2 className={styles.sectionTitle}>즐겨찾기 매장</h2>
       {stores.map((store) => (
-        <div key={store.storeId} className="favorite-card">
+        <div key={store.storeId} className={styles.favoriteCard}>
           <div
-            className="favorite-content"
+            className={styles.favoriteContent}
             onClick={() => onStoreClick(store.storeId)}
           >
-            <div className="favorite-header">
-              <h3 className="favorite-name">{store.storeName}</h3>
-              <div className="favorite-rating">
-                <span className="rating-star">⭐</span>
-                <span className="rating-value">{store.rating.toFixed(1)}</span>
+            <div className={styles.favoriteHeader}>
+              <h3 className={styles.favoriteName}>{store.storeName}</h3>
+              <div className={styles.favoriteRating}>
+                <span className={styles.ratingStar}>⭐</span>
+                <span className={styles.ratingValue}>{store.rating.toFixed(1)}</span>
               </div>
             </div>
 
-            <div className="favorite-info">
-              <span className="favorite-category">{store.category}</span>
-              <span className="favorite-distance">{store.distance}</span>
+            <div className={styles.favoriteInfo}>
+              <span className={styles.favoriteCategory}>{store.category}</span>
+              <span className={styles.favoriteDistance}>{store.distance}</span>
             </div>
           </div>
 
           <button
-            className="favorite-remove-btn"
+            className={styles.favoriteRemoveBtn}
             onClick={(e) => {
               e.stopPropagation()
               onRemove(store.storeId)

@@ -1,0 +1,15 @@
+/* StarRating Component Styles */
+
+.starRating {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.star {
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+.star.filled {
+  color: #fbbf24;
+}

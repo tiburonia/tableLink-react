@@ -1,0 +1,173 @@
+.resultsContainer {
+  padding: 16px;
+}
+
+.resultsHeader {
+  margin-bottom: 16px;
+}
+
+.resultsCount {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.resultsCount strong {
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.storeCard {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.storeCard:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.storeInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.storeHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.storeName {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.statusBadge {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.statusOpen {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.statusClosed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.category {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.address {
+  font-size: 13px;
+  color: #9ca3af;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ratingContainer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #f59e0b;
+}
+
+.reviewCount {
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+.loadingContainer,
+.errorContainer,
+.emptyContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loadingText {
+  margin-top: 16px;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.errorIcon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.errorMessage {
+  font-size: 15px;
+  color: #dc2626;
+  margin-bottom: 16px;
+}
+
+.retryBtn {
+  padding: 10px 20px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.emptyMessage {
+  font-size: 15px;
+  color: #6b7280;
+}

@@ -1,0 +1,56 @@
+.footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 20px;
+  background: white;
+  border-top: 1px solid #e5e7eb;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.payButton {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #ff8a00 0%, #ff6200 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.payButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 138, 0, 0.4);
+}
+
+.payButton:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.payButton:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

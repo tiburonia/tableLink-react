@@ -65,6 +65,7 @@ export interface NaverMapProps {
   centerLat?: number
   centerLng?: number
   zoom?: number
+  children?: React.ReactNode
 }
 
 // 네이버 맵 타입 정의

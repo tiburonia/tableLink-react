@@ -1,0 +1,62 @@
+.section {
+  background: white;
+  padding: 20px 16px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.titleIcon {
+  font-size: 18px;
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.photoItem {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.photoItem:hover {
+  transform: scale(1.02);
+  opacity: 0.9;
+}
+
+.photoItem img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.emptyPhotos {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.emptyText {
+  font-size: 14px;
+  margin: 0;
+}

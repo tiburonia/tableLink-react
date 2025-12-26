@@ -1,0 +1,63 @@
+/* StoreHeader CSS Module */
+
+.fixedHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: transparent;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  max-width: 430px;
+  margin: 0 auto;
+  z-index: 90;
+  transition: background 0.3s ease;
+  pointer-events: none;
+}
+
+.fixedHeader.scrolled {
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.fixedHeader > * {
+  pointer-events: auto;
+}
+
+.headerBtn {
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.headerBtn:hover {
+  background: rgba(0, 0, 0, 0.5);
+  transform: scale(1.05);
+}
+
+.headerBtnIco {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scrolled .headerBtn {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.scrolled .headerBtn:hover {
+  background: #e5e5e5;
+}

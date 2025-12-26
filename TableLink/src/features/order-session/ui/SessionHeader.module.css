@@ -1,0 +1,66 @@
+.sessionHeader {
+  position: sticky;
+  top: 0;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10;
+}
+
+.backBtn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #374151;
+  transition: background 0.2s;
+}
+
+.backBtn:hover {
+  background: #f3f4f6;
+}
+
+.headerInfo {
+  flex: 1;
+}
+
+.storeName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 4px 0;
+}
+
+.subtitle {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.endSessionBtn {
+  padding: 8px 16px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.endSessionBtn:hover {
+  background: #dc2626;
+}
+
+.endSessionBtn:active {
+  background: #b91c1c;
+}

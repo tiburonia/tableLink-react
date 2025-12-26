@@ -1,0 +1,54 @@
+/* PhotoModal CSS Module */
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modalContent {
+  position: relative;
+  max-width: 90%;
+  max-height: 90vh;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.modalImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  max-height: 80vh;
+  object-fit: contain;
+}
+
+.modalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modalClose:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.1);
+}

@@ -1,6 +1,7 @@
 
 const userRepository = require('../repositories/userRepository');
 const authRepository = require('../repositories/authRepository');
+const { generateTokenPair } = require('../utils/jwtUtils');
 
 /**
  * 인증 서비스 - 회원가입/로그인 비즈니스 로직
@@ -89,6 +90,9 @@ class AuthService {
 
     console.log(`✅ 로그인 성공: ${user.name} (${user.user_id})`);
 
+    // JWT 토큰 쌍 생성
+    const tokens = generateTokenPair(user);
+
     return {
       id: user.user_id,
       userId: user.id,
@@ -97,7 +101,9 @@ class AuthService {
       email: user.email,
       address: user.address,
       birth: user.birth,
-      gender: user.gender
+      gender: user.gender,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken
     };
   }
 

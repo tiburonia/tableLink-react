@@ -1,3 +1,5 @@
+import styles from './PhotoModal.module.css'
+
 interface PhotoModalProps {
   photoUrl: string
   onClose: () => void
@@ -5,9 +7,11 @@ interface PhotoModalProps {
 
 export const PhotoModal = ({ photoUrl, onClose }: PhotoModalProps) => {
   return (
-    <div className="photo-modal" onClick={onClose}>
-      <button className="modal-close">✕</button>
-      <img src={photoUrl} alt="매장 사진" />
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+        <button className={styles.modalClose} onClick={onClose}>✕</button>
+        <img src={photoUrl} alt="매장 사진" className={styles.modalImage} />
+      </div>
     </div>
   )
 }

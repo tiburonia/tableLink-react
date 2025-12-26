@@ -3,7 +3,8 @@
  */
 
 export interface User {
-  id: number
+  id: string
+  userId: number
   username: string
   email: string
   phone?: string

@@ -1,5 +1,5 @@
 /* 피드 섹션 */
-.feed-section {
+.feedSection {
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -7,7 +7,7 @@
 }
 
 /* 탭 */
-.feed-tabs {
+.feedTabs {
   position: sticky;
   top: 0;
   background: white;
@@ -19,11 +19,11 @@
   border-bottom: 1px solid #f3f4f6;
 }
 
-.feed-tabs::-webkit-scrollbar {
+.feedTabs::-webkit-scrollbar {
   display: none;
 }
 
-.feed-tab {
+.feedTab {
   flex-shrink: 0;
   padding: 8px 14px;
   border-radius: 16px;
@@ -39,31 +39,35 @@
   transition: all 0.2s;
 }
 
-.feed-tab.active {
+.feedTab.active {
   background: #111827;
   color: white;
 }
 
-.feed-tab:hover {
+.feedTab:hover {
   background: #e5e7eb;
 }
 
-.feed-tab.active:hover {
+.feedTab.active:hover {
   background: #1f2937;
 }
 
-.tab-icon {
+.tabIcon {
   font-size: 14px;
 }
 
+.tabLabel {
+  display: inline-block;
+}
+
 /* 피드 컨텐츠 */
-.feed-content {
+.feedContent {
   flex: 1;
   overflow-y: auto;
   padding-bottom: 20px;
 }
 
-.feed-list {
+.feedList {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -71,7 +75,7 @@
 }
 
 /* 로딩 상태 */
-.feed-loading {
+.feedLoading {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -80,7 +84,7 @@
   color: #6b7280;
 }
 
-.loading-spinner {
+.loadingSpinner {
   width: 40px;
   height: 40px;
   border: 3px solid #f3f4f6;
@@ -94,37 +98,37 @@
   to { transform: rotate(360deg); }
 }
 
-.feed-loading p {
+.feedLoading p {
   font-size: 14px;
   margin: 0;
 }
 
 /* 에러 상태 */
-.feed-error {
+.feedError {
   text-align: center;
   padding: 80px 20px;
 }
 
-.error-icon {
+.errorIcon {
   font-size: 64px;
   margin-bottom: 16px;
   opacity: 0.6;
 }
 
-.feed-error h3 {
+.feedError h3 {
   margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: 700;
   color: #1f2937;
 }
 
-.feed-error p {
+.feedError p {
   margin: 0 0 20px 0;
   font-size: 14px;
   color: #9ca3af;
 }
 
-.retry-btn {
+.retryBtn {
   padding: 10px 24px;
   background: #111827;
   color: white;
@@ -136,31 +140,31 @@
   transition: all 0.2s;
 }
 
-.retry-btn:hover {
+.retryBtn:hover {
   background: #1f2937;
   transform: translateY(-1px);
 }
 
 /* Empty State */
-.feed-empty {
+.feedEmpty {
   text-align: center;
   padding: 80px 20px;
 }
 
-.empty-icon {
+.emptyIcon {
   font-size: 64px;
   margin-bottom: 16px;
   opacity: 0.6;
 }
 
-.feed-empty h3 {
+.feedEmpty h3 {
   margin: 0 0 8px 0;
   font-size: 18px;
   font-weight: 700;
   color: #1f2937;
 }
 
-.feed-empty p {
+.feedEmpty p {
   margin: 0;
   font-size: 14px;
   color: #9ca3af;

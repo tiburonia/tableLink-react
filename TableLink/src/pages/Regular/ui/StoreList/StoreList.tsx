@@ -28,8 +28,8 @@ const getLevelBadge = (level: string) => {
 export const StoreList = ({ stores, onStoreClick }: StoreListProps) => {
   if (stores.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-icon">🏪</div>
+      <div className={styles.emptyState}>
+        <div className={styles.emptyIcon}>🏪</div>
         <h3>아직 단골 매장이 없습니다</h3>
         <p>매장을 방문하고 단골이 되어보세요!</p>
       </div>
@@ -37,41 +37,41 @@ export const StoreList = ({ stores, onStoreClick }: StoreListProps) => {
   }
 
   return (
-    <div className="store-list">
-      <h2 className="section-title">단골 매장 목록</h2>
+    <div className={styles.storeList}>
+      <h2 className={styles.sectionTitle}>단골 매장 목록</h2>
       {stores.map((store) => {
         const levelInfo = getLevelBadge(store.level)
         return (
           <div
             key={store.storeId}
-            className="store-card"
+            className={styles.storeCard}
             onClick={() => onStoreClick(store.storeId)}
           >
-            <div className="store-header">
-              <h3 className="store-name">{store.storeName}</h3>
+            <div className={styles.storeHeader}>
+              <h3 className={styles.storeName}>{store.storeName}</h3>
               <div
-                className="level-badge"
+                className={styles.levelBadge}
                 style={{ backgroundColor: levelInfo.color }}
               >
-                <span className="level-icon">{levelInfo.icon}</span>
-                <span className="level-name">{levelInfo.name}</span>
+                <span className={styles.levelIcon}>{levelInfo.icon}</span>
+                <span className={styles.levelName}>{levelInfo.name}</span>
               </div>
             </div>
 
-            <div className="store-category">{store.category}</div>
+            <div className={styles.storeCategory}>{store.category}</div>
 
-            <div className="store-stats">
-              <div className="stat-item">
-                <span className="stat-label">포인트</span>
-                <span className="stat-value">{store.points}P</span>
+            <div className={styles.storeStats}>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>포인트</span>
+                <span className={styles.statValue}>{store.points}P</span>
               </div>
-              <div className="stat-item">
-                <span className="stat-label">방문 횟수</span>
-                <span className="stat-value">{store.visitCount}회</span>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>방문 횟수</span>
+                <span className={styles.statValue}>{store.visitCount}회</span>
               </div>
-              <div className="stat-item">
-                <span className="stat-label">최근 방문</span>
-                <span className="stat-value">{store.lastVisit}</span>
+              <div className={styles.statItem}>
+                <span className={styles.statLabel}>최근 방문</span>
+                <span className={styles.statValue}>{store.lastVisit}</span>
               </div>
             </div>
           </div>

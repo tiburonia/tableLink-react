@@ -1,3 +1,5 @@
+import styles from './TabNavigation.module.css'
+
 type TabType = 'main' | 'menu' | 'review' |'regular' | 'info'
 
 interface TabNavigationProps {
@@ -7,41 +9,41 @@ interface TabNavigationProps {
 
 export const TabNavigation = ({ activeTab, onTabChange }: TabNavigationProps) => {
   return (
-    <div className="tab-navigation">
+    <div className={styles.tabNavigation}>
       <button 
-        className={`tab-btn ${activeTab === 'main' ? 'active' : ''}`}
+        className={`${styles.tabBtn} ${activeTab === 'main' ? styles.active : ''}`}
         onClick={() => onTabChange('main')}
       >
-        <span className="tab-icon">🏠</span>
-        <span className="tab-label">홈</span>
+        <span className={styles.tabIcon}>🏠</span>
+        <span className={styles.tabLabel}>홈</span>
       </button>
       <button 
-        className={`tab-btn ${activeTab === 'regular' ? 'active' : ''}`}
+        className={`${styles.tabBtn} ${activeTab === 'regular' ? styles.active : ''}`}
         onClick={() => onTabChange('regular')}
       >
-        <span className="tab-icon">👑</span>
-        <span className="tab-label">단골혜택</span>
+        <span className={styles.tabIcon}>👑</span>
+        <span className={styles.tabLabel}>단골혜택</span>
       </button>
       <button 
-        className={`tab-btn ${activeTab === 'menu' ? 'active' : ''}`}
+        className={`${styles.tabBtn} ${activeTab === 'menu' ? styles.active : ''}`}
         onClick={() => onTabChange('menu')}
       >
-        <span className="tab-icon">🍽️</span>
-        <span className="tab-label">메뉴</span>
+        <span className={styles.tabIcon}>🍽️</span>
+        <span className={styles.tabLabel}>메뉴</span>
       </button>
       <button 
-        className={`tab-btn ${activeTab === 'review' ? 'active' : ''}`}
+        className={`${styles.tabBtn} ${activeTab === 'review' ? styles.active : ''}`}
         onClick={() => onTabChange('review')}
       >
-        <span className="tab-icon">💬</span>
-        <span className="tab-label">리뷰</span>
+        <span className={styles.tabIcon}>💬</span>
+        <span className={styles.tabLabel}>리뷰</span>
       </button>
       <button 
-        className={`tab-btn ${activeTab === 'info' ? 'active' : ''}`}
+        className={`${styles.tabBtn} ${activeTab === 'info' ? styles.active : ''}`}
         onClick={() => onTabChange('info')}
       >
-        <span className="tab-icon">ℹ️</span>
-        <span className="tab-label">매장정보</span>
+        <span className={styles.tabIcon}>ℹ️</span>
+        <span className={styles.tabLabel}>매장정보</span>
       </button>
     </div>
   )

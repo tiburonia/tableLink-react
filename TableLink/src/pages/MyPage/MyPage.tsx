@@ -20,9 +20,11 @@ export const MyPage = ({ onLogout, userInfo }: MyPageProps) => {
 
   if (loading) {
     return (
-      <div className={styles.mobileApp}>
-        <div className={styles.mobileContent}>
-          <LoadingSpinner fullScreen text="로딩 중..." />
+      <div className="mobile-app">
+        <div className="mobile-content">
+          <div className={styles.loadingContainer}>
+            <LoadingSpinner text="로딩 중..." />
+          </div>
         </div>
         <BottomNavigation />
       </div>
@@ -31,8 +33,8 @@ export const MyPage = ({ onLogout, userInfo }: MyPageProps) => {
 
   if (error || !data) {
     return (
-      <div className={styles.mobileApp}>
-        <div className={styles.mobileContent}>
+      <div className="mobile-app">
+        <div className="mobile-content">
           <div className={styles.error}>
             <h2>🚫 마이페이지를 불러올 수 없습니다</h2>
             <p>{error || '잠시 후 다시 시도해주세요'}</p>
@@ -50,8 +52,8 @@ export const MyPage = ({ onLogout, userInfo }: MyPageProps) => {
   const regularSummary = data.regularSummary
 
   return (
-    <div className={styles.mobileApp}>
-      <div className={styles.mobileContent}>
+    <div className="mobile-app">
+      <div className="mobile-content">
         <ProfileHeader displayName={displayName} />
 
         <div className={styles.container}>

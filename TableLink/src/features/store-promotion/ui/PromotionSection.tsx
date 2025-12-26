@@ -1,27 +1,6 @@
 import { useState, useEffect } from 'react'
+import type { Coupon, Discount } from '../model'
 import styles from './PromotionSection.module.css'
-
-interface Coupon {
-  id: string
-  name: string
-  description: string
-  discountRate: string
-  minOrderAmount: string
-  maxDiscount?: string
-  startDate: string
-  endDate: string
-}
-
-interface Discount {
-  id: string
-  name: string
-  description: string
-  discountRate: string
-  tag: string
-  conditions: string[]
-  startDate: string
-  endDate: string
-}
 
 interface PromotionSectionProps {
   storeId: number

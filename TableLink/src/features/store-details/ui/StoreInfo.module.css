@@ -212,6 +212,29 @@
   border-top: 1px solid #f1f3f5;
 }
 
+/* 매장 섹션 */
+.storeSection {
+  padding: 16px 0 0;
+  border-top: 1px solid #f1f3f5;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin: 0 0 12px 0;
+  line-height: 1.4;
+}
+
+.descriptionText {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #495057;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: keep-all;
+}
+
 /* 반응형 */
 @media (max-width: 768px) {
   .storeMainTitle {

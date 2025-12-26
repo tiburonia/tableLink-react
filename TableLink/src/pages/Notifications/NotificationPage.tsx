@@ -7,8 +7,15 @@
  * - API 호출 ❌
  */
 
-import { useNotificationPage, NotificationCard } from '@/features/notification';
+import { useNotificationPage } from '@/features/notification';
 import { BottomNavigation } from '@/widgets/Layout';
+import {
+  NotificationHeader,
+  NotificationList,
+  EmptyState,
+  LoadingState,
+  ErrorState,
+} from './ui';
 import styles from './NotificationPage.module.css';
 
 export const NotificationPage = () => {
@@ -30,10 +37,7 @@ export const NotificationPage = () => {
     return (
       <div className="mobile-app">
         <div className="mobile-content">
-          <div className="notification-loading">
-            <div className="loading-spinner"></div>
-            <p>알림을 불러오는 중...</p>
-          </div>
+          <LoadingState />
         </div>
       </div>
     );
@@ -43,13 +47,7 @@ export const NotificationPage = () => {
     return (
       <div className="mobile-app">
         <div className="mobile-content">
-          <div className="notification-error">
-            <div className="error-icon">⚠️</div>
-            <h3>{error}</h3>
-            <button onClick={refetch} className="retry-btn">
-              다시 시도
-            </button>
-          </div>
+          <ErrorState error={error} onRetry={refetch} />
         </div>
       </div>
     );
@@ -58,50 +56,22 @@ export const NotificationPage = () => {
   return (
     <div className="mobile-app">
       <div className="mobile-content">
-        {/* 헤더 */}
-        <header className="notification-header">
-          <div className="header-top">
-            <h1 className="page-title">알림</h1>
-            {unreadCount > 0 && (
-              <button onClick={handleMarkAllAsRead} className="mark-all-read-btn">
-                모두 읽음
-              </button>
-            )}
-          </div>
-          
-          {/* 탭 */}
-          <div className="notification-tabs">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                className={`notification-tab ${currentTab === tab.id ? 'active' : ''}`}
-                onClick={() => handleTabChange(tab.id)}
-              >
-                <span className="tab-icon">{tab.icon}</span>
-                <span className="tab-label">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-        </header>
+        <NotificationHeader
+          unreadCount={unreadCount}
+          currentTab={currentTab}
+          tabs={tabs}
+          onMarkAllAsRead={handleMarkAllAsRead}
+          onTabChange={handleTabChange}
+        />
 
-        {/* 알림 목록 */}
-        <div className="notification-content">
+        <div className={styles.content}>
           {notifications.length === 0 ? (
-            <div className="notification-empty">
-              <div className="empty-icon">🔔</div>
-              <h3>알림이 없습니다</h3>
-              <p>새로운 알림이 도착하면 여기에 표시됩니다</p>
-            </div>
+            <EmptyState />
           ) : (
-            <div className="notification-list">
-              {notifications.map(notification => (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  onRead={handleNotificationRead}
-                />
-              ))}
-            </div>
+            <NotificationList
+              notifications={notifications}
+              onNotificationRead={handleNotificationRead}
+            />
           )}
         </div>
       </div>

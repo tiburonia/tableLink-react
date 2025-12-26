@@ -2,4 +2,4 @@
 export { MenuItem } from './ui/MenuItem'
 export { MenuList } from './ui/MenuList'
 export { MenuTab } from './ui/MenuTab'
-export type { MenuItemData } from './ui/MenuItem'
+export type { MenuItemData, MenuCategory } from './model'

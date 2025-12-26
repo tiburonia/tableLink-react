@@ -1,0 +1,107 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.backButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.backButton:hover {
+  background: #f3f4f6;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.spacer {
+  width: 40px;
+}
+
+.storeProfile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.storeLogo {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #ff8a00;
+}
+
+.storeInfo {
+  flex: 1;
+}
+
+.storeName {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.storeBio {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 8px 0;
+}
+
+.storeStats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.followersCount {
+  font-size: 13px;
+  color: #ff8a00;
+  font-weight: 600;
+}
+
+.followButton {
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: linear-gradient(135deg, #ff8a00 0%, #ff6200 100%);
+  color: white;
+}
+
+.followButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 138, 0, 0.3);
+}
+
+.followButton.following {
+  background: #f3f4f6;
+  color: #6b7280;
+}

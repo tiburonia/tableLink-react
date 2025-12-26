@@ -1,0 +1,85 @@
+/* Amenities Section */
+.section {
+  background: white;
+  padding: 20px 16px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.titleIcon {
+  font-size: 18px;
+}
+
+/* Amenities Grid */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 12px;
+  background: #f9fafb;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  cursor: default;
+  min-height: 100px;
+}
+
+.card:hover {
+  background: #f3f4f6;
+  transform: translateY(-2px);
+}
+
+.cardIcon {
+  font-size: 32px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.cardName {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4b5563;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+  }
+
+  .card {
+    padding: 16px 8px;
+    min-height: 90px;
+  }
+
+  .cardIcon {
+    font-size: 28px;
+  }
+
+  .cardName {
+    font-size: 12px;
+  }
+}

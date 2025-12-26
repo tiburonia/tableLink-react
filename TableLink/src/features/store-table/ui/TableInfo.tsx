@@ -1,14 +1,8 @@
 import { useState, useEffect } from 'react'
 import clsx from 'clsx'
+import type { Table } from '../model'
+import { calculateTableStats } from '../model'
 import styles from './TableInfo.module.css'
-
-interface Table {
-  id: number
-  store_id: number
-  table_name: string
-  capacity: number
-  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED'
-}
 
 interface TableInfoProps {
   storeId: number
@@ -54,13 +48,7 @@ export const TableInfo = ({ storeId, isOpen }: TableInfoProps) => {
   }, [storeId, isOpen])
 
   // 통계 계산
-  const occupiedCount = tables.filter(t => t.status === 'OCCUPIED').length
-  const availableCount = tables.filter(t => t.status === 'AVAILABLE').length
-  const totalCount = tables.length
-  const occupancyRate = totalCount > 0 ? Math.round((occupiedCount / totalCount) * 100) : 0
-  
-  const usedSeats = tables.filter(t => t.status === 'OCCUPIED').reduce((sum, t) => sum + t.capacity, 0)
-  const totalSeats = tables.reduce((sum, t) => sum + t.capacity, 0)
+  const stats = calculateTableStats(tables)
 
   const handleManualRefresh = () => {
     loadTables()
@@ -101,21 +89,21 @@ export const TableInfo = ({ storeId, isOpen }: TableInfoProps) => {
           <div className={clsx(styles.visualStatItem, styles.occupied)}>
             <div className={styles.visualIcon}>🔴</div>
             <div className={styles.visualData}>
-              <span className={styles.visualNumber}>{occupiedCount}</span>
+              <span className={styles.visualNumber}>{stats.occupiedCount}</span>
               <span className={styles.visualLabel}>사용중</span>
             </div>
           </div>
           <div className={clsx(styles.visualStatItem, styles.available)}>
             <div className={styles.visualIcon}>🟢</div>
             <div className={styles.visualData}>
-              <span className={styles.visualNumber}>{availableCount}</span>
+              <span className={styles.visualNumber}>{stats.availableCount}</span>
               <span className={styles.visualLabel}>이용가능</span>
             </div>
           </div>
           <div className={clsx(styles.visualStatItem, styles.total)}>
             <div className={styles.visualIcon}>⚪</div>
             <div className={styles.visualData}>
-              <span className={styles.visualNumber}>{totalCount}</span>
+              <span className={styles.visualNumber}>{stats.totalCount}</span>
               <span className={styles.visualLabel}>전체</span>
             </div>
           </div>
@@ -138,7 +126,7 @@ export const TableInfo = ({ storeId, isOpen }: TableInfoProps) => {
             <div className={styles.occupancyHeader}>
               <span className={styles.occupancyTitle}>좌석 사용률</span>
               <div className={styles.occupancyPercentageWrapper}>
-                <span className={styles.occupancyPercentage}>{occupancyRate}%</span>
+                <span className={styles.occupancyPercentage}>{stats.occupancyRate}%</span>
                 <div className={styles.percentageTrend}>
                   <span className={styles.trendIcon}>📈</span>
                 </div>
@@ -149,11 +137,11 @@ export const TableInfo = ({ storeId, isOpen }: TableInfoProps) => {
               <div className={styles.occupancyTrack}>
                 <div 
                   className={styles.occupancyFill} 
-                  style={{ width: `${occupancyRate}%` }}
+                  style={{ width: `${stats.occupancyRate}%` }}
                 ></div>
                 <div 
                   className={styles.occupancyGlow} 
-                  style={{ left: `${occupancyRate}%` }}
+                  style={{ left: `${stats.occupancyRate}%` }}
                 ></div>
               </div>
               <div className={styles.occupancyMarkers}>
@@ -165,9 +153,9 @@ export const TableInfo = ({ storeId, isOpen }: TableInfoProps) => {
 
             <div className={styles.seatsBreakdown}>
               <div className={styles.seatsInfo}>
-                <span className={styles.seatsUsed}>{usedSeats}</span>
+                <span className={styles.seatsUsed}>{stats.usedSeats}</span>
                 <span className={styles.seatsSeparator}>/</span>
-                <span className={styles.seatsTotal}>{totalSeats}</span>
+                <span className={styles.seatsTotal}>{stats.totalSeats}</span>
                 <span className={styles.seatsLabel}>좌석</span>
               </div>
               <div className={styles.seatsVisual}>

@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom'
+import styles from './StoreHeader.module.css'
 
 interface StoreHeaderProps {
   onFavoriteClick?: () => void
   isFavorite?: boolean
   onQRClick?: () => void
+  isScrolled?: boolean
 }
 
-export const StoreHeader = ({ onFavoriteClick, isFavorite, onQRClick }: StoreHeaderProps) => {
+export const StoreHeader = ({ onFavoriteClick, isFavorite, onQRClick, isScrolled = false }: StoreHeaderProps) => {
   const navigate = useNavigate()
 
   const handleQRClick = () => {
@@ -20,13 +22,13 @@ export const StoreHeader = ({ onFavoriteClick, isFavorite, onQRClick }: StoreHea
   }
   
   return (
-    <header className="store-fixed-header">
+    <header className={`${styles.fixedHeader} ${isScrolled ? styles.scrolled : ''}`}>
       <button 
         onClick={() => navigate("/map")} 
-        className="header-btn" 
+        className={styles.headerBtn} 
         aria-label="뒤로가기"
       >
-        <span className="header-btn-ico">
+        <span className={styles.headerBtnIco}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
             <path d="M15 18L9 12L15 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
@@ -34,17 +36,17 @@ export const StoreHeader = ({ onFavoriteClick, isFavorite, onQRClick }: StoreHea
       </button>
       
       <button 
-        className="header-btn" 
+        className={styles.headerBtn} 
         onClick={handleQRClick}
         aria-label="QR결제"
       >
-        <span className="header-btn-ico">
+        <span className={styles.headerBtnIco}>
           <img 
             width="24" 
             height="24" 
             src="https://img.icons8.com/external-tanah-basah-glyph-tanah-basah/30/ffffff/external-qr-metaverse-tanah-basah-glyph-tanah-basah.png" 
             alt="QR"
-            style={{ filter: 'invert(1)' }}
+            style={{ filter: isScrolled ? 'invert(0)' : 'invert(1)' }}
           />
         </span>
       </button>

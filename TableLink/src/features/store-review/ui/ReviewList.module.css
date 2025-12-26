@@ -1,0 +1,38 @@
+/* ReviewList Component Styles */
+
+.storeSection {
+  padding: 20px 16px;
+  background: white;
+}
+
+.sectionTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 16px 0;
+}
+
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.loadMoreBtn {
+  width: 100%;
+  padding: 12px;
+  margin-top: 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.loadMoreBtn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}

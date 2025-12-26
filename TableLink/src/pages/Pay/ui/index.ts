@@ -1,1 +1,7 @@
-export { PayPage } from '../PayPage'
+export { LoadingState } from './LoadingState'
+export { PayHeader } from './PayHeader'
+export { StoreInfoSection } from './StoreInfoSection'
+export { OrderItemsSection } from './OrderItemsSection'
+export { AmountSection } from './AmountSection'
+export { PaymentMethodsSection } from './PaymentMethodsSection'
+export { PayFooter } from './PayFooter'

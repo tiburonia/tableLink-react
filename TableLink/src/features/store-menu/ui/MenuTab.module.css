@@ -1,0 +1,7 @@
+/* MenuTab Component Styles */
+
+.menuTab {
+  display: flex;
+  flex-direction: column;
+  background: white;
+}

@@ -5,6 +5,7 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuthStore } from '@/features/auth';
 import type { Notification } from '../model/notificationService';
 import {
   markAsRead,
@@ -21,6 +22,7 @@ interface NotificationCardProps {
 
 export const NotificationCard: React.FC<NotificationCardProps> = ({ notification, onRead }) => {
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [isRead, setIsRead] = useState(notification.isRead);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -62,9 +64,11 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({ notification
     setIsProcessing(true);
 
     // 읽음 처리
-    if (!isRead) {
-      const userId = parseInt(localStorage.getItem('userId') || '0');
-      const success = await markAsRead(notification.id, userId);
+    if (!isRead && user) {
+      // 서버는 userId(숫자 PK)를 요구하지만, user.id는 username(string)
+      // user 객체에 userId가 있으면 사용, 없으면 id 사용
+      const userPk = user.userId || user.id;
+      const success = await markAsRead(notification.id, userPk);
       if (success) {
         setIsRead(true);
         onRead();
@@ -84,10 +88,10 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({ notification
     switch (notification.type) {
       case 'order':
       case 'payment': {
-        // 주문 상세 화면으로 이동
+        // 주문 세션 화면으로 이동
         const orderId = enrichedData.order?.id || metadata.order_id;
         if (orderId) {
-          navigate(`/order/${orderId}`);
+          navigate(`/ns/${orderId}`);
         }
         break;
       }

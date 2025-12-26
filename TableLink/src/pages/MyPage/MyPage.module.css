@@ -1,5 +1,14 @@
 /* MyPage Styles - extracted from TLG mypage.css */
 
+/* 로딩 컨테이너 */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 50vh;
+  padding: 40px 20px;
+}
+
 /* 상단 헤더 */
 .mypage-top-header {
   display: flex;

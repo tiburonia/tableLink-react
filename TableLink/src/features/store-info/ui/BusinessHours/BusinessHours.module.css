@@ -1,0 +1,51 @@
+.section {
+  background: white;
+  padding: 20px 16px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px 0;
+}
+
+.titleIcon {
+  font-size: 18px;
+}
+
+.hoursList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hoursItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.hoursDay {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.hoursTime {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.closed {
+  color: #ef4444;
+  font-weight: 600;
+}

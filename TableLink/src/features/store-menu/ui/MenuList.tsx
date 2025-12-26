@@ -1,4 +1,6 @@
-import { MenuItem, type MenuItemData } from './MenuItem'
+import { MenuItem } from './MenuItem'
+import type { MenuItemData } from '../model'
+import styles from './MenuList.module.css'
 
 interface MenuListProps {
   title: string
@@ -7,9 +9,9 @@ interface MenuListProps {
 
 export const MenuList = ({ title, items }: MenuListProps) => {
   return (
-    <section className="store-section">
-      <h3 className="section-title">{title}</h3>
-      <div className="menu-list">
+    <section className={styles.storeSection}>
+      <h3 className={styles.sectionTitle}>{title}</h3>
+      <div className={styles.menuList}>
         {items.map((item) => (
           <MenuItem key={item.id} item={item} />
         ))}

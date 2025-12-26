@@ -1,14 +1,14 @@
-.summary-section {
+.summarySection {
   padding: 16px 0;
 }
 
-.summary-cards {
+.summaryCards {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
-.summary-card {
+.summaryCard {
   background: white;
   border-radius: 12px;
   padding: 16px;
@@ -19,11 +19,11 @@
   transition: transform 0.2s;
 }
 
-.summary-card:active {
+.summaryCard:active {
   transform: scale(0.98);
 }
 
-.summary-icon {
+.summaryIcon {
   font-size: 28px;
   width: 48px;
   height: 48px;
@@ -34,17 +34,17 @@
   border-radius: 10px;
 }
 
-.summary-content {
+.summaryContent {
   flex: 1;
 }
 
-.summary-label {
+.summaryLabel {
   font-size: 13px;
   color: #6b7280;
   margin-bottom: 4px;
 }
 
-.summary-value {
+.summaryValue {
   font-size: 18px;
   font-weight: 700;
   color: #1f2937;

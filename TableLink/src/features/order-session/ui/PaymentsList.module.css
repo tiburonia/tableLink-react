@@ -1,0 +1,86 @@
+.paymentsSection {
+  margin: 16px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.paymentSummary {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.paymentsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.paymentCard {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.paymentInfo {
+  flex: 1;
+}
+
+.paymentHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.paymentIcon {
+  font-size: 18px;
+}
+
+.paymentMethod {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.paymentTime {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+.paymentAmount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+}
+
+.emptyIcon {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.emptyText {
+  font-size: 14px;
+}

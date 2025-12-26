@@ -1,5 +1,6 @@
 import { MenuList } from './MenuList'
-import type { MenuItemData } from './MenuItem'
+import type { MenuItemData } from '../model'
+import styles from './MenuTab.module.css'
 
 interface MenuTabProps {
   menu: MenuItemData[]
@@ -8,7 +9,7 @@ interface MenuTabProps {
 export const MenuTab = ({ menu }: MenuTabProps) => {
   
   return (
-    <div className="menu-tab">
+    <div className={styles.menuTab}>
     
       <MenuList title="전체 메뉴" items={menu} />
     </div>

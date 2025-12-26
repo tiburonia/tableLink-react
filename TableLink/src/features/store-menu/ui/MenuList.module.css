@@ -1,0 +1,18 @@
+/* MenuList Component Styles */
+
+.storeSection {
+  padding: 20px 16px;
+  background: white;
+}
+
+.sectionTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 16px 0;
+}
+
+.menuList {
+  display: flex;
+  flex-direction: column;
+}

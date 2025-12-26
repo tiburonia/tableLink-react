@@ -1,15 +1,8 @@
 import { useEffect, useState } from 'react'
 import clsx from 'clsx'
+import type { TopUser } from '../model'
+import { getRankEmoji, getLevelColor } from '../model'
 import styles from './TopUsersCard.module.css'
-
-interface TopUser {
-  id: number
-  name: string
-  level: string
-  visit_count: number
-  total_spent: number
-  avatar?: string
-}
 
 interface TopUsersCardProps {
   storeId: number
@@ -64,24 +57,6 @@ export const TopUsersCard = ({ storeId }: TopUsersCardProps) => {
   const handleShowAllUsers = () => {
     // TODO: 전체 랭킹 페이지로 이동
     console.log('전체 랭킹 보기')
-  }
-
-  const getRankEmoji = (index: number) => {
-    switch (index) {
-      case 0: return '🥇'
-      case 1: return '🥈'
-      case 2: return '🥉'
-      default: return '👤'
-    }
-  }
-
-  const getLevelColor = (level: string) => {
-    switch (level) {
-      case 'VIP': return '#ffd700'
-      case 'GOLD': return '#ffa500'
-      case 'SILVER': return '#c0c0c0'
-      default: return '#cd7f32'
-    }
   }
 
   return (

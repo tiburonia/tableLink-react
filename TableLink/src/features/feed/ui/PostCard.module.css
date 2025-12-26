@@ -1,5 +1,5 @@
 /* 게시물 카드 */
-.feed-post {
+.feedPost {
   background: white;
   margin: 0 0 12px 0;
   border-radius: 16px;
@@ -8,18 +8,18 @@
   transition: all 0.2s;
 }
 
-.feed-post:hover {
+.feedPost:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.post-header {
+.postHeader {
   display: flex;
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid #f9fafb;
 }
 
-.post-store-logo {
+.postStoreLogo {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -32,25 +32,25 @@
   border: 2px solid #f3f4f6;
 }
 
-.post-meta {
+.postMeta {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-.post-author {
+.postAuthor {
   font-weight: 600;
   font-size: 14px;
   color: #111827;
 }
 
-.post-date {
+.postDate {
   font-size: 12px;
   color: #9ca3af;
   margin-top: 2px;
 }
 
-.post-type-badge {
+.postTypeBadge {
   padding: 4px 10px;
   border-radius: 12px;
   font-size: 11px;
@@ -60,18 +60,18 @@
   gap: 4px;
 }
 
-.post-image {
+.postImage {
   width: 100%;
   height: 280px;
   object-fit: cover;
   padding: 20px;
 }
 
-.post-body {
+.postBody {
   padding: 14px 16px;
 }
 
-.post-title {
+.postTitle {
   font-size: 16px;
   font-weight: 700;
   color: #111827;
@@ -79,21 +79,21 @@
   line-height: 1.4;
 }
 
-.post-caption {
+.postCaption {
   font-size: 14px;
   color: #374151;
   line-height: 1.5;
   margin-bottom: 12px;
 }
 
-.post-actions {
+.postActions {
   display: flex;
   gap: 16px;
   padding-top: 8px;
   border-top: 1px solid #f3f4f6;
 }
 
-.post-actions button {
+.postActions button {
   background: none;
   border: none;
   font-size: 13px;
@@ -107,21 +107,25 @@
   border-radius: 8px;
 }
 
-.post-actions button:hover:not(:disabled) {
+.postActions button:hover:not(:disabled) {
   background: #f9fafb;
   color: #111827;
 }
 
-.post-actions button:disabled {
+.postActions button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
 }
 
-.like-btn.liked {
+.likeBtn {
+  /* 기본 스타일 */
+}
+
+.likeBtn.liked {
   color: #ef4444;
 }
 
-.like-btn.liked .like-icon {
+.likeBtn.liked .likeIcon {
   animation: likeAnimation 0.3s ease;
 }
 
@@ -130,15 +134,27 @@
   50% { transform: scale(1.3); }
 }
 
-.like-icon, .comment-icon, .coupon-icon {
+.likeIcon, .commentIcon, .couponIcon {
   font-size: 16px;
 }
 
-.coupon-btn.received {
+.likeCount, .commentText, .couponText {
+  /* 텍스트 스타일 */
+}
+
+.commentBtn {
+  /* 댓글 버튼 스타일 */
+}
+
+.couponBtn {
+  /* 쿠폰 버튼 스타일 */
+}
+
+.couponBtn.received {
   color: #10b981;
   cursor: not-allowed;
 }
 
-.coupon-btn.received:hover {
+.couponBtn.received:hover {
   background: #f0fdf4;
 }

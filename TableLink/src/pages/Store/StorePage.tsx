@@ -7,7 +7,8 @@
  * - API 호출 ❌
  */
 
-import { useParams } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 
 // UI Components (페이지 전용)
 import {
@@ -35,6 +36,9 @@ import styles from './StorePage.module.css'
 
 export const StorePage = () => {
   const { storeId } = useParams<{ storeId: string }>()
+  const navigate = useNavigate()
+  const [isScrolled, setIsScrolled] = useState(false)
+  const contentRef = useRef<HTMLDivElement>(null)
   
   // Feature Hook에서 모든 상태와 로직을 가져옴
   const {
@@ -49,11 +53,32 @@ export const StorePage = () => {
     selectPhoto,
   } = useStoreView(storeId)
 
+  // 스크롤 이벤트 감지 (UI 관련 로직)
+  useEffect(() => {
+    const contentElement = contentRef.current
+    if (!contentElement) {
+      console.log('❌ contentRef 요소를 찾지 못했습니다')
+      return
+    }
+
+    const handleScroll = () => {
+      const scrollThreshold = 180 // 스크롤 임계값 (픽셀)
+      const scrolled = contentElement.scrollTop > scrollThreshold
+      setIsScrolled(scrolled)
+    }
+
+    contentElement.addEventListener('scroll', handleScroll)
+    
+    return () => {
+      contentElement.removeEventListener('scroll', handleScroll)
+    }
+  }, [store]) // store가 로드된 후에 실행되도록 의존성 추가
+
   if (loading) return <LoadingState />
   if (error || !store) return <ErrorState error={error || '매장 정보를 찾을 수 없습니다.'} />
 
   const handleStoryClick = () => {
-    alert('매장 스토리 페이지 준비 중')
+    navigate(`/rs/${storeId}/sf`)
   }
 
   const handleReviewClick = () => {
@@ -61,9 +86,14 @@ export const StorePage = () => {
   }
 
   return (
-    <div className={styles.mobileApp}>
-      <div className={styles.storePage}>
-        <StoreHeader onFavoriteClick={toggleFavorite} isFavorite={isFavorite} />
+    <div className="mobile-app">
+      <div className="mobile-content" ref={contentRef}>
+        <div  className={styles.storeSection}>
+        <StoreHeader 
+          onFavoriteClick={toggleFavorite} 
+          isFavorite={isFavorite} 
+          isScrolled={isScrolled}
+        />
         <StoreHero 
           name={store.name} 
           category={store.category}
@@ -122,6 +152,7 @@ export const StorePage = () => {
           <PhotoModal photoUrl={selectedPhoto} onClose={() => selectPhoto(null)} />
         )}
       </div>
+    </div>
     </div>
   )
 }

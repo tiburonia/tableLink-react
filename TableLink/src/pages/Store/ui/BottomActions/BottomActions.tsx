@@ -1,3 +1,5 @@
+import styles from './BottomActions.module.css'
+
 interface BottomActionsProps {
   storeId: number
   storeName: string
@@ -17,15 +19,15 @@ export const BottomActions = ({ storeId, storeName }: BottomActionsProps) => {
   }
 
   return (
-    <div className="bottom-actions">
+    <div className={styles.bottomActions}>
       <button 
-        className="action-btn secondary" 
+        className={`${styles.actionBtn} ${styles.secondary}`} 
         onClick={handleQROrder}
       >
         QR 주문
       </button>
       <button 
-        className="action-btn primary" 
+        className={`${styles.actionBtn} ${styles.primary}`} 
         onClick={handleReservation}
       >
         예약하기

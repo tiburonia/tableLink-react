@@ -19,8 +19,8 @@ export const StorePanel = ({ stores, onStoreSelect }: StorePanelProps) => {
   const startYRef = useRef(0)
   const startHeightRef = useRef(0)
 
-  const MIN_HEIGHT = 120
-  const MAX_HEIGHT = 630
+  const MIN_HEIGHT = 95
+  const MAX_HEIGHT = 750
   const MID_POINT = 300
 
   const handleDragMove = useCallback((clientY: number) => {

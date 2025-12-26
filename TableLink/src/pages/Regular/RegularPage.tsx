@@ -1,11 +1,4 @@
-/**
- * RegularPage - 단골/즐겨찾기 페이지
- * 
- * FSD 원칙: 페이지는 조립만 한다
- * - useState ❌
- * - useEffect ❌
- * - API 호출 ❌
- */
+
 
 import { useRegularPage } from '@/features/regular-benefits'
 import { RegularHeader } from './ui/RegularHeader'
@@ -38,8 +31,8 @@ export const RegularPage = () => {
 
   if (loading) {
     return (
-        <div className={styles.mobileApp}>
-        <div className={styles.mobileContent}>
+        <div className="mobile-app">
+        <div className="mobile-content">
       <div className={styles.regularPageLoading}>
         <div className={styles.loadingSpinner}></div>
         <p>로딩 중...</p>
@@ -51,8 +44,8 @@ export const RegularPage = () => {
 
   if (error) {
     return (
-    <div className={styles.mobileApp}>
-    <div className={styles.mobileContent}>
+    <div className="mobile-app">
+    <div className="mobile-content">
       <div className={styles.regularPageError}>
         <h2>오류가 발생했습니다</h2>
         <p>{error}</p>
@@ -67,8 +60,8 @@ export const RegularPage = () => {
   }
 
   return (
-    <div className={styles.mobileApp}>
-      <div className={styles.mobileContent}>
+    <div className="mobile-app">
+      <div className="mobile-content">
         <RegularHeader
           activeTab={activeTab}
           onTabChange={handleTabChange}

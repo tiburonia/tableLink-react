@@ -65,15 +65,15 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   };
 
   return (
-    <article className="feed-post" data-post-id={post.id} data-type={post.postType}>
-      <div className="post-header">
-        <div className="post-store-logo">{post.storeLogo}</div>
-        <div className="post-meta">
-          <span className="post-author">{post.storeName}</span>
-          <span className="post-date">{relativeTime}</span>
+    <article className={styles.feedPost} data-post-id={post.id} data-type={post.postType}>
+      <div className={styles.postHeader}>
+        <div className={styles.postStoreLogo}>{post.storeLogo}</div>
+        <div className={styles.postMeta}>
+          <span className={styles.postAuthor}>{post.storeName}</span>
+          <span className={styles.postDate}>{relativeTime}</span>
         </div>
         <span 
-          className="post-type-badge" 
+          className={styles.postTypeBadge} 
           style={{ 
             background: `${typeInfo.color}20`, 
             color: typeInfo.color 
@@ -84,36 +84,36 @@ export const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
       </div>
 
       {post.hasImage && post.imageUrl && (
-        <img src={post.imageUrl} className="post-image" alt={post.title} />
+        <img src={post.imageUrl} className={styles.postImage} alt={post.title} />
       )}
 
-      <div className="post-body">
-        <h3 className="post-title">{post.title}</h3>
-        <p className="post-caption">{post.content}</p>
+      <div className={styles.postBody}>
+        <h3 className={styles.postTitle}>{post.title}</h3>
+        <p className={styles.postCaption}>{post.content}</p>
         
-        <div className="post-actions">
+        <div className={styles.postActions}>
           <button 
-            className={`like-btn ${isLiked ? 'liked' : ''}`}
+            className={`${styles.likeBtn} ${isLiked ? styles.liked : ''}`}
             onClick={handleLikeClick}
             disabled={isProcessing}
           >
-            <span className="like-icon">{isLiked ? '❤️' : '🤍'}</span>
-            <span className="like-count">{likeCount}</span>
+            <span className={styles.likeIcon}>{isLiked ? '❤️' : '🤍'}</span>
+            <span className={styles.likeCount}>{likeCount}</span>
           </button>
           
-          <button className="comment-btn" onClick={handleCommentClick}>
-            <span className="comment-icon">💬</span>
-            <span className="comment-text">댓글 {post.comments}</span>
+          <button className={styles.commentBtn} onClick={handleCommentClick}>
+            <span className={styles.commentIcon}>💬</span>
+            <span className={styles.commentText}>댓글 {post.comments}</span>
           </button>
           
           {post.hasCoupon && (
             <button 
-              className={`coupon-btn ${isCouponReceived ? 'received' : ''}`}
+              className={`${styles.couponBtn} ${isCouponReceived ? styles.received : ''}`}
               onClick={handleCouponClick}
               disabled={isProcessing || isCouponReceived}
             >
-              <span className="coupon-icon">{isCouponReceived ? '✅' : '🎁'}</span>
-              <span className="coupon-text">{isCouponReceived ? '받음' : '쿠폰'}</span>
+              <span className={styles.couponIcon}>{isCouponReceived ? '✅' : '🎁'}</span>
+              <span className={styles.couponText}>{isCouponReceived ? '받음' : '쿠폰'}</span>
             </button>
           )}
         </div>

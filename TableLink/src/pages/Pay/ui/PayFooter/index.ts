@@ -1,0 +1,1 @@
+export { PayFooter } from './PayFooter'

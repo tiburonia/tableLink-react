@@ -1,0 +1,130 @@
+.searchBar {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  z-index: 1002;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.searchContainer {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  border-radius: 28px;
+  padding: 10px 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(41, 126, 252, 0.04);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.searchContainer:hover {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 6px 20px rgba(41, 126, 252, 0.08);
+  border-color: rgba(41, 126, 252, 0.2);
+  transform: translateY(-1px);
+}
+
+.searchIcon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f1f5f9 100%);
+  border: 1px solid rgba(41, 126, 252, 0.1);
+  border-radius: 50%;
+  flex-shrink: 0;
+  color: #6b7280;
+}
+
+.searchInput {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 15px;
+  color: #1f2937;
+  padding: 0 12px;
+  font-weight: 500;
+}
+
+.searchInput::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.notificationBtn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f1f5f9 100%);
+  border: 1px solid rgba(41, 126, 252, 0.1);
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.notificationBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 키워드 네비게이션 */
+.keywordNav {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  padding: 0 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.keywordNav::-webkit-scrollbar {
+  display: none;
+}
+
+.keywordBtn {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(10px);
+}
+
+.keywordBtn:hover {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.keywordBtn:active {
+  transform: scale(0.96);
+}
+
+.keywordIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.keywordText {
+  font-weight: 500;
+  letter-spacing: -0.3px;
+}

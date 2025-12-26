@@ -1,0 +1,50 @@
+/* ErrorState CSS Module */
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 40px;
+  text-align: center;
+}
+
+.errorIcon {
+  font-size: 64px;
+  margin-bottom: 16px;
+}
+
+.errorTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 8px 0;
+}
+
+.errorMessage {
+  font-size: 15px;
+  color: #6b7280;
+  margin: 0 0 24px 0;
+}
+
+.backButton {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.backButton:active {
+  transform: translateY(0);
+}
