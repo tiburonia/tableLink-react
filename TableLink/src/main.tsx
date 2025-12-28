@@ -11,7 +11,8 @@ function loadNaverMapAPI() {
   if (apiKey) {
     const script = document.getElementById('naver-map-script') as HTMLScriptElement | null
     if (script) {
-      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${apiKey}`
+      // submodules=geocoder 추가하여 주소 검색 기능 활성화
+      script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${apiKey}&submodules=geocoder`
     }
   } else {
     console.warn(

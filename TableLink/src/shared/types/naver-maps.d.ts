@@ -1,82 +1,163 @@
-declare namespace naver.maps {
-  export class LatLng {
-    constructor(lat: number, lng: number)
-    lat(): number
-    lng(): number
-  }
+declare namespace naver {
+  namespace maps {
+    class LatLng {
+      constructor(lat: number, lng: number)
+      lat(): number
+      lng(): number
+    }
 
-  export class Size {
-    constructor(width: number, height: number)
-    width: number
-    height: number
-  }
+    class Size {
+      constructor(width: number, height: number)
+      width: number
+      height: number
+    }
 
-  export class Bounds {
-    min: LatLng
-    max: LatLng
-  }
+    class Bounds {
+      min: LatLng
+      max: LatLng
+    }
 
-  export interface MapOptions {
-    center?: LatLng
-    zoom?: number
-    maxZoom?: number
-    minZoom?: number
-    mapTypeControl?: boolean
-    mapTypeControlOptions?: Record<string, unknown>
-  }
+    interface MapOptions {
+      center?: LatLng
+      zoom?: number
+      maxZoom?: number
+      minZoom?: number
+      mapTypeControl?: boolean
+      mapTypeControlOptions?: Record<string, unknown>
+    }
 
-  export class Map {
-    constructor(container: HTMLElement, options?: MapOptions)
-    getCenter(): LatLng
-    setCenter(location: LatLng): void
-    getZoom(): number
-    setZoom(zoom: number): void
-  }
+    class Map {
+      constructor(container: HTMLElement, options?: MapOptions)
+      getCenter(): LatLng
+      setCenter(location: LatLng): void
+      getZoom(): number
+      setZoom(zoom: number): void
+    }
 
-  export interface MarkerOptions {
-    position?: LatLng
-    map?: Map | null
-    title?: string
-    icon?: string | Record<string, unknown>
-    [key: string]: unknown
-  }
+    interface MarkerOptions {
+      position?: LatLng
+      map?: Map | null
+      title?: string
+      icon?: string | Record<string, unknown>
+      [key: string]: unknown
+    }
 
-  export class Marker {
-    constructor(options?: MarkerOptions)
-    setPosition(position: LatLng): void
-    setMap(map: Map | null): void
-  }
+    class Marker {
+      constructor(options?: MarkerOptions)
+      setPosition(position: LatLng): void
+      setMap(map: Map | null): void
+    }
 
-  export interface InfoWindowOptions {
-    content?: string | HTMLElement
-    position?: LatLng
-    [key: string]: unknown
-  }
+    interface InfoWindowOptions {
+      content?: string | HTMLElement
+      position?: LatLng
+      [key: string]: unknown
+    }
 
-  export class InfoWindow {
-    constructor(options?: InfoWindowOptions)
-    open(map: Map, marker?: Marker): void
-    close(): void
-  }
+    class InfoWindow {
+      constructor(options?: InfoWindowOptions)
+      open(map: Map, marker?: Marker): void
+      close(): void
+    }
 
-  export namespace Event {
-    export function addListener(
-      target: Map | Marker,
-      eventName: string,
-      handler: (event: MouseEvent | Event) => void,
-      useCapture?: boolean
-    ): void
-  }
-}
+    namespace Event {
+      function addListener(
+        target: Map | Marker,
+        eventName: string,
+        handler: (event: MouseEvent | Event) => void,
+        useCapture?: boolean
+      ): void
+    }
 
-declare const naver: {
-  maps: {
-    LatLng: typeof naver.maps.LatLng
-    Map: typeof naver.maps.Map
-    Marker: typeof naver.maps.Marker
-    InfoWindow: typeof naver.maps.InfoWindow
-    Size: typeof naver.maps.Size
-    Bounds: typeof naver.maps.Bounds
-    Event: typeof naver.maps.Event
+    // Geocoder Service 타입 정의
+    namespace Service {
+      const Status: {
+        OK: 'OK'
+        ERROR: 'ERROR'
+      }
+      type StatusType = 'OK' | 'ERROR'
+
+      const OrderType: {
+        ADDR: 'addr'
+        ROAD_ADDR: 'roadaddr'
+      }
+
+      interface AddressItemV2 {
+        roadAddress: string
+        jibunAddress: string
+        englishAddress: string
+        x: string
+        y: string
+        distance: number
+        addressElements?: Array<{
+          types: string[]
+          longName: string
+          shortName: string
+          code: string
+        }>
+      }
+
+      interface GeocodeResponse {
+        v2?: {
+          status: string
+          errorMessage: string
+          meta: {
+            totalCount: number
+            page: number
+            count: number
+          }
+          addresses: AddressItemV2[]
+        }
+      }
+
+      interface ReverseGeocodeResponse {
+        v2?: {
+          status: string
+          address: {
+            roadAddress: string
+            jibunAddress: string
+          }
+          results?: Array<{
+            name: string
+            code: {
+              id: string
+              type: string
+              mappingId: string
+            }
+            region: {
+              area1: { name: string }
+              area2: { name: string }
+              area3: { name: string }
+              area4: { name: string }
+            }
+            land?: {
+              type: string
+              number1: string
+              number2: string
+              addition0: { type: string; value: string }
+            }
+          }>
+        }
+      }
+
+      interface GeocodeOptions {
+        query: string
+      }
+
+      interface ReverseGeocodeOptions {
+        coords: LatLng
+        orders?: string
+      }
+
+      function geocode(
+        options: GeocodeOptions,
+        callback: (status: StatusType, response: GeocodeResponse) => void
+      ): void
+
+      function reverseGeocode(
+        options: ReverseGeocodeOptions,
+        callback: (status: StatusType, response: ReverseGeocodeResponse) => void
+      ): void
+    }
   }
 }

@@ -6,27 +6,47 @@
 import { useState, useEffect } from 'react';
 import type { Post } from '../model/feedService';
 import { getPersonalizedFeed } from '../model/feedService';
+import { feedTabs, type FeedTab } from '../model/feedTabs';
 import { PostCard } from './PostCard';
 import styles from './FeedSection.module.css';
 
+export type { FeedTab } from '../model/feedTabs';
+
 interface FeedSectionProps {
   userId: number;
+  currentTab?: FeedTab;
 }
 
-type FeedTab = 'all' | 'following' | 'event' | 'menu';
+// FeedTabs 컴포넌트
+interface FeedTabsProps {
+  currentTab: FeedTab;
+  onTabChange: (tab: FeedTab) => void;
+}
 
-export const FeedSection: React.FC<FeedSectionProps> = ({ userId }) => {
-  const [currentTab, setCurrentTab] = useState<FeedTab>('following');
+export const FeedTabs: React.FC<FeedTabsProps> = ({ currentTab, onTabChange }) => {
+  return (
+    <div className={styles.feedTabs}>
+      {feedTabs.map(tab => (
+        <button
+          key={tab.id}
+          className={`${styles.feedTab} ${currentTab === tab.id ? styles.active : ''}`}
+          onClick={() => onTabChange(tab.id)}
+        >
+          <span className={styles.tabIcon}>{tab.icon}</span>
+          <span className={styles.tabLabel}>{tab.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+export const FeedSection: React.FC<FeedSectionProps> = ({ userId, currentTab: externalTab }) => {
+  const [internalTab] = useState<FeedTab>('following');
+  const currentTab = externalTab ?? internalTab;
+  
   const [posts, setPosts] = useState<Post[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const tabs = [
-    { id: 'all' as FeedTab, label: '전체', icon: '📢' },
-    { id: 'following' as FeedTab, label: '내 단골', icon: '❤️' },
-    { id: 'event' as FeedTab, label: '이벤트', icon: '🎉' },
-    { id: 'menu' as FeedTab, label: '신메뉴', icon: '🍽️' }
-  ];
 
   useEffect(() => {
     const loadData = async () => {
@@ -62,25 +82,9 @@ export const FeedSection: React.FC<FeedSectionProps> = ({ userId }) => {
     setIsLoading(false);
   };
 
-  const handleTabChange = (tabId: FeedTab) => {
-    setCurrentTab(tabId);
-  };
-
   if (isLoading) {
     return (
       <div className={styles.feedSection}>
-        <div className={styles.feedTabs}>
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={`${styles.feedTab} ${currentTab === tab.id ? styles.active : ''}`}
-              onClick={() => handleTabChange(tab.id)}
-            >
-              <span className={styles.tabIcon}>{tab.icon}</span>
-              <span className={styles.tabLabel}>{tab.label}</span>
-            </button>
-          ))}
-        </div>
         <div className={styles.feedLoading}>
           <div className={styles.loadingSpinner}></div>
           <p>피드를 불러오는 중...</p>
@@ -92,18 +96,6 @@ export const FeedSection: React.FC<FeedSectionProps> = ({ userId }) => {
   if (error) {
     return (
       <div className={styles.feedSection}>
-        <div className={styles.feedTabs}>
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={`${styles.feedTab} ${currentTab === tab.id ? styles.active : ''}`}
-              onClick={() => handleTabChange(tab.id)}
-            >
-              <span className={styles.tabIcon}>{tab.icon}</span>
-              <span className={styles.tabLabel}>{tab.label}</span>
-            </button>
-          ))}
-        </div>
         <div className={styles.feedError}>
           <div className={styles.errorIcon}>⚠️</div>
           <h3>피드를 불러올 수 없습니다</h3>
@@ -116,19 +108,6 @@ export const FeedSection: React.FC<FeedSectionProps> = ({ userId }) => {
 
   return (
     <div className={styles.feedSection}>
-      <div className={styles.feedTabs}>
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            className={`${styles.feedTab} ${currentTab === tab.id ? styles.active : ''}`}
-            onClick={() => handleTabChange(tab.id)}
-          >
-            <span className={styles.tabIcon}>{tab.icon}</span>
-            <span className={styles.tabLabel}>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
       <div className={styles.feedContent}>
         {posts.length === 0 ? (
           <div className={styles.feedEmpty}>

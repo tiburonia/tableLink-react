@@ -1,0 +1,177 @@
+.section {
+  padding: 20px 0;
+  background: #f9fafb;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.moreBtn {
+  font-size: 13px;
+  color: #007aff;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+/* 카테고리 탭 */
+.categoryTabs {
+  display: flex;
+  gap: 8px;
+  margin: 20px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.categoryTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.categoryTab {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.categoryTab:hover {
+  border-color: #007aff;
+}
+
+.categoryTab.active {
+  background: #007aff;
+  border-color: #007aff;
+  color: white;
+}
+
+.categoryEmoji {
+  font-size: 16px;
+}
+
+.categoryName {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* 매장 리스트 */
+.storeList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 0 20px;
+}
+
+.storeCard {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.storeCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.storeImage {
+  height: 80px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.storeEmoji {
+  font-size: 32px;
+}
+
+.storeInfo {
+  padding: 12px;
+}
+
+.storeName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.storeRating {
+  font-size: 12px;
+  color: #f59e0b;
+  margin-bottom: 4px;
+}
+
+.storeAddress {
+  font-size: 11px;
+  color: #6b7280;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 로딩 상태 */
+.loading {
+  grid-column: span 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #007aff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 12px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading p,
+.empty p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.empty {
+  grid-column: span 2;
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+}

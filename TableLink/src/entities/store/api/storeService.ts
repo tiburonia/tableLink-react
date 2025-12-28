@@ -128,4 +128,101 @@ export const storeService = {
       return { success: false, store: null, message: '서버 연결 실패' }
     }
   },
+
+  /**
+   * 매장 초기 로딩 (커서 기반 페이지네이션, id순)
+   */
+  getInitialStores: async (
+    limit = 20
+  ): Promise<{
+    success: boolean
+    items: Store[]
+    nextCursor: string | null
+    hasNext: boolean
+    message?: string
+  }> => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/stores/initial?limit=${limit}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+      const data = await safeJson(res)
+      if (!res.ok) {
+        return {
+          success: false,
+          items: [],
+          nextCursor: null,
+          hasNext: false,
+          message: data?.error || '매장 초기 로딩 실패',
+        }
+      }
+      return {
+        success: true,
+        items: data.items || [],
+        nextCursor: data.nextCursor,
+        hasNext: data.hasNext,
+      }
+    } catch (err) {
+      console.error('storeService.getInitialStores error', err)
+      return {
+        success: false,
+        items: [],
+        nextCursor: null,
+        hasNext: false,
+        message: '서버 연결 실패',
+      }
+    }
+  },
+
+  /**
+   * 매장 추가 로딩 (커서 기반 페이지네이션, id순)
+   */
+  getMoreStores: async (
+    cursor: string,
+    limit = 20
+  ): Promise<{
+    success: boolean
+    items: Store[]
+    nextCursor: string | null
+    hasNext: boolean
+    message?: string
+  }> => {
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/stores/more?cursor=${cursor}&limit=${limit}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+      const data = await safeJson(res)
+      if (!res.ok) {
+        return {
+          success: false,
+          items: [],
+          nextCursor: null,
+          hasNext: false,
+          message: data?.error || '매장 추가 로딩 실패',
+        }
+      }
+      return {
+        success: true,
+        items: data.items || [],
+        nextCursor: data.nextCursor,
+        hasNext: data.hasNext,
+      }
+    } catch (err) {
+      console.error('storeService.getMoreStores error', err)
+      return {
+        success: false,
+        items: [],
+        nextCursor: null,
+        hasNext: false,
+        message: '서버 연결 실패',
+      }
+    }
+  },
 }

@@ -1,12 +1,12 @@
-
-
+import { useState } from 'react'
 import { useRegularPage } from '@/features/regular-benefits'
 import { RegularHeader } from './ui/RegularHeader'
 import { SummarySection } from './ui/SummarySection'
 import { StoreList } from './ui/StoreList'
 import { FavoriteList } from './ui/FavoriteList'
 import { SidePanel } from './ui/SidePanel'
-import { FeedSection } from '@/features/feed'
+import { FeedSection, FeedTabs } from '@/features/feed'
+import type { FeedTab } from '@/features/feed'
 import { BottomNavigation } from '@/widgets/Layout'
 import styles from './RegularPage.module.css'
 
@@ -29,32 +29,54 @@ export const RegularPage = () => {
     getUserId,
   } = useRegularPage()
 
+  // Feed 탭 상태
+  const [feedTab, setFeedTab] = useState<FeedTab>('following')
+
   if (loading) {
     return (
-        <div className="mobile-app">
+      <div className="mobile-app">
         <div className="mobile-content">
-      <div className={styles.regularPageLoading}>
-        <div className={styles.loadingSpinner}></div>
-        <p>로딩 중...</p>
+          <RegularHeader
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            onMenuClick={openSidePanel}
+          />
+          {activeTab === 'feed' && (
+            <FeedTabs currentTab={feedTab} onTabChange={setFeedTab} />
+          )}
+          <div className={styles.regularPageLoading}>
+            <div className={styles.loadingSpinner}></div>
+            <p>로딩 중...</p>
+          </div>
+        </div>
+        <SidePanel isOpen={isSidePanelOpen} onClose={closeSidePanel} />
+        <BottomNavigation />
       </div>
-      </div>
-      <BottomNavigation />
-      </div>)
+    )
   }
 
   if (error) {
     return (
-    <div className="mobile-app">
-    <div className="mobile-content">
-      <div className={styles.regularPageError}>
-        <h2>오류가 발생했습니다</h2>
-        <p>{error}</p>
-        <button onClick={refetch} className={styles.retryButton}>
-          다시 시도
-        </button>
-      </div>
-      </div>
-      <BottomNavigation />
+      <div className="mobile-app">
+        <div className="mobile-content">
+          <RegularHeader
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            onMenuClick={openSidePanel}
+          />
+          {activeTab === 'feed' && (
+            <FeedTabs currentTab={feedTab} onTabChange={setFeedTab} />
+          )}
+          <div className={styles.regularPageError}>
+            <h2>오류가 발생했습니다</h2>
+            <p>{error}</p>
+            <button onClick={refetch} className={styles.retryButton}>
+              다시 시도
+            </button>
+          </div>
+        </div>
+        <SidePanel isOpen={isSidePanelOpen} onClose={closeSidePanel} />
+        <BottomNavigation />
       </div>
     )
   }
@@ -68,9 +90,13 @@ export const RegularPage = () => {
           onMenuClick={openSidePanel}
         />
 
+        {activeTab === 'feed' && (
+          <FeedTabs currentTab={feedTab} onTabChange={setFeedTab} />
+        )}
+
         <div className={styles.regularContent}>
           {activeTab === 'feed' ? (
-            <FeedSection userId={getUserId()} />
+            <FeedSection userId={getUserId()} currentTab={feedTab} />
           ) : (
             <>
               {summary && <SummarySection summary={summary} />}

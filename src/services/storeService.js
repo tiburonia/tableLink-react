@@ -318,7 +318,7 @@ class StoreService {
   }
 
   /**
-   * 모든 매장 목록 조회 (지도용)
+   * 모든 매장 목록 조회 (지도용 - Legacy)
    */
   async getAllStores() {
     const stores = await storeRepository.getAllStores();
@@ -334,6 +334,113 @@ class StoreService {
       rating: parseFloat(store.rating_average) || 0,
       isOpen: store.is_open !== false
     }));
+  }
+
+  /**
+   * 매장 초기 로딩 (커서 기반 페이지네이션, id순)
+   * @param {number} limit - 가져올 개수
+   */
+  async getInitialStores(limit = 20) {
+    console.log(`🏪 매장 초기 로딩 요청: limit ${limit}`);
+    
+    const result = await storeRepository.getInitialStores(limit);
+    
+    const formattedItems = result.items.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 매장 초기 로딩 완료: ${formattedItems.length}개, hasNext: ${result.hasNext}`);
+    
+    return {
+      items: formattedItems,
+      nextCursor: result.nextCursor,
+      hasNext: result.hasNext
+    };
+  }
+
+  /**
+   * 매장 추가 로딩 (커서 기반, id순)
+   * @param {string} cursor - 커서 (마지막 id)
+   * @param {number} limit - 가져올 개수
+   */
+  async getMoreStores(cursor, limit = 20) {
+    console.log(`🏪 매장 추가 로딩 요청: cursor=${cursor}, limit ${limit}`);
+    
+    const result = await storeRepository.getMoreStores(cursor, limit);
+    
+    const formattedItems = result.items.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 매장 추가 로딩 완료: ${formattedItems.length}개, hasNext: ${result.hasNext}`);
+    
+    return {
+      items: formattedItems,
+      nextCursor: result.nextCursor,
+      hasNext: result.hasNext
+    };
+  }
+
+  /**
+   * 매장 데이터 포맷팅 (리스트용)
+   */
+  formatStoreItem(store) {
+    return {
+      id: store.id.toString(),
+      name: store.name || '매장명 없음',
+      category: store.category || '기타',
+      address: store.full_address || '주소 정보 없음',
+      rating: parseFloat(store.rating_average) || 0,
+      reviewCount: store.review_count || 0,
+      latitude: store.latitude ? parseFloat(store.latitude) : null,
+      longitude: store.longitude ? parseFloat(store.longitude) : null,
+      isOpen: store.is_open !== false,
+      phone: store.store_tel_number,
+      region: {
+        sido: store.sido,
+        sigungu: store.sigungu,
+        eupmyeondong: store.eupmyeondong
+      }
+    };
+  }
+
+  /**
+   * 카테고리 기준 추천
+   * @param {string} category - 카테고리 ID (korean, japanese, cafe 등)
+   * @param {number} limit - 가져올 개수
+   */
+  async getRecommendByCategory(category, limit = 10) {
+    console.log(`🍽️ 카테고리 추천 요청: category=${category}, limit=${limit}`);
+    
+    const result = await storeRepository.getStoresByCategory(category, limit);
+    
+    const formattedItems = result.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 카테고리 추천 완료: ${formattedItems.length}개`);
+    
+    return {
+      items: formattedItems
+    };
+  }
+
+  /**
+   * 위치 기준 추천 (주변 매장)
+   * @param {number} lat - 위도
+   * @param {number} lng - 경도
+   * @param {number} radius - 반경 (미터)
+   * @param {number} limit - 가져올 개수
+   */
+  async getRecommendNearby(lat, lng, radius = 1000, limit = 10) {
+    console.log(`📍 주변 추천 요청: (${lat}, ${lng}), radius=${radius}m, limit=${limit}`);
+    
+    const result = await storeRepository.getStoresNearby(lat, lng, radius, limit);
+    
+    const formattedItems = result.map(store => ({
+      ...this.formatStoreItem(store),
+      distance: store.distance_m ? store.distance_m / 1000 : null // km로 변환
+    }));
+    
+    console.log(`✅ 주변 추천 완료: ${formattedItems.length}개`);
+    
+    return {
+      items: formattedItems
+    };
   }
 }
 

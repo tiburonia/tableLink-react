@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapContent } from '@/widgets/Map/components/MapContent'
 import { MapSearchBar } from '@/widgets/Map/components/MapSearchBar'
@@ -9,14 +9,18 @@ import { MAP_CONFIG, SEOUL_CITY_HALL } from '@/widgets/Map/constants'
 import { useNaverMap } from '@/widgets/Map/hooks/useNaverMap'
 import { useClusters } from '@/widgets/Map/hooks/useClusters'
 import { useClusterMarkers } from '@/widgets/Map/hooks/useClusterMarkers'
+import type { Location } from '@/widgets/Map/components/LocationSearch'
 import '@/widgets/Map/NaverMap.css'
 import styles from './MapPage.module.css'
 
 export const MapPage = () => {
   const navigate = useNavigate()
   const mapRef = useRef<HTMLDivElement>(null)
+  
+  // 선택된 위치 상태 관리
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null)
 
-  // 지도 초기화
+  // 지도 초기화 (기본 위치: 서울시청)
   const map = useNaverMap(mapRef, SEOUL_CITY_HALL.lat, SEOUL_CITY_HALL.lng, MAP_CONFIG.DEFAULT_ZOOM)
   
   // 클러스터 데이터 가져오기
@@ -48,6 +52,26 @@ export const MapPage = () => {
     navigate(`/search?q=${encodeURIComponent(keyword)}`)
   }
 
+  // 위치 선택 핸들러 - 선택된 위치로 지도 이동
+  const handleLocationSelect = useCallback((location: Location) => {
+    setSelectedLocation(location)
+    
+    if (map && typeof naver !== 'undefined') {
+      const newCenter = new naver.maps.LatLng(location.lat, location.lng)
+      map.setCenter(newCenter)
+      map.setZoom(MAP_CONFIG.DEFAULT_ZOOM)
+      console.log('📍 지도 이동:', location.address, location.lat, location.lng)
+    }
+  }, [map])
+
+  // 지도가 로드된 후 선택된 위치가 있으면 이동
+  useEffect(() => {
+    if (map && selectedLocation && typeof naver !== 'undefined') {
+      const newCenter = new naver.maps.LatLng(selectedLocation.lat, selectedLocation.lng)
+      map.setCenter(newCenter)
+    }
+  }, [map, selectedLocation])
+
   return (
     <div className="mobile-app">
       <div className="mobile-content">
@@ -58,6 +82,8 @@ export const MapPage = () => {
             onSearchClick={() => navigate('/search')}
             onNotificationClick={() => navigate('/notifications')}
             onKeywordClick={handleKeywordClick}
+            onLocationSelect={handleLocationSelect}
+            currentLocation={selectedLocation}
           />
           
           <MapControls map={map} storeCount={features.length} />

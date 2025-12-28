@@ -4,7 +4,7 @@
  * FSD 원칙: features 레이어에서 유저 행동에 필요한 API 서비스 관리
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
 export const regularService = {
   async getRegularStoresData() {
@@ -16,7 +16,7 @@ export const regularService = {
       }
 
       const user = JSON.parse(userStr)
-      const userId = user.id
+      const userId = user.user_pk
 
       // API 호출 (임시로 목업 데이터 반환)
       // TODO: 실제 API 엔드포인트로 교체

@@ -318,7 +318,7 @@ class StoreService {
   }
 
   /**
-   * 모든 매장 목록 조회 (지도용)
+   * 모든 매장 목록 조회 (지도용 - Legacy)
    */
   async getAllStores() {
     const stores = await storeRepository.getAllStores();
@@ -334,6 +334,137 @@ class StoreService {
       rating: parseFloat(store.rating_average) || 0,
       isOpen: store.is_open !== false
     }));
+  }
+
+  /**
+   * 매장 초기 로딩 (커서 기반 페이지네이션, id순)
+   * @param {number} limit - 가져올 개수
+   */
+  async getInitialStores(limit = 20) {
+    console.log(`🏪 매장 초기 로딩 요청: limit ${limit}`);
+    
+    const result = await storeRepository.getInitialStores(limit);
+    
+    const formattedItems = result.items.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 매장 초기 로딩 완료: ${formattedItems.length}개, hasNext: ${result.hasNext}`);
+    
+    return {
+      items: formattedItems,
+      nextCursor: result.nextCursor,
+      hasNext: result.hasNext
+    };
+  }
+
+  /**
+   * 매장 추가 로딩 (커서 기반, id순)
+   * @param {string} cursor - 커서 (마지막 id)
+   * @param {number} limit - 가져올 개수
+   */
+  async getMoreStores(cursor, limit = 20) {
+    console.log(`🏪 매장 추가 로딩 요청: cursor=${cursor}, limit ${limit}`);
+    
+    const result = await storeRepository.getMoreStores(cursor, limit);
+    
+    const formattedItems = result.items.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 매장 추가 로딩 완료: ${formattedItems.length}개, hasNext: ${result.hasNext}`);
+    
+    return {
+      items: formattedItems,
+      nextCursor: result.nextCursor,
+      hasNext: result.hasNext
+    };
+  }
+
+  /**
+   * 매장 데이터 포맷팅 (리스트용)
+   */
+  formatStoreItem(store) {
+    return {
+      id: store.id.toString(),
+      name: store.name || '매장명 없음',
+      category: store.category || '기타',
+      address: store.full_address || '주소 정보 없음',
+      rating: parseFloat(store.rating_average) || 0,
+      reviewCount: store.review_count || 0,
+      latitude: store.latitude ? parseFloat(store.latitude) : null,
+      longitude: store.longitude ? parseFloat(store.longitude) : null,
+      isOpen: store.is_open !== false,
+      phone: store.store_tel_number,
+      distance: store.distance ? Math.round(store.distance) : null,
+      region: {
+        sido: store.sido,
+        sigungu: store.sigungu,
+        eupmyeondong: store.eupmyeondong
+      }
+    };
+  }
+
+  /**
+   * 오늘의 가게 추천 (요일 기반)
+   * @param {number} limit - 가져올 개수
+   * @returns {Object} - dayOfWeek, t, items
+   */
+  async getRecommendToday(limit = 5) {
+    // 요일 계산: 월=1, 화=2, ... 일=7
+    const now = new Date();
+    const dayOfWeekJS = now.getDay(); // 0=일, 1=월, ... 6=토
+    const t = dayOfWeekJS === 0 ? 7 : dayOfWeekJS; // 일요일 0 → 7로 변환
+    
+    const dayNames = ['', '월', '화', '수', '목', '금', '토', '일'];
+    const dayOfWeek = dayNames[t];
+    
+    console.log(`🏪 오늘의 가게 추천 요청: ${dayOfWeek}요일 (t=${t}), limit=${limit}`);
+    
+    const stores = await storeRepository.getStoresByDayMod(t, limit);
+    const formattedItems = stores.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 오늘의 가게 추천 완료: ${formattedItems.length}개`);
+    
+    return {
+      dayOfWeek,
+      t,
+      items: formattedItems
+    };
+  }
+
+  /**
+   * 카테고리별 추천 매장 조회
+   * @param {string} category - 카테고리 ID
+   * @param {number} limit - 가져올 개수
+   */
+  async getRecommendByCategory(category, limit = 6) {
+    console.log(`🏪 카테고리별 추천 매장 요청: category=${category}, limit=${limit}`);
+    
+    const stores = await storeRepository.getStoresByCategory(category, limit);
+    const formattedItems = stores.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 카테고리별 추천 완료: ${formattedItems.length}개`);
+    
+    return {
+      items: formattedItems
+    };
+  }
+
+  /**
+   * 위치 기반 추천 매장 조회
+   * @param {number} lat - 위도
+   * @param {number} lng - 경도
+   * @param {number} radius - 반경 (미터)
+   * @param {number} limit - 가져올 개수
+   */
+  async getRecommendNearby(lat, lng, radius = 1000, limit = 6) {
+    console.log(`🏪 위치 기반 추천 매장 요청: lat=${lat}, lng=${lng}, radius=${radius}m, limit=${limit}`);
+    
+    const stores = await storeRepository.getStoresNearby(lat, lng, radius, limit);
+    const formattedItems = stores.map(store => this.formatStoreItem(store));
+    
+    console.log(`✅ 위치 기반 추천 완료: ${formattedItems.length}개`);
+    
+    return {
+      items: formattedItems
+    };
   }
 }
 

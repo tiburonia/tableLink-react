@@ -1,2 +1,2 @@
 export { PostCard } from './PostCard'
-export { FeedSection } from './FeedSection'
+export { FeedSection, FeedTabs } from './FeedSection'

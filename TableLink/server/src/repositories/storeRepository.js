@@ -307,7 +307,7 @@ class StoreRepository {
   }
 
   /**
-   * 모든 매장 정보 조회 (지도용)
+   * 모든 매장 정보 조회 (지도용 - Legacy)
    */
   async getAllStores() {
     const result = await pool.query(`
@@ -333,6 +333,207 @@ class StoreRepository {
       WHERE sa.latitude IS NOT NULL AND sa.longitude IS NOT NULL
       ORDER BY s.id
     `);
+
+    return result.rows;
+  }
+
+  /**
+   * 매장 초기 로딩 (커서 기반 페이지네이션, id순)
+   * @param {number} limit - 가져올 개수
+   */
+  async getInitialStores(limit = 20) {
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.name,
+        s.is_open,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        si.store_tel_number,
+        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as full_address,
+        ST_Y(sa.geom) as latitude,
+        ST_X(sa.geom) as longitude,
+        sa.sido,
+        sa.sigungu,
+        sa.eupmyeondong
+      FROM stores s
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      ORDER BY s.id ASC
+      LIMIT $1
+    `, [limit + 1]); // limit + 1로 hasNext 확인
+
+    const hasNext = result.rows.length > limit;
+    const items = hasNext ? result.rows.slice(0, limit) : result.rows;
+    const lastItem = items[items.length - 1];
+    const nextCursor = hasNext && lastItem ? String(lastItem.id) : null;
+
+    return {
+      items,
+      nextCursor,
+      hasNext
+    };
+  }
+
+  /**
+   * 매장 추가 로딩 (커서 기반, id순)
+   * @param {string} cursor - 커서 (마지막 id)
+   * @param {number} limit - 가져올 개수
+   */
+  async getMoreStores(cursor, limit = 20) {
+    const cursorId = parseInt(cursor);
+
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.name,
+        s.is_open,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        si.store_tel_number,
+        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as full_address,
+        ST_Y(sa.geom) as latitude,
+        ST_X(sa.geom) as longitude,
+        sa.sido,
+        sa.sigungu,
+        sa.eupmyeondong
+      FROM stores s
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      WHERE s.id > $1
+      ORDER BY s.id ASC
+      LIMIT $2
+    `, [cursorId, limit + 1]);
+
+    const hasNext = result.rows.length > limit;
+    const items = hasNext ? result.rows.slice(0, limit) : result.rows;
+    const lastItem = items[items.length - 1];
+    const nextCursor = hasNext && lastItem ? String(lastItem.id) : null;
+
+    return {
+      items,
+      nextCursor,
+      hasNext
+    };
+  }
+
+  /**
+   * 카테고리별 매장 조회
+   * @param {string} category - 카테고리 ID (korean, japanese, chinese 등)
+   * @param {number} limit - 가져올 개수
+   */
+  async getStoresByCategory(category, limit = 6) {
+    // 카테고리 ID를 한글 카테고리명으로 매핑
+    const categoryMap = {
+      korean: '한식',
+      japanese: '일식',
+      chinese: '중식',
+      western: '양식',
+      cafe: '카페',
+      etc: '기타'
+    };
+
+    const categoryName = categoryMap[category] || category;
+
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.name,
+        s.is_open,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        si.store_tel_number,
+        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as full_address,
+        ST_Y(sa.geom) as latitude,
+        ST_X(sa.geom) as longitude,
+        sa.sido,
+        sa.sigungu,
+        sa.eupmyeondong
+      FROM stores s
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      WHERE si.category ILIKE $1
+      ORDER BY si.rating_average DESC NULLS LAST, s.id ASC
+      LIMIT $2
+    `, [`%${categoryName}%`, limit]);
+
+    return result.rows;
+  }
+
+  /**
+   * 위치 기반 근처 매장 조회 (PostGIS)
+   * @param {number} lat - 위도
+   * @param {number} lng - 경도
+   * @param {number} radius - 반경 (미터)
+   * @param {number} limit - 가져올 개수
+   */
+  async getStoresNearby(lat, lng, radius = 1000, limit = 6) {
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.name,
+        s.is_open,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        si.store_tel_number,
+        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as full_address,
+        ST_Y(sa.geom) as latitude,
+        ST_X(sa.geom) as longitude,
+        sa.sido,
+        sa.sigungu,
+        sa.eupmyeondong,
+        ST_Distance(
+          sa.geom::geography,
+          ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography
+        ) as distance
+      FROM stores s
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      WHERE sa.geom IS NOT NULL
+        AND ST_DWithin(
+          sa.geom::geography,
+          ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography,
+          $3
+        )
+      ORDER BY distance ASC, si.rating_average DESC NULLS LAST
+      LIMIT $4
+    `, [lat, lng, radius, limit]);
+
+    return result.rows;
+  }
+
+  /**
+   * 요일 기반 매장 조회 (id % t === 0인 매장 랜덤 조회)
+   * @param {number} t - 요일 값 (월=1 ~ 일=7)
+   * @param {number} limit - 가져올 개수
+   */
+  async getStoresByDayMod(t, limit = 5) {
+    const result = await pool.query(`
+      SELECT 
+        s.id,
+        s.name,
+        s.is_open,
+        si.category,
+        si.rating_average,
+        si.review_count,
+        si.store_tel_number,
+        CONCAT_WS(' ', sa.sido, sa.sigungu, sa.eupmyeondong) as full_address,
+        ST_Y(sa.geom) as latitude,
+        ST_X(sa.geom) as longitude,
+        sa.sido,
+        sa.sigungu,
+        sa.eupmyeondong
+      FROM stores s
+      LEFT JOIN store_info si ON s.id = si.store_id
+      LEFT JOIN store_addresses sa ON s.id = sa.store_id
+      WHERE s.id % $1 = 0
+      ORDER BY RANDOM()
+      LIMIT $2
+    `, [t, limit]);
 
     return result.rows;
   }

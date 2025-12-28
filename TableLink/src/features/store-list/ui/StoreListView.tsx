@@ -2,11 +2,14 @@
  * StoreListView - 매장 목록 Feature UI
  * 
  * 검색, 필터, 매장 카드 리스트를 포함한 완전한 UI
+ * - 초기 로딩 후 "더보기" 버튼
+ * - 더보기 클릭 후 무한 스크롤 활성화
  */
 
 import { useNavigate } from 'react-router-dom'
 import type { StoreFilterState } from '../model/types'
 import styles from './StoreListView.module.css'
+import type { RefObject } from 'react'
 
 interface Store {
   id: string
@@ -25,6 +28,12 @@ interface StoreListViewProps {
   onFiltersChange: (filters: StoreFilterState) => void
   loading?: boolean
   error?: string | null
+  // 페이지네이션 props
+  hasNext?: boolean
+  isLoadingMore?: boolean
+  autoLoadEnabled?: boolean
+  loadMoreRef?: RefObject<HTMLDivElement | null>
+  onLoadMore?: () => void
 }
 
 export const StoreListView = ({
@@ -35,6 +44,11 @@ export const StoreListView = ({
   onFiltersChange,
   loading,
   error,
+  hasNext = false,
+  isLoadingMore = false,
+  autoLoadEnabled = false,
+  loadMoreRef,
+  onLoadMore,
 }: StoreListViewProps) => {
   const navigate = useNavigate()
 
@@ -129,6 +143,42 @@ export const StoreListView = ({
           ))
         )}
       </div>
+
+      {/* 더보기 버튼: autoLoadEnabled가 false이고 hasNext가 true일 때만 표시 */}
+      {!autoLoadEnabled && hasNext && onLoadMore && (
+        <div className={styles.loadMoreSection}>
+          <button 
+            className={styles.loadMoreBtn}
+            onClick={onLoadMore}
+            disabled={isLoadingMore}
+          >
+            {isLoadingMore ? (
+              <>
+                <span className={styles.spinner}></span>
+                불러오는 중...
+              </>
+            ) : '더보기'}
+          </button>
+        </div>
+      )}
+
+      {/* 무한 스크롤 감지용 요소 */}
+      {loadMoreRef && <div ref={loadMoreRef} className={styles.loadMoreTrigger} />}
+
+      {/* 추가 로딩 인디케이터 */}
+      {isLoadingMore && (
+        <div className={styles.loadingMore}>
+          <div className={styles.loadingSpinner}></div>
+          <p>매장 정보를 더 불러오는 중...</p>
+        </div>
+      )}
+
+      {/* 모든 데이터 로드 완료 메시지 */}
+      {!hasNext && stores.length > 0 && (
+        <div className={styles.endOfList}>
+          <p>모든 매장을 불러왔습니다.</p>
+        </div>
+      )}
     </div>
   )
 }

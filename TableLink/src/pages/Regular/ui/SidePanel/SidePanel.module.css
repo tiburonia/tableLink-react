@@ -25,7 +25,6 @@
   width: 320px;
   height: 100%;
   background: white;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 999;
   display: flex;
