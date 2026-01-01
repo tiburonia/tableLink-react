@@ -7,6 +7,8 @@
 
 import { useState, useEffect, useCallback } from 'react'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://stunning-broccoli-7vwxrrpqr7vj29pj-5000.app.github.dev'
+
 interface UserInfo {
   userId: number
   name?: string
@@ -41,7 +43,13 @@ interface MyPageData {
 const mypageService = {
   async loadMypageData(userId: number, userInfo?: UserInfo): Promise<MyPageData> {
     try {
-      const response = await fetch(`/api/users/${userId}/mypage`)
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch(`${API_BASE}/api/auth/users/${userId}/mypage`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
       if (!response.ok) throw new Error('마이페이지 데이터 조회 실패')
       return await response.json()
     } catch (error) {

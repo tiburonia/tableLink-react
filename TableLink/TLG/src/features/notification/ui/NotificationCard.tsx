@@ -65,9 +65,8 @@ export const NotificationCard: React.FC<NotificationCardProps> = ({ notification
 
     // 읽음 처리
     if (!isRead && user) {
-      // 서버는 userId(숫자 PK)를 요구하지만, user.id는 username(string)
-      // user 객체에 userId가 있으면 사용, 없으면 id 사용
-      const userPk = user.userId || user.id;
+      // user.user_pk는 DB PK (숫자)
+      const userPk = user.user_pk;
       const success = await markAsRead(notification.id, userPk);
       if (success) {
         setIsRead(true);

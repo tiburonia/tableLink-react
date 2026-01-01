@@ -1,0 +1,74 @@
+.header {
+  position: sticky;
+  top: 0;
+  height: var(--header-height);
+  background: var(--color-bg-header);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  z-index: 50;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.menuButton {
+  font-size: 1.5rem;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.menuButton:hover {
+  background: var(--color-bg);
+}
+
+.title {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.iconButton {
+  font-size: 1.25rem;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.iconButton:hover {
+  background: var(--color-bg);
+}
+
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.profile:hover {
+  background: var(--color-bg);
+}
+
+.avatar {
+  font-size: 1.25rem;
+}
+
+.name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}

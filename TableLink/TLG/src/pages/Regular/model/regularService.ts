@@ -10,7 +10,7 @@ export const regularService = {
       }
 
       const user = JSON.parse(userStr)
-      const userId = user.id
+      const userId = user.user_pk  // DB PK 사용
 
       // API 호출 (임시로 목업 데이터 반환)
       // TODO: 실제 API 엔드포인트로 교체

@@ -5,11 +5,13 @@
   "description": "TableLink 모노레포 - 프론트엔드 및 백엔드 통합 관리",
   "scripts": {
     "dev": "npm run dev --prefix TableLink/TLG",
+    "dev:tlm": "npm run dev --prefix TableLink/TLM",
     "dev:server": "npm run dev --prefix server",
-    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\"",
+    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\" \"npm run dev:tlm\"",
     "build": "npm run build --prefix TableLink/TLG",
+    "build:tlm": "npm run build --prefix TableLink/TLM",
     "start": "npm run build && npm run start --prefix server",
-    "install:all": "npm install && npm install --prefix TableLink/TLG && npm install --prefix server"
+    "install:all": "npm install && npm install --prefix TableLink/TLG && npm install --prefix TableLink/TLM && npm install --prefix server"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

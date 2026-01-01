@@ -28,21 +28,23 @@ class AuthRepository {
   }
 
   /**
-   * 사용자 생성
+   * 사용자 생성 (bcrypt 해시 비밀번호 저장)
    */
   async createUser(userData) {
     const result = await pool.query(`
       INSERT INTO users (
-        user_id, user_pw, name, phone, 
-        email, address, birth, gender
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        user_id, user_pw, password_hash, name, phone, 
+        email, address, birth, gender, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id, user_id, name, phone
     `, [
       userData.user_id,
-      userData.user_pw,
+      userData.user_pw,           // 레거시 호환 (평문)
+      userData.password_hash,     // bcrypt 해시된 비밀번호
       userData.name,
       userData.phone,
-      null, null, null, null
+      null, null, null, null,     // email, address, birth, gender
+      'ACTIVE'                    // status 기본값
     ]);
 
     return result.rows[0];

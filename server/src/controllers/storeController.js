@@ -6,24 +6,31 @@ const userService = require("../services/userService")
  */
 class StoreController {
   /**
-   * 매장 기본 정보 조회 (userId 포함)
+   * 매장 기본 정보 조회 (userId 선택적)
    */
   async getStoreInfo(req, res, next) {
     try {
       const { storeId } = req.params;
       const { userId } = req.query;
 
-      // TODO: userId를 활용한 개인화된 매장 정보 조회 로직 구현 예정
-      // 현재는 기본 매장 정보만 반환
-      //userId없을경우 오류 발생.
-      const store = await storeService.getStoreInfo(storeId, userId);
-      const user = await userService.getUserStoreInfo(storeId, userId)
-
-      res.json({
-        success: true,
-        store: store,
-        user: user || null,
-      });
+      // userId가 없어도 매장 정보는 조회 가능
+      const store = await storeService.getStoreInfo(storeId, userId || null);
+      
+      // userId가 있을 때만 user 정보 조회
+      if (userId) {
+        const user = await userService.getUserStoreInfo(storeId, userId);
+        res.json({
+          success: true,
+          store: store,
+          user: user || null,
+        });
+      } else {
+        // userId 없으면 user 필드 제외
+        res.json({
+          success: true,
+          store: store,
+        });
+      }
     } catch (error) {
       next(error);
     }

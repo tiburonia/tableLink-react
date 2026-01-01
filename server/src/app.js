@@ -25,34 +25,34 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// Static file serving - vite-project 구조에 맞게 경로 수정
-app.use(express.static(path.join(__dirname, '../public')));
-app.use('/pos', express.static(path.join(__dirname, '../pos')));
-app.use('/KDS', express.static(path.join(__dirname, '../KDS')));
+// Static file serving - Legacy_TLG 구조에 맞게 경로 수정
+app.use(express.static(path.join(__dirname, '../Legacy_TLG/public')));
+app.use('/pos', express.static(path.join(__dirname, '../Legacy_TLG/pos')));
+app.use('/KDS', express.static(path.join(__dirname, '../Legacy_TLG/KDS')));
 
 // 레거시 TLG 시스템 정적 파일 서빙
-app.use('/shared', express.static(path.join(__dirname, '../shared')));
-app.use('/TLG', express.static(path.join(__dirname, '../TLG')));
-app.use('/krp', express.static(path.join(__dirname, '../krp')));
-app.use('/admin', express.static(path.join(__dirname, '../admin')));
-app.use('/tlm-components', express.static(path.join(__dirname, '../tlm-components')));
-app.use('/kds', express.static(path.join(__dirname, '../kds')));
+app.use('/shared', express.static(path.join(__dirname, '../Legacy_TLG/shared')));
+app.use('/TLG', express.static(path.join(__dirname, '../Legacy_TLG/TLG')));
+app.use('/krp', express.static(path.join(__dirname, '../Legacy_TLG/krp')));
+app.use('/admin', express.static(path.join(__dirname, '../Legacy_TLG/admin')));
+app.use('/tlm-components', express.static(path.join(__dirname, '../Legacy_TLG/tlm-components')));
+app.use('/kds', express.static(path.join(__dirname, '../Legacy_TLG/kds')));
 
 // Vite 빌드 결과물 서빙 (React SPA)
-app.use(express.static(path.join(__dirname, '../dist')));
+app.use(express.static(path.join(__dirname, '../Legacy_TLG/dist')));
 
 // 레거시 루트 경로
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.sendFile(path.join(__dirname, '../Legacy_TLG/public/index.html'));
 });
 
 // React SPA 라우팅 (vite-project) - Express 5 정규식 사용
 app.get(/^\/main(\/.*)?$/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  res.sendFile(path.join(__dirname, '../Legacy_TLG/dist/index.html'));
 });
 
 app.get(/^\/payment(\/.*)?$/, (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  res.sendFile(path.join(__dirname, '../Legacy_TLG/dist/index.html'));
 });
 
 // Health Check
@@ -116,6 +116,10 @@ try {
   const databaseRoutes = require('./routes/database');
   const mapRoutes = require('./routes/map');
 
+  // TLM Merchant 라우터
+  const merchantAuthRoutes = require('./merchant/routes/auth');
+  const merchantStoreRoutes = require('./merchant/routes/stores');
+
   // 새로운 POS 시스템 API
   app.use('/api/pos', posRoutes);
   app.use('/api/pos-payment', posPaymentRoutes);
@@ -142,6 +146,10 @@ try {
   app.use('/api/tll', tllRoutes);
   app.use('/api/toss', tossRoutes);
   app.use('/api/krp', krpRoutes);
+
+  // TLM Merchant API
+  app.use('/api/merchants/auth', merchantAuthRoutes);
+  app.use('/api/merchants/stores', merchantStoreRoutes);
 
   // SSE 라우트 추가
   const sseRoutes = require('./routes/sse');

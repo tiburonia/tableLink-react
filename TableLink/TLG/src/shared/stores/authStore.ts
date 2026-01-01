@@ -4,11 +4,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 /**
  * 인증 상태 관리를 위한 Zustand Store
  * localStorage를 사용하여 토큰 및 사용자 정보 영구 저장
+ * API 응답 필드: user_id, user_pk, uuid
  */
 
 interface User {
-  id: string;
-  userId: number;
+  user_id: string;    // 로그인 아이디 (users.user_id)
+  user_pk: number;    // DB PK (users.id)
+  uuid: string;       // UUID (users.uuid)
   name: string;
   phone?: string;
   email?: string;

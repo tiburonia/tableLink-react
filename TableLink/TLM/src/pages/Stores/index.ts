@@ -1,0 +1,5 @@
+export { StoresPage } from './StoresPage'
+export { AddStorePage } from './AddStorePage'
+export { StoreRegistrationPage } from './StoreRegistrationPage'
+export { StoreDashboardPage } from './StoreDashboardPage'
+export { StorePreviewPage } from './StorePreviewPage'

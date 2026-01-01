@@ -1,4 +1,5 @@
 
+const bcrypt = require('bcryptjs');
 const userRepository = require('../repositories/userRepository');
 const authRepository = require('../repositories/authRepository');
 const { generateTokenPair } = require('../utils/jwtUtils');
@@ -31,36 +32,62 @@ class AuthService {
   }
 
   /**
-   * 회원가입
+   * 회원가입 (bcrypt 해싱 적용)
    */
   async signup(signupData) {
-    const { id, pw, name, phone } = signupData;
+    // 새 필드명(user_id, user_pw) 또는 기존 필드명(id, pw) 모두 지원
+    const userId = signupData.user_id || signupData.id;
+    const userPw = signupData.user_pw || signupData.pw;
+    const { name, phone } = signupData;
 
     // 유효성 검사
-    if (!id || !pw) {
+    if (!userId || !userPw) {
       throw new Error('아이디와 비밀번호는 필수입니다');
     }
 
-    if (!/^[a-zA-Z0-9]{3,20}$/.test(id)) {
-      throw new Error('아이디는 3-20자의 영문과 숫자만 사용 가능합니다');
+    if (!/^[a-zA-Z0-9]{3,50}$/.test(userId)) {
+      throw new Error('아이디는 3-50자의 영문과 숫자만 사용 가능합니다');
     }
 
-    if (pw.length < 4) {
+    if (userPw.length < 4) {
       throw new Error('비밀번호는 최소 4자 이상이어야 합니다');
     }
 
-    if (phone && !/^010-\d{4}-\d{4}$/.test(phone)) {
-      throw new Error('전화번호 형식이 올바르지 않습니다');
+    // name과 phone은 필수 (DB 스키마 NOT NULL)
+    if (!name) {
+      throw new Error('이름은 필수입니다');
     }
 
+    if (!phone || !/^010-\d{4}-\d{4}$/.test(phone)) {
+      throw new Error('전화번호 형식이 올바르지 않습니다 (010-0000-0000)');
+    }
+
+    // 아이디 중복 확인
+    const userIdExists = await authRepository.checkUserIdExists(userId.trim());
+    if (userIdExists) {
+      throw new Error('이미 사용 중인 아이디입니다');
+    }
+
+    // 전화번호 중복 확인
+    const phoneExists = await authRepository.checkPhoneExists(phone.trim());
+    if (phoneExists) {
+      throw new Error('이미 등록된 전화번호입니다');
+    }
+
+    // bcrypt로 비밀번호 해싱 (salt rounds: 10)
+    const saltRounds = 10;
+    const passwordHash = await bcrypt.hash(userPw, saltRounds);
+    console.log(`🔐 비밀번호 해싱 완료 (salt rounds: ${saltRounds})`);
+
     const newUser = await authRepository.createUser({
-      user_id: id.trim(),
-      user_pw: pw.trim(),
-      name: name ? name.trim() : null,
-      phone: phone ? phone.trim() : null
+      user_id: userId.trim(),
+      user_pw: userPw.trim(),  // 호환성 유지 (기존 칼럼)
+      password_hash: passwordHash,  // 해시된 비밀번호
+      name: name.trim(),
+      phone: phone.trim()
     });
 
-    console.log(`✅ 새 사용자 가입: ${newUser.user_id} (${newUser.name || '익명'})`);
+    console.log(`✅ 새 사용자 가입: ${newUser.user_id} (${newUser.name})`);
 
     return {
       id: newUser.user_id,
@@ -71,7 +98,7 @@ class AuthService {
   }
 
   /**
-   * 로그인
+   * 로그인 (bcrypt 비밀번호 검증)
    */
   async login(userId, password) {
     if (!userId || !password) {
@@ -84,7 +111,18 @@ class AuthService {
       throw new Error('아이디 또는 비밀번호가 일치하지 않습니다');
     }
 
-    if (user.user_pw !== password) {
+    // bcrypt 해시 비밀번호 검증 (password_hash 컬럼 우선 사용)
+    let isPasswordValid = false;
+    
+    if (user.password_hash) {
+      // 새로운 bcrypt 해시된 비밀번호로 검증
+      isPasswordValid = await bcrypt.compare(password, user.password_hash);
+    } else {
+      // 기존 평문 비밀번호 검증 (레거시 호환)
+      isPasswordValid = user.user_pw === password;
+    }
+
+    if (!isPasswordValid) {
       throw new Error('아이디 또는 비밀번호가 일치하지 않습니다');
     }
 
@@ -94,8 +132,9 @@ class AuthService {
     const tokens = generateTokenPair(user);
 
     return {
-      id: user.user_id,
-      userId: user.id,
+      user_id: user.user_id,
+      uuid: user.uuid,
+      user_pk: user.id,
       name: user.name,
       phone: user.phone,
       email: user.email,

@@ -15,9 +15,10 @@ export const LoginPage = () => {
 
   return (
     <div className="mobile-app">
-    <div className={styles.loginPage}>
-      <div className={styles.loginPageContainer}>
-        <LoginForm
+    
+        <div className={styles.loginPage}>
+          <div className={styles.loginPageContainer}>
+            <LoginForm
           Id={formData.Id}
           password={formData.password}
           onIdChange={(Id: string) => setFormData({ ...formData, Id })}
@@ -27,9 +28,10 @@ export const LoginPage = () => {
           IdError={errors.Id}
           passwordError={errors.password}
           generalError={errors.general}
-        />
-      </div>
+          />
+       </div>
     </div>
+    
     </div>
   )
 }

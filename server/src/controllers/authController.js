@@ -78,13 +78,16 @@ class AuthController {
   }
 
   /**
-   * 회원가입
+   * 회원가입 (bcrypt 해싱은 서비스 레이어에서 처리)
    */
   async signup(req, res, next) {
     try {
-      const { id, pw, name, phone } = req.body;
+      // 새 필드명(user_id, user_pw) 또는 기존 필드명(id, pw) 모두 지원
+      const user_id = req.body.user_id || req.body.id;
+      const user_pw = req.body.user_pw || req.body.pw;
+      const { name, phone } = req.body;
 
-      const newUser = await authService.signup({ id, pw, name, phone });
+      const newUser = await authService.signup({ user_id, user_pw, name, phone });
 
       // 전화번호가 있는 경우 게스트 주문을 회원 주문으로 전환
       if (phone) {

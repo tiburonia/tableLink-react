@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/features/auth'
 import { LoginPage } from '@/pages/Login'
+import { SignUpPage } from '@/pages/SignUp'
 import { MainPage } from '@/pages/Main/MainPage'
 import { StorePage } from '@/pages/Store'
 import { StoreFeedPage } from '@/pages/StoreFeed'
@@ -29,17 +30,19 @@ export const AppRouter = () => {
     window.location.href = '/login'
   }
 
-  // userInfo 호환성 유지
+  // userInfo 호환성 유지 (새 API 필드명 사용)
   const userInfo = user ? {
-    userId: user.id,
-    name: user.nickname || user.username,
-    username: user.username,
+    userId: user.user_pk,       // DB PK
+    user_id: user.user_id,      // 로그인 아이디
+    uuid: user.uuid,            // UUID
+    name: user.name,
   } : undefined
 
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignUpPage />} />
         <Route path="/" element={isAuthenticated ? <Navigate to="/main" replace /> : <Navigate to="/login" replace />} />
         <Route path="/main" element={<ProtectedRoute><MainPage /></ProtectedRoute>} />
         <Route path="/map" element={<ProtectedRoute><MapPage /></ProtectedRoute>} />

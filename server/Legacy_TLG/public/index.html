@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TableLink - 메인</title>
+
+  <!--네이버맵 API-->
+  <script type="text/javascript" src="https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=60k4tio1ue&submodules=geocoder"></script>
+
+  <!--전역 CSS 파일-->
+  <link rel="stylesheet" href="shared/css/favoriteStore.css" />
+  <link rel="stylesheet" href="shared/css/globalBody.css" />
+  <link rel="stylesheet" href="shared/css/renderLogin.css" />
+  <!--서브메인 CSS 추가-->
+  <link rel="stylesheet" href="TLG/styles/subMain.css" />
+  <!--마이페이지 CSS (FOUC 방지)-->
+  <link rel="stylesheet" href="TLG/pages/mypage/views/styles/mypage.css" />
+  <link rel="stylesheet" href="TLG/pages/mypage/views/styles/mypageSkeleton.css" />
+</head>
+
+<body>
+  <!-- 화면을 렌더링할 메인 영역 -->
+  <div id="device-frame">
+    <!-- 노치 / 상단 상태바 -->
+    <div id="status-bar">
+      <div class="status-time">9:41</div>
+      <div class="status-icons">
+        <span>
+          <!-- size는 필요에 맞게 조정 -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-label="Signal">
+          <!-- 바탕(꺼진 바) -->
+          <rect x="3"  y="16" width="3" height="5"  opacity=".25" rx="1"/>
+          <rect x="8"  y="12" width="3" height="9"  opacity=".25" rx="1"/>
+          <rect x="13" y="8"  width="3" height="13" opacity=".25" rx="1"/>
+          <rect x="18" y="4"  width="3" height="17" opacity=".25" rx="1"/>
+          <!-- 켜진 바(3칸) -->
+          <rect x="3"  y="16" width="3" height="5"  rx="1"/>
+          <rect x="8"  y="12" width="3" height="9"  rx="1"/>
+          <rect x="13" y="8"  width="3" height="13" rx="1"/>
+        </svg>
+        </span>
+        <span>
+          <svg width="26" height="12" viewBox="0 0 26 12" xmlns="http://www.w3.org/2000/svg" aria-label="LTE">
+            <path fill="currentColor" d="M1.5 2v8h3.8V8.8H3.2V2H1.5Zm6.5 0v1.3h2.2v6.7h1.5V3.3h2.2V2H8Zm8.3 0v8h6.7V8.8h-5.2V7.2h4.8V5.9h-4.8V3.3h5.2V2h-6.7Z"/>
+          </svg>
+        </span>
+        <span>
+          <svg width="22" height="16" viewBox="0 0 28 16" xmlns="http://www.w3.org/2000/svg" aria-label="Battery">
+            <!-- 테두리 -->
+            <rect x="1" y="3" width="22" height="10" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <!-- 단자(+) -->
+            <rect x="24" y="6" width="3" height="4" rx="1" fill="currentColor"/>
+            <!-- 잔량(80%) : 22px 내부폭 기준 -->
+            <rect x="3" y="5" width="17.6" height="6" rx="1.2" fill="currentColor" />
+          </svg>
+        </span>
+      </div>
+    </div>
+
+    <!-- 진짜 앱 화면 -->
+    <div id="main"></div>
+    <div class="device-home-bar"></div>
+  </div>
+
+  <!--회원가입 화면 렌더링 함수 (로그인보다 먼저 로드)-->
+  <script src="TLG/pages/auth/renderSignUp.js"></script>
+  <!--마이페이지 스켈레톤 (FOUC 방지 - 사전 로드)-->
+  <script src="TLG/pages/mypage/views/mypageSkeleton.js"></script>
+  <!--마이페이지 화면 렌더링 함수 (먼저 로드)-->
+  <script src="TLG/pages/mypage/renderMyPage.js"></script>
+  <!--로그인 화면 렌더링 함수-->
+  <script type="module" src="/TLG/pages/auth/renderLogin.js"></script>
+  <!--내 계정 화면 렌더링 함수-->
+  <script type="module" src="/TLG/pages/mypage/renderMyAccount.js"></script>
+  <!--내정보 관리 화면 렌더링 함수-->
+  <script type="module" src="/TLG/pages/mypage/renderAccountSettings.js"></script>
+  <!-- 리뷰 관련 -->
+  <script type="module" src="/TLG/pages/store/views/review/renderReviewWrite.js"></script>
+  <link rel="stylesheet" href="/TLG/pages/store/views/review/css/reviewWrite.css">
+
+  <!-- 즐겨찾기 관련 -->
+  <script type="module" src="/TLG/pages/store/views/favoriteButtonView.js"></script>
+  <script type="module" src="/TLG/pages/store/services/favoriteService.js"></script>
+
+  <!-- 리뷰 전체보기 -->
+  <script src="/TLG/pages/store/views/review/renderAllReview.js"></script>
+
+  <!-- 리뷰 관리자 및 미리보기 (레이어드 아키텍처) -->
+  <script type="module" src="/TLG/pages/store/repositories/reviewDataRepository.js"></script>
+  <script type="module" src="/TLG/pages/store/views/reviewPreviewView.js"></script>
+  <script type="module" src="/TLG/pages/store/controllers/reviewPreviewController.js"></script>
+
+  <!-- 프로모션 상세 -->
+  <script src="/TLG/pages/store/views/promotion/renderPromotionDetail.js"></script>
+  <!--지도 모듈들-->
+  <link rel="stylesheet" href="TLG/pages/main/views/styles/mapStorePanel.css" />
+  <script src="TLG/pages/main/modules/mapPanelUI.js"></script>
+  <script src="TLG/pages/main/modules/mapMarkerManager.js"></script>
+  <!--지도 화면 렌더링 함수-->
+  <script type="module" src="TLG/pages/main/renderMap.js"></script>
+  <script type="module" src="TLG/pages/main/renderSearch.js"></script>
+  <!--알림 화면 렌더링 함수-->
+  <script type="module" src="TLG/pages/main/renderNotification.js"></script>
+  <!--즐겨찾기 기능 (레이어드 아키텍처) - 위에서 이미 로드됨, 중복 제거-->
+  <script type="module" src="TLG/pages/store/repositories/favoriteRepository.js"></script>
+  <script type="module" src="TLG/pages/store/controllers/favoriteController.js"></script>
+  <!--매장렌더링 모듈들-->
+  <!-- storePanelManager는 더 이상 사용하지 않음 -->
+  <!--패널 관리 (레이어드 아키텍처)-->
+  <script type="module" src="/TLG/pages/store/repositories/panelRepository.js"></script>
+
+  <!-- 비회원 TLL QR 주문 -->
+  <script type="module" src="/TLG/pages/pay/renderGuestTLL.js"></script>
+  <script type="module" src="/TLG/pages/pay/renderGuestOrderScreen.js"></script>
+  <script type="module" src="/TLG/pages/pay/repositories/guestPaymentRepository.js"></script>
+  <script type="module" src="/TLG/pages/pay/services/guestPaymentService.js"></script>
+  <script type="module" src="/TLG/pages/pay/controllers/guestPaymentController.js"></script>
+  <script type="module" src="/TLG/pages/pay/renderGuestPayment.js"></script>
+
+  <script type="module" src="/TLG/pages/store/services/panelService.js"></script>
+  <script type="module" src="/TLG/pages/store/views/modules/panelView.js"></script>
+  <script type="module" src="/TLG/pages/store/controllers/panelController.js"></script>
+  <!--리뷰 프리뷰 (레이어드 아키텍처) - 위에서 이미 로드됨, 중복 제거-->
+  <script type="module" src="/TLG/pages/store/services/reviewDataService.js"></script>
+  <!--매장 탭 뷰 (레이어드 아키텍처)-->
+  <script type="module" src="/TLG/pages/store/views/tabs/homeTabView.js"></script>
+  <script type="module" src="/TLG/pages/store/views/tabs/menuTabView.js"></script>
+  <script type="module" src="/TLG/pages/store/views/tabs/reviewTabView.js"></script>
+  <script type="module" src="/TLG/pages/store/views/tabs/storeInfoTabView.js"></script>
+  <script type="module" src="/TLG/pages/store/views/tabs/regularTabView.js"></script>
+  <!--매장 추가 정보 (레이어드 아키텍처)-->
+  <script type="module" src="/TLG/pages/store/repositories/storeInfoRepository.js"></script>
+
+  <script type="module" src="/TLG/pages/pay/renderGuestOrderScreen.js"></script>
+
+  <script type="module" src="/TLG/pages/store/services/storeInfoService.js"></script>
+  <script type="module" src="/TLG/pages/store/views/modules/storeAdditionalInfoHTML.js"></script>
+  <!--테이블 관리 (레이어드 아키텍처)-->
+  <script type="module" src="/TLG/pages/store/repositories/tableRepository.js"></script>
+  <script type="module" src="/TLG/pages/store/services/tableService.js"></script>
+  <script type="module" src="/TLG/pages/store/views/tableStatusView.js"></script>
+
+  <script type="module" src="/TLG/pages/store/services/storeEventService.js"></script>
+
+  <script type="module" src="/TLG/pages/store/controllers/tableController.js"></script>
+  <!--TLL 관리 (레이어드 아키텍처)-->
+  <script type="module" src="/TLG/pages/store/controllers/tllController.js"></script>
+  <!--매장렌더링 함수 (우선 로딩)-->
+  <script src="TLG/pages/store/renderStore.js"></script>
+  <!--결제 화면 렌더링 함수 (레이어드 아키텍처)-->
+  <script type="module" src="TLG/pages/pay/renderPay.js"></script>
+  <!--쿠폰 발급 함수-->
+  <script src="TLG/utils/creatCoupon.js"></script>
+  <!--결제 완료 화면 렌더링 함수 (레이어드 아키텍처)-->
+  <script type="module" src="TLG/pages/pay/confirmPayF.js"></script>
+  <!--주문 화면 렌더링 함수 (레이어드 아키텍처)-->
+  <script type="module" src="TLG/pages/pay/renderOrderScreen.js"></script>
+  <!--예약 화면 렌더링 함수-->
+  <script src="TLG/pages/store/renderReservationScreen.js"></script>
+  <!--메뉴 모듈-->
+  <script type="module" src="/TLG/pages/store/views/modules/menuHTML.js"></script>
+
+  <!--매장 캐시 시스템-->
+  <script src="TLG/utils/storeCache.js"></script>
+  <script src="/TLG/utils/globalKeyboardEvents.js"></script>
+  <script src="/TLG/utils/regularLevelManager.js"></script>
+  <!-- 혜택 상세보기 스크립트 - 위에서 이미 로드됨, 중복 제거 -->
+  <!-- 서브 메인 화면 렌더링 함수 (레이어드 아키텍처) -->
+  <script type="module" src="TLG/pages/main/repositories/subMainRepository.js"></script>
+  <script type="module" src="TLG/pages/main/services/subMainService.js"></script>
+  <script type="module" src="TLG/pages/main/views/subMainView.js"></script>
+  <script type="module" src="TLG/pages/main/controllers/subMainController.js"></script>
+  <script type="module" src="TLG/pages/main/renderSubMain.js"></script>
+  <script type="module" src="TLG/pages/pay/TLL.js"></script>
+
+  <!-- 단골매장 페이지 (레이어드 아키텍처) -->
+  <script type="module" src="TLG/pages/regular/renderRegularPage.js"></script>
+
+  <!-- 매장 스토리 피드 페이지 (레이어드 아키텍처) -->
+  <script type="module" src="TLG/pages/storeFeed/renderStoreFeed.js"></script>
+
+  <!-- 앱 초기화 스크립트 (AuthManager에서 제공) -->
+  <script type="module">
+    import { initializeApp } from '/TLG/utils/authManager.js';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🔄 DOM 로드 완료, 앱 초기화 시작');
+
+      if (typeof initializeApp === 'function') {
+        console.log('✅ initializeApp 함수 발견, 실행 중...');
+        initializeApp();
+      } else {
+        console.error('❌ initializeApp 함수를 찾을 수 없음');
+        // 폴백으로 직접 로그인 화면 렌더링
+        setTimeout(() => {
+          if (typeof renderLogin === 'function') {
+            console.log('🔄 폴백: renderLogin 함수 실행');
+            renderLogin();
+
+
+          } else {
+            console.error('❌ renderLogin 함수도 찾을 수 없음');
+            document.getElementById('main').innerHTML = '<div style="padding: 20px; text-align: center;">앱을 로딩하는 중...</div>';
+          }
+        }, 100);
+      }
+    });
+  </script>
+
+  <script>
+    // 토스페이먼츠 팝업창으로부터 메시지 수신
+    window.addEventListener('message', function(event) {
+      console.log('📨 메시지 수신:', event.data);
+
+      if (event.data && event.data.action) {
+        switch (event.data.action) {
+          case 'navigate':
+            console.log('🔄 페이지 이동:', event.data.url);
+            window.location.href = event.data.url;
+            break;
+
+          case 'payment-success':
+            console.log('✅ 결제 성공 알림:', event.data);
+            // 필요시 추가 처리 로직
+            break;
+
+          default:
+            console.log('ℹ️ 알 수 없는 액션:', event.data.action);
+        }
+      }
+    }, false);
+  </script>
+</body>
+
+</html>

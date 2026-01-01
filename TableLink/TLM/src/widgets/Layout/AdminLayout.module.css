@@ -1,0 +1,19 @@
+.layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  margin-left: var(--sidebar-width);
+  transition: margin-left 0.3s ease;
+}
+
+.main.collapsed {
+  margin-left: 80px;
+}
+
+.content {
+  padding: 24px;
+  min-height: calc(100vh - var(--header-height));
+}

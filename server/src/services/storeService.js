@@ -18,9 +18,7 @@ class StoreService {
       throw new Error('유효하지 않은 매장 ID입니다');
     }
 
-    if (isNaN(numericUserId) || numericUserId <= 0) {
-      throw new Error('유효하지 않은 사용자 ID입니다')
-    }
+    
 
     console.log(`🏪 매장 ${storeId} 기본 정보 조회 요청`);
 

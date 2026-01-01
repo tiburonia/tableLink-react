@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { Input, Button } from '@/shared/ui'
 import styles from './LoginForm.module.css'
 
@@ -71,9 +72,9 @@ export const LoginForm = ({
           비밀번호를 잊으셨나요?
         </a>
         <span className={styles.loginFormDivider}>|</span>
-        <a href="#" className={styles.loginFormLink}>
+        <Link to="/signup" className={styles.loginFormLink}>
           회원가입
-        </a>
+        </Link>
       </div>
 
       <div className={styles.loginFormHint}>

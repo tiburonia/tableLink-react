@@ -5,13 +5,21 @@
 
 import type { MyPageData, RegularSummary } from './types'
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://stunning-broccoli-7vwxrrpqr7vj29pj-5000.app.github.dev'
+
 export const mypageService = {
   /**
    * 마이페이지 데이터 로드
    */
   async loadMypageData(userPk: number): Promise<MyPageData> {
     try {
-      const response = await fetch(`/api/auth/users/${userPk}/mypage`)
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch(`${API_BASE}/api/auth/users/${userPk}/mypage`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
 
       if (!response.ok) {
         throw new Error('마이페이지 데이터 조회 실패')
@@ -44,7 +52,13 @@ export const mypageService = {
    */
   async getRegularSummary(userPk: number): Promise<RegularSummary> {
     try {
-      const response = await fetch(`/api/regular-levels/summary/${userPk}`)
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch(`${API_BASE}/api/regular-levels/summary/${userPk}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
       if (!response.ok) {
         throw new Error('단골 정보 조회 실패')
       }
