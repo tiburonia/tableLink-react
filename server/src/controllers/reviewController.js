@@ -81,6 +81,35 @@ class ReviewController {
       });
     } catch (error) {
       console.error('❌ 리뷰 제출 실패:', error);
+      // 중복 리뷰 에러는 400으로 응답
+      if (error.message.includes('이미')) {
+        return res.status(400).json({
+          success: false,
+          message: error.message
+        });
+      }
+      next(error);
+    }
+  }
+
+  /**
+   * 주문에 대한 리뷰 작성 가능 여부 검증
+   */
+  async checkReviewEligibility(req, res, next) {
+    try {
+      const { orderId } = req.params;
+
+      console.log(`🔍 리뷰 작성 가능 여부 확인: 주문 ${orderId}`);
+
+      const result = await reviewService.checkReviewEligibility(parseInt(orderId));
+
+      res.json({
+        success: true,
+        canReview: result.canReview,
+        message: result.message
+      });
+    } catch (error) {
+      console.error('❌ 리뷰 작성 가능 여부 확인 실패:', error);
       next(error);
     }
   }

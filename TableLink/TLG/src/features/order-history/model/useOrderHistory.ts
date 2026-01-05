@@ -8,29 +8,32 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+// API 응답 형식에 맞는 OrderItem
 interface OrderItem {
-  name: string
-  price?: number
-  qty?: number
-  quantity?: number
-}
-
-interface OrderData {
-  items?: OrderItem[]
-  store?: string
-  totalAmount?: number
+  menu_name: string
+  quantity: number
+  unit_price: number
+  total_price: number
 }
 
 interface Order {
   id: number | string
-  order_date: string
-  store_name?: string
-  order_data?: OrderData
-  total_amount?: number
-  final_amount?: number
-  hasReview?: boolean
-  has_review?: boolean
-  order_status?: string
+  created_at: string           // 주문 생성일
+  total_price: number          // 총 금액
+  session_status: string       // 세션 상태 (OPEN, CLOSED 등)
+  source: string               // 주문 출처 (TLL 등)
+  table_number: number         // 테이블 번호
+  store_id: number             // 매장 ID
+  store_name: string           // 매장명
+  store_category: string       // 매장 카테고리
+  ticket_count: string         // 티켓 수
+  order_items: OrderItem[]     // 주문 항목
+  is_reviewed?: boolean        // 리뷰 작성 여부 (API 응답 필드)
+  has_review?: boolean         // 리뷰 작성 여부 (호환성)
+  // 리뷰 정보
+  review_rating?: number       // 리뷰 별점
+  review_content?: string      // 리뷰 내용
+  review_created_at?: string   // 리뷰 작성일
 }
 
 interface OrderStats {
@@ -56,8 +59,15 @@ const orderHistoryService = {
       const response = await fetch(`/api/orders/user/${userId}`)
       if (!response.ok) throw new Error('주문 내역 조회 실패')
       const data = await response.json()
+      
+      // is_reviewed를 has_review로 매핑
+      const orders = (data.orders || []).map((order: Order) => ({
+        ...order,
+        has_review: order.is_reviewed ?? order.has_review ?? false
+      }))
+      
       return {
-        orders: data.orders || [],
+        orders,
         stats: data.stats || { totalOrders: 0, thisMonthOrders: 0, totalAmount: 0 }
       }
     } catch (error) {
@@ -110,19 +120,30 @@ export function useOrderHistory(userInfo?: UserInfo) {
   }, [])
 
   const handleReviewWrite = useCallback((order: Order) => {
-    console.log('✍️ 리뷰 작성:', order)
-    alert('리뷰 작성 기능은 준비중입니다.')
-  }, [])
+    console.log('✍️ 리뷰 작성 페이지로 이동:', order.id)
+    // 주문 정보를 state로 전달하여 리뷰 작성 페이지로 이동
+    navigate('/review-write', { 
+      state: { 
+        order: {
+          id: order.id,
+          store_name: order.store_name,
+          store_id: order.store_id,
+          order_items: order.order_items,
+          total_price: order.total_price,
+          created_at: order.created_at,
+        } 
+      } 
+    })
+  }, [navigate])
 
   const getOrderItemsText = useCallback((order: Order) => {
-    const orderData = order.order_data || {}
-    const items = orderData.items || []
+    const items = order.order_items || []
 
     if (items.length === 0) return '메뉴 정보 없음'
 
     return items.length > 1
-      ? `${items[0].name} 외 ${items.length - 1}건`
-      : items[0]?.name || '메뉴 정보 없음'
+      ? `${items[0].menu_name} 외 ${items.length - 1}건`
+      : items[0]?.menu_name || '메뉴 정보 없음'
   }, [])
 
   const formatOrderDate = useCallback((dateStr: string) => {

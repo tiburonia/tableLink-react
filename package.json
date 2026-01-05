@@ -6,12 +6,17 @@
   "scripts": {
     "dev": "npm run dev --prefix TableLink/TLG",
     "dev:tlm": "npm run dev --prefix TableLink/TLM",
+    "dev:kds": "npm run dev --prefix TableLink/KDS",
+    "dev:pos": "npm run dev --prefix TableLink/POS",
     "dev:server": "npm run dev --prefix server",
-    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\" \"npm run dev:tlm\"",
+    "dev:all": "concurrently \"npm run dev:server\" \"npm run dev\" \"npm run dev:tlm\" \"npm run dev:kds\" \"npm run dev:pos\"",
     "build": "npm run build --prefix TableLink/TLG",
     "build:tlm": "npm run build --prefix TableLink/TLM",
+    "build:kds": "npm run build --prefix TableLink/KDS",
+    "build:pos": "npm run build --prefix TableLink/POS",
+    "build:all": "npm run build && npm run build:tlm && npm run build:kds && npm run build:pos",
     "start": "npm run build && npm run start --prefix server",
-    "install:all": "npm install && npm install --prefix TableLink/TLG && npm install --prefix TableLink/TLM && npm install --prefix server"
+    "install:all": "npm install && npm install --prefix TableLink/TLG && npm install --prefix TableLink/TLM && npm install --prefix TableLink/KDS && npm install --prefix TableLink/POS && npm install --prefix server"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"

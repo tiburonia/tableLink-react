@@ -1,0 +1,1 @@
+export { useTableMap } from './useTableMap'

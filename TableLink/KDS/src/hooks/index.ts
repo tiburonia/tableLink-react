@@ -1,0 +1,1 @@
+export { useKDSManager } from './useKDSManager';

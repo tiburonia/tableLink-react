@@ -20,7 +20,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
+    port: 5170,
     fs: {
       // Vite가 server 폴더와 부모 디렉토리의 파일을 읽을 수 있도록 허용
       strict: false,
@@ -29,7 +29,7 @@ export default defineConfig({
     proxy: {
       // API 요청을 백엔드 서버로 프록시
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://stunning-broccoli-7vwxrrpqr7vj29pj-5000.app.github.dev',
         changeOrigin: true,
       },
     },

@@ -18,6 +18,7 @@ import { RegularPage } from '@/pages/Regular'
 import { NotificationPage } from '@/pages/Notifications'
 import { SettingsPage } from '@/pages/Settings'
 import { ReviewPage } from '@/pages/Review'
+import { ReviewWritePage } from '@/pages/ReviewWrite'
 import { ProtectedRoute } from './ProtectedRoute'
 
 
@@ -61,6 +62,7 @@ export const AppRouter = () => {
         <Route path="/rs/:storeId" element={<ProtectedRoute><StorePage /></ProtectedRoute>} />
         <Route path="/rs/:storeId/sf" element={<ProtectedRoute><StoreFeedPage /></ProtectedRoute>} />
         <Route path="/rs/:storeId/rv" element={<ProtectedRoute><ReviewPage /></ProtectedRoute>} />
+        <Route path="/review-write" element={<ProtectedRoute><ReviewWritePage /></ProtectedRoute>} />
         <Route path="/ns/:orderId" element={<ProtectedRoute><OrderSessionPage /></ProtectedRoute>} />
           
         <Route path="*" element={<Navigate to={isAuthenticated ? "/main" : "/login"} replace />} />

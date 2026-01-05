@@ -225,6 +225,107 @@ class StoreController {
       next(error);
     }
   }
+
+  /**
+   * 매장 테이블 목록 조회
+   */
+  async getStoreTables(req, res, next) {
+    try {
+      const { storeId } = req.params;
+
+      const tables = await storeService.getStoreTables(storeId);
+
+      res.json({
+        success: true,
+        tables: tables,
+        count: tables.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 매장 단골 등급 조회
+   */
+  async getStorePromotions(req, res, next) {
+    try {
+      const { storeId } = req.params;
+
+      const promotions = await storeService.getStorePromotions(storeId);
+
+      res.json({
+        success: true,
+        promotions: promotions,
+        count: promotions.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 매장 사진 조회
+   */
+  async getStorePhotos(req, res, next) {
+    try {
+      const { storeId } = req.params;
+
+      const photos = await storeService.getStorePhotos(storeId);
+
+      res.json({
+        success: true,
+        photos: photos,
+        count: photos.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 매장 사진 업로드
+   */
+  async uploadStorePhoto(req, res, next) {
+    try {
+      const { storeId } = req.params;
+      const { photo_url, description } = req.body;
+
+      if (!photo_url) {
+        return res.status(400).json({
+          success: false,
+          error: '사진 URL이 필요합니다.'
+        });
+      }
+
+      const photo = await storeService.uploadStorePhoto(storeId, photo_url, description);
+
+      res.json({
+        success: true,
+        photo: photo
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 매장 사진 삭제
+   */
+  async deleteStorePhoto(req, res, next) {
+    try {
+      const { storeId, photoId } = req.params;
+
+      await storeService.deleteStorePhoto(storeId, photoId);
+
+      res.json({
+        success: true,
+        message: '사진이 삭제되었습니다.'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new StoreController();

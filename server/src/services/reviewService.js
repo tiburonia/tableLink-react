@@ -86,9 +86,9 @@ class ReviewService {
       throw new Error('리뷰는 최소 10자 이상이어야 합니다');
     }
 
-    // 이미 리뷰가 있는지 확인
-    const reviewExists = await reviewRepository.checkReviewExistsByOrderId(reviewData.orderId);
-    if (reviewExists) {
+    // orders 테이블의 is_reviewed 컬럼으로 중복 검증
+    const isReviewed = await reviewRepository.checkOrderIsReviewed(reviewData.orderId);
+    if (isReviewed) {
       throw new Error('이미 해당 주문에 대한 리뷰를 작성하셨습니다');
     }
 
@@ -103,9 +103,28 @@ class ReviewService {
       reviewText: reviewData.reviewText.trim()
     });
 
+    // orders 테이블의 is_reviewed를 true로 업데이트
+    await reviewRepository.updateOrderIsReviewed(reviewData.orderId, true);
+
     console.log(`✅ 리뷰 제출 완료: ID ${review.id}`);
 
     return review;
+  }
+
+  /**
+   * 주문에 대한 리뷰 작성 가능 여부 검증
+   */
+  async checkReviewEligibility(orderId) {
+    if (!orderId || orderId <= 0) {
+      throw new Error('유효하지 않은 주문 ID입니다');
+    }
+
+    const isReviewed = await reviewRepository.checkOrderIsReviewed(orderId);
+
+    return {
+      canReview: !isReviewed,
+      message: isReviewed ? '이미 리뷰가 작성된 주문입니다' : '리뷰 작성이 가능합니다'
+    };
   }
 }
 

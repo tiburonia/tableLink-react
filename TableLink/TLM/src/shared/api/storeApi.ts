@@ -16,7 +16,7 @@ export interface TableInfo {
   store_id: number
   table_name: string
   capacity: number
-  status: 'AVAILABLE' | 'OCCUPIED'
+  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED'
 }
 
 // 리뷰 정보
@@ -447,6 +447,511 @@ export async function addMenuItems(
     }
   } catch (error) {
     console.error('메뉴 일괄 추가 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 메뉴 목록 조회 (TLM)
+ * GET /api/merchants/stores/:storeId/menu
+ */
+export async function getMenuItems(storeId: number): Promise<{
+  success: boolean
+  menus?: MenuItem[]
+  count?: number
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/menu`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '메뉴 목록 조회에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('메뉴 목록 조회 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 메뉴 수정 (TLM)
+ * PUT /api/merchants/stores/:storeId/menu/:menuId
+ */
+export async function updateMenuItem(
+  storeId: number,
+  menuId: number,
+  menuData: { name: string; description?: string; price: number; cook_station?: string }
+): Promise<{ success: boolean; data?: MenuItem; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/menu/${menuId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(menuData),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '메뉴 수정에 실패했습니다.',
+      }
+    }
+
+    return {
+      success: true,
+      data: result.data,
+    }
+  } catch (error) {
+    console.error('메뉴 수정 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 메뉴 삭제 (TLM)
+ * DELETE /api/merchants/stores/:storeId/menu/:menuId
+ */
+export async function deleteMenuItem(
+  storeId: number,
+  menuId: number
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/menu/${menuId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '메뉴 삭제에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('메뉴 삭제 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+// ========== 테이블 관리 API (TLM) ==========
+
+/**
+ * 테이블 목록 조회 (TLM)
+ * GET /api/merchants/stores/:storeId/tables
+ */
+export async function getTables(storeId: number): Promise<{
+  success: boolean
+  tables?: TableInfo[]
+  count?: number
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/tables`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '테이블 목록 조회에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('테이블 목록 조회 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 테이블 추가 (TLM)
+ * POST /api/merchants/stores/:storeId/tables
+ */
+export async function addTable(
+  storeId: number,
+  tableData: { table_name: string; capacity?: number }
+): Promise<{ success: boolean; data?: TableInfo; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/tables`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tableData),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '테이블 추가에 실패했습니다.',
+      }
+    }
+
+    return {
+      success: true,
+      data: result.data,
+    }
+  } catch (error) {
+    console.error('테이블 추가 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 테이블 수정 (TLM)
+ * PUT /api/merchants/stores/:storeId/tables/:tableId
+ */
+export async function updateTable(
+  storeId: number,
+  tableId: number,
+  tableData: { table_name: string; capacity?: number }
+): Promise<{ success: boolean; data?: TableInfo; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/tables/${tableId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(tableData),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '테이블 수정에 실패했습니다.',
+      }
+    }
+
+    return {
+      success: true,
+      data: result.data,
+    }
+  } catch (error) {
+    console.error('테이블 수정 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 테이블 삭제 (TLM)
+ * DELETE /api/merchants/stores/:storeId/tables/:tableId
+ */
+export async function deleteTable(
+  storeId: number,
+  tableId: number
+): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/tables/${tableId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '테이블 삭제에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('테이블 삭제 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 테이블 상태 변경 (TLM)
+ * PATCH /api/merchants/stores/:storeId/tables/:tableId/status
+ */
+export async function updateTableStatus(
+  storeId: number,
+  tableId: number,
+  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED'
+): Promise<{ success: boolean; data?: TableInfo; error?: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/merchants/stores/${storeId}/tables/${tableId}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status }),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '테이블 상태 변경에 실패했습니다.',
+      }
+    }
+
+    return {
+      success: true,
+      data: result.data,
+    }
+  } catch (error) {
+    console.error('테이블 상태 변경 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 매장 테이블 목록 조회
+ * GET /api/stores/:storeId/tables
+ */
+export async function getStoreTables(storeId: number): Promise<{
+  success: boolean
+  tables?: TableInfo[]
+  count?: number
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stores/${storeId}/tables`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '테이블 목록 조회에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('테이블 목록 조회 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 매장 단골 등급 목록 조회
+ * GET /api/stores/:storeId/promotions
+ */
+export async function getStorePromotions(storeId: number): Promise<{
+  success: boolean
+  promotions?: PromotionInfo[]
+  count?: number
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stores/${storeId}/promotions`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '단골 등급 조회에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('단골 등급 조회 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 매장 사진 조회
+ * GET /api/stores/:storeId/photos
+ */
+export interface StorePhoto {
+  id: number
+  store_id: number
+  photo_url: string
+  description: string | null
+  uploaded_at: string
+  is_primary: boolean
+}
+
+export async function getStorePhotos(storeId: number): Promise<{
+  success: boolean
+  photos?: StorePhoto[]
+  count?: number
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stores/${storeId}/photos`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '사진 조회에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('사진 조회 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 매장 사진 업로드
+ * POST /api/stores/:storeId/photos
+ */
+export async function uploadStorePhoto(
+  storeId: number,
+  photo_url: string,
+  description?: string
+): Promise<{
+  success: boolean
+  photo?: StorePhoto
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stores/${storeId}/photos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ photo_url, description }),
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '사진 업로드에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('사진 업로드 에러:', error)
+    return {
+      success: false,
+      error: '서버 연결에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 매장 사진 삭제
+ * DELETE /api/stores/:storeId/photos/:photoId
+ */
+export async function deleteStorePhoto(
+  storeId: number,
+  photoId: number
+): Promise<{
+  success: boolean
+  message?: string
+  error?: string
+}> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stores/${storeId}/photos/${photoId}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      return {
+        success: false,
+        error: result.error || '사진 삭제에 실패했습니다.',
+      }
+    }
+
+    return result
+  } catch (error) {
+    console.error('사진 삭제 에러:', error)
     return {
       success: false,
       error: '서버 연결에 실패했습니다.',

@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AppRouter } from './routing/AppRouter'
-import { AdminLayout } from '@/widgets/Layout/AdminLayout'
 import { AuthPage } from '@/pages/Auth'
-import { AddStorePage, StoreRegistrationPage, StoreDashboardPage, StorePreviewPage } from '@/pages/Stores'
+import { AddStorePage, StoreRegistrationPage, StoreDashboardPage, StorePreviewPage, MenuManagementPage, TableManagementPage, StoreSettingsPage, StoreOrdersPage } from '@/pages/Stores'
 import * as authApi from '@/shared/api/authApi'
 import * as storeApi from '@/shared/api/storeApi'
 import '@/index.css'
@@ -125,17 +123,18 @@ function App() {
           } 
         />
         
-        {/* 매장이 있는 경우 관리자 페이지 */}
-        {hasStores && (
-          <Route 
-            path="/*" 
-            element={
-              <AdminLayout>
-                <AppRouter />
-              </AdminLayout>
-            } 
-          />
-        )}
+        {/* 매장 관련 하위 페이지들 */}
+        <Route path="/stores/:storeId/menu" element={<MenuManagementPage />} />
+        <Route path="/stores/:storeId/tables" element={<TableManagementPage />} />
+        <Route path="/stores/:storeId/promotions" element={<StoreDashboardPage storeId={currentStoreId || undefined} />} />
+        <Route path="/stores/:storeId/photos" element={<StoreDashboardPage storeId={currentStoreId || undefined} />} />
+        <Route path="/stores/:storeId/reviews" element={<StoreDashboardPage storeId={currentStoreId || undefined} />} />
+        
+        {/* 설정 페이지 */}
+        <Route path="/settings" element={<StoreSettingsPage />} />
+        
+        {/* 주문 관리 페이지 */}
+        <Route path="/orders" element={<StoreOrdersPage />} />
         
         {/* 기타 경로는 홈으로 리다이렉트 */}
         <Route path="*" element={<Navigate to="/" replace />} />

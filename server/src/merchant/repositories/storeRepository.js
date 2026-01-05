@@ -299,6 +299,156 @@ class MerchantStoreRepository {
 
     return store.rows[0] || null;
   }
+
+  /**
+   * 매장 메뉴 목록 조회
+   */
+  async getMenusByStoreId(storeId) {
+    const result = await pool.query(`
+      SELECT 
+        id, store_id, name, description, 
+        cook_station, price
+      FROM store_menu
+      WHERE store_id = $1
+      ORDER BY id ASC
+    `, [storeId]);
+
+    return result.rows;
+  }
+
+  /**
+   * 메뉴 수정
+   */
+  async updateMenuItem(storeId, menuId, menuData) {
+    const result = await pool.query(`
+      UPDATE store_menu
+      SET 
+        name = $1,
+        description = $2,
+        cook_station = $3,
+        price = $4
+      WHERE id = $5 AND store_id = $6
+      RETURNING id, store_id, name, description, cook_station, price
+    `, [
+      menuData.name,
+      menuData.description || null,
+      menuData.cook_station || 'kitchen',
+      menuData.price,
+      menuId,
+      storeId
+    ]);
+
+    return result.rows[0] || null;
+  }
+
+  /**
+   * 메뉴 삭제
+   */
+  async deleteMenuItem(storeId, menuId) {
+    const result = await pool.query(`
+      DELETE FROM store_menu
+      WHERE id = $1 AND store_id = $2
+      RETURNING id
+    `, [menuId, storeId]);
+
+    return result.rows[0] || null;
+  }
+
+  // ========== 테이블 관리 ==========
+
+  /**
+   * 테이블 목록 조회
+   */
+  async getTablesByStoreId(storeId) {
+    const result = await pool.query(`
+      SELECT 
+        id, store_id, table_name, capacity, status, updated_at
+      FROM store_tables
+      WHERE store_id = $1
+      ORDER BY id ASC
+    `, [storeId]);
+
+    return result.rows;
+  }
+
+  /**
+   * 테이블 ID로 조회
+   */
+  async getTableById(storeId, tableId) {
+    const result = await pool.query(`
+      SELECT id, store_id, table_name, capacity, status, updated_at
+      FROM store_tables
+      WHERE store_id = $1 AND id = $2
+    `, [storeId, tableId]);
+
+    return result.rows[0] || null;
+  }
+
+  /**
+   * 테이블 추가
+   */
+  async createTable(storeId, tableData) {
+    const result = await pool.query(`
+      INSERT INTO store_tables (store_id, table_name, capacity, status)
+      VALUES ($1, $2, $3, 'AVAILABLE')
+      RETURNING id, store_id, table_name, capacity, status
+    `, [
+      storeId,
+      tableData.table_name,
+      tableData.capacity || 4
+    ]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * 테이블 수정
+   */
+  async updateTable(storeId, tableId, tableData) {
+    const result = await pool.query(`
+      UPDATE store_tables
+      SET 
+        table_name = $1,
+        capacity = $2,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3 AND store_id = $4
+      RETURNING id, store_id, table_name, capacity, status
+    `, [
+      tableData.table_name,
+      tableData.capacity || 4,
+      tableId,
+      storeId
+    ]);
+
+    return result.rows[0] || null;
+  }
+
+  /**
+   * 테이블 삭제
+   */
+  async deleteTable(storeId, tableId) {
+    const result = await pool.query(`
+      DELETE FROM store_tables
+      WHERE id = $1 AND store_id = $2
+      RETURNING id
+    `, [tableId, storeId]);
+
+    return result.rows[0] || null;
+  }
+
+  /**
+   * 테이블 상태 변경
+   */
+  async updateTableStatus(storeId, tableId, status) {
+    const result = await pool.query(`
+      UPDATE store_tables
+      SET status = $1, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $2 AND store_id = $3
+      RETURNING id, store_id, table_name, capacity, status
+    `, [status, tableId, storeId]);
+
+    return result.rows[0] || null;
+  }
 }
 
 module.exports = new MerchantStoreRepository();

@@ -1,0 +1,1 @@
+export { tableApi } from './tableApi'

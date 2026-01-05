@@ -1,36 +1,88 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import * as storeApi from '@/shared/api/storeApi'
-import type { StoreInfo } from '@/shared/api/storeApi'
+import type { StoreInfo, MenuItem, TableInfo } from '@/shared/api/storeApi'
 import styles from './StorePreviewPage.module.css'
 
 type TabType = 'main' | 'menu' | 'review' | 'regular'
 
 export function StorePreviewPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [store, setStore] = useState<StoreInfo | null>(null)
+  const [menus, setMenus] = useState<MenuItem[]>([])
+  const [tables, setTables] = useState<TableInfo[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('main')
   const [isFavorite, setIsFavorite] = useState(false)
 
   useEffect(() => {
-    const loadStore = async () => {
+    const loadStoreData = async () => {
+      // localStorage에서 현재 매장 ID 가져오기
+      const storeId = parseInt(localStorage.getItem('tlm_current_store_id') || '0')
+      
+      if (!storeId) {
+        console.log('❌ storeId가 없음')
+        setIsLoading(false)
+        return
+      }
+
       try {
-        const response = await storeApi.getStoreById(2)
-        if (response.success && response.store) {
-          setStore(response.store)
+        console.log('👁️ 미리보기 데이터 로드:', storeId)
+        
+        // 매장 기본 정보, 메뉴, 테이블 병렬 로드
+        const [storeRes, menuRes, tableRes] = await Promise.all([
+          storeApi.getStoreById(storeId),
+          storeApi.getMenuItems(storeId),
+          storeApi.getTables(storeId)
+        ])
+
+        if (storeRes.success && storeRes.store) {
+          setStore(storeRes.store)
         } else {
-          setStore(storeApi.getDummyStore(2))
+          // API 실패 시 더미 데이터 사용
+          console.log('매장 API 실패, 더미 데이터 사용')
+          setStore(storeApi.getDummyStore(storeId))
         }
+
+        // 메뉴 데이터
+        if (menuRes.success && menuRes.menus) {
+          console.log('✅ 메뉴 로드:', menuRes.menus.length, '개')
+          setMenus(menuRes.menus)
+        } else if (storeRes.store?.menu) {
+          setMenus(storeRes.store.menu)
+        }
+
+        // 테이블 데이터
+        if (tableRes.success && tableRes.tables) {
+          console.log('✅ 테이블 로드:', tableRes.tables.length, '개')
+          setTables(tableRes.tables)
+        } else if (storeRes.store?.tables) {
+          setTables(storeRes.store.tables)
+        }
+
       } catch (error) {
-        console.error('매장 정보 로드 실패:', error)
-        setStore(storeApi.getDummyStore(2))
+        console.error('미리보기 데이터 로드 실패:', error)
+        const storeId = parseInt(localStorage.getItem('tlm_current_store_id') || '0')
+        setStore(storeApi.getDummyStore(storeId || 1))
       } finally {
         setIsLoading(false)
       }
     }
-    loadStore()
+    
+    loadStoreData()
   }, [])
+
+  // 바텀바 활성 상태 확인
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
+
+  // 테이블 상태 계산
+  const tableStats = {
+    total: tables.length,
+    available: tables.filter(t => t.status === 'AVAILABLE').length,
+    occupied: tables.filter(t => t.status === 'OCCUPIED').length,
+    reserved: tables.filter(t => t.status === 'RESERVED').length
+  }
 
   if (isLoading) {
     return (
@@ -160,18 +212,54 @@ export function StorePreviewPage() {
                 {/* 대표 메뉴 */}
                 <section className={styles.section}>
                   <h3 className={styles.sectionTitle}>대표 메뉴</h3>
-                  <div className={styles.featuredMenu}>
-                    {store.menu.slice(0, 3).map(item => (
-                      <div key={item.id} className={styles.featuredItem}>
-                        <img 
-                          src={`https://picsum.photos/200/200?random=${item.id}`} 
-                          alt={item.name}
-                        />
-                        <span className={styles.featuredName}>{item.name}</span>
-                        <span className={styles.featuredPrice}>{item.price.toLocaleString()}원</span>
+                  {menus.length > 0 ? (
+                    <div className={styles.featuredMenu}>
+                      {menus.slice(0, 3).map(item => (
+                        <div key={item.id} className={styles.featuredItem}>
+                          <img 
+                            src={`https://picsum.photos/200/200?random=${item.id}`} 
+                            alt={item.name}
+                          />
+                          <span className={styles.featuredName}>{item.name}</span>
+                          <span className={styles.featuredPrice}>{item.price.toLocaleString()}원</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.emptyState}>
+                      <span>🍽️</span>
+                      <p>등록된 메뉴가 없습니다</p>
+                    </div>
+                  )}
+                </section>
+
+                {/* 테이블 현황 */}
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>테이블 현황</h3>
+                  {tables.length > 0 ? (
+                    <div className={styles.tableStatus}>
+                      <div className={styles.tableStatCard}>
+                        <span className={styles.tableStatIcon}>🪑</span>
+                        <span className={styles.tableStatValue}>{tableStats.available}</span>
+                        <span className={styles.tableStatLabel}>이용가능</span>
                       </div>
-                    ))}
-                  </div>
+                      <div className={styles.tableStatCard}>
+                        <span className={styles.tableStatIcon}>👥</span>
+                        <span className={styles.tableStatValue}>{tableStats.occupied}</span>
+                        <span className={styles.tableStatLabel}>사용중</span>
+                      </div>
+                      <div className={styles.tableStatCard}>
+                        <span className={styles.tableStatIcon}>📅</span>
+                        <span className={styles.tableStatValue}>{tableStats.reserved}</span>
+                        <span className={styles.tableStatLabel}>예약됨</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.emptyState}>
+                      <span>🪑</span>
+                      <p>등록된 테이블이 없습니다</p>
+                    </div>
+                  )}
                 </section>
 
                 {/* 매장 정보 */}
@@ -188,7 +276,10 @@ export function StorePreviewPage() {
                     </div>
                     <div className={styles.infoItem}>
                       <span className={styles.infoIcon}>🪑</span>
-                      <span>테이블 {store.tableCount}개 (빈 테이블 {store.tableStatusSummary.available}개)</span>
+                      <span>
+                        테이블 {tables.length > 0 ? tables.length : store.tableCount}개 
+                        (빈 테이블 {tables.length > 0 ? tableStats.available : store.tableStatusSummary.available}개)
+                      </span>
                     </div>
                   </div>
                 </section>
@@ -217,20 +308,28 @@ export function StorePreviewPage() {
             {/* 메뉴 탭 */}
             {activeTab === 'menu' && (
               <div className={styles.menuTab}>
-                {store.menu.map(item => (
-                  <div key={item.id} className={styles.menuItem}>
-                    <div className={styles.menuInfo}>
-                      <h4 className={styles.menuName}>{item.name}</h4>
-                      <p className={styles.menuDesc}>{item.description}</p>
-                      <span className={styles.menuPrice}>{item.price.toLocaleString()}원</span>
+                {menus.length > 0 ? (
+                  menus.map(item => (
+                    <div key={item.id} className={styles.menuItem}>
+                      <div className={styles.menuInfo}>
+                        <h4 className={styles.menuName}>{item.name}</h4>
+                        <p className={styles.menuDesc}>{item.description || '맛있는 메뉴입니다'}</p>
+                        <span className={styles.menuPrice}>{item.price.toLocaleString()}원</span>
+                      </div>
+                      <img 
+                        src={`https://picsum.photos/100/100?random=${item.id + 10}`}
+                        alt={item.name}
+                        className={styles.menuImage}
+                      />
                     </div>
-                    <img 
-                      src={`https://picsum.photos/100/100?random=${item.id + 10}`}
-                      alt={item.name}
-                      className={styles.menuImage}
-                    />
+                  ))
+                ) : (
+                  <div className={styles.emptyState}>
+                    <span>🍽️</span>
+                    <p>등록된 메뉴가 없습니다</p>
+                    <small>매장 관리에서 메뉴를 추가해보세요</small>
                   </div>
-                ))}
+                )}
               </div>
             )}
 
@@ -295,6 +394,35 @@ export function StorePreviewPage() {
               예약하기
             </button>
           </div>
+
+          {/* 하단 네비게이션 */}
+          <nav className={styles.bottomNav}>
+            <button 
+              className={`${styles.navItem} ${isActive('/') && !isActive('/preview') && !isActive('/settings') && !isActive('/orders') ? styles.active : ''}`}
+              onClick={() => navigate('/')}
+            >
+              <span>🏠</span>
+              <span>홈</span>
+            </button>
+            <button 
+              className={`${styles.navItem} ${isActive('/orders') ? styles.active : ''}`}
+              onClick={() => navigate('/orders')}
+            >
+              <span>📋</span>
+              <span>주문</span>
+            </button>
+            <button className={`${styles.navItem} ${isActive('/preview') ? styles.active : ''}`}>
+              <span>👁️</span>
+              <span>미리보기</span>
+            </button>
+            <button 
+              className={`${styles.navItem} ${isActive('/settings') ? styles.active : ''}`}
+              onClick={() => navigate('/settings')}
+            >
+              <span>⚙️</span>
+              <span>설정</span>
+            </button>
+          </nav>
         </div>
       </div>
     </div>

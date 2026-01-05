@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import * as authApi from '@/shared/api/authApi'
 import * as storeApi from '@/shared/api/storeApi'
 import type { StoreInfo } from '@/shared/api/storeApi'
@@ -11,6 +11,7 @@ interface StoreDashboardPageProps {
 
 export function StoreDashboardPage({ storeId }: StoreDashboardPageProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [store, setStore] = useState<StoreInfo | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -47,6 +48,30 @@ export function StoreDashboardPage({ storeId }: StoreDashboardPageProps) {
     loadStore()
   }, [storeId, navigate])
 
+  // 메뉴 관리 버튼 핸들러
+  const handleMenuManagement = () => {
+    if (!store) return
+    navigate(`/stores/${store.id}/menu`)
+  }
+
+  // 테이블 설정 버튼 핸들러
+  const handleTableSettings = () => {
+    if (!store) return
+    navigate(`/stores/${store.id}/tables`)
+  }
+
+  // 단골 등급 버튼 핸들러
+  const handlePromotionSettings = () => {
+    if (!store) return
+    navigate(`/stores/${store.id}/promotions`)
+  }
+
+  // 리뷰 관리 버튼 핸들러
+  const handleReviewManagement = () => {
+    if (!store) return
+    navigate(`/stores/${store.id}/reviews`)
+  }
+
   const handleLogout = () => {
     authApi.logout()
     localStorage.removeItem('tlm_stores')
@@ -54,6 +79,9 @@ export function StoreDashboardPage({ storeId }: StoreDashboardPageProps) {
     localStorage.removeItem('tlm_current_store')
     window.location.reload()
   }
+
+  // 바텀바 활성 상태 확인
+  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/')
 
   if (isLoading) {
     return (
@@ -82,11 +110,15 @@ export function StoreDashboardPage({ storeId }: StoreDashboardPageProps) {
     )
   }
 
+  // 리뷰 상태 분석
+  const negativeReviews = store.reviews.filter(r => r.score <= 2).length
+  const noReplyReviews = store.reviews.filter(r => !r.status || r.status === 'pending').length
+
   return (
     <div className="mobile-app">
       <div className="mobile-content">
         <div className={styles.page}>
-          {/* 헤더 */}
+          {/* 헤더 - 간소화 */}
           <header className={styles.header}>
             <div className={styles.headerTop}>
               <div className={styles.storeInfo}>
@@ -95,15 +127,22 @@ export function StoreDashboardPage({ storeId }: StoreDashboardPageProps) {
                   {store.is_open ? '영업중' : '영업종료'}
                 </span>
               </div>
-              <button className={styles.menuBtn}>☰</button>
+              <button className={styles.notificationBtn}>
+                🔔
+                {noReplyReviews > 0 && <span className={styles.badge}>{noReplyReviews}</span>}
+              </button>
             </div>
-            <p className={styles.storeAddress}>{store.full_address}</p>
           </header>
 
-          {/* 메인 콘텐츠 영역 */}
+          {/* 메인 콘텐츠 영역 - 핵심만 */}
           <main className={styles.main}>
             {/* 매장 통계 카드 */}
             <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <span className={styles.statIcon}>💰</span>
+                <span className={styles.statValue}>₩0</span>
+                <span className={styles.statLabel}>오늘 매출</span>
+              </div>
               <div className={styles.statCard}>
                 <span className={styles.statIcon}>⭐</span>
                 <span className={styles.statValue}>{store.rating_average.toFixed(1)}</span>
@@ -115,139 +154,122 @@ export function StoreDashboardPage({ storeId }: StoreDashboardPageProps) {
                 <span className={styles.statLabel}>리뷰</span>
               </div>
               <div className={styles.statCard}>
-                <span className={styles.statIcon}>🍽️</span>
-                <span className={styles.statValue}>{store.menuCount}</span>
-                <span className={styles.statLabel}>메뉴</span>
-              </div>
-              <div className={styles.statCard}>
                 <span className={styles.statIcon}>🪑</span>
                 <span className={styles.statValue}>{store.tableStatusSummary.available}/{store.tableCount}</span>
                 <span className={styles.statLabel}>빈 테이블</span>
               </div>
             </div>
 
-            {/* 빠른 설정 섹션 */}
+            {/* 빠른 설정 섹션 - 상태형 버튼 */}
             <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>빠른 설정</h3>
+              <h3 className={styles.sectionTitle}>빠른 관리</h3>
               <div className={styles.quickActions}>
-                <button className={styles.actionCard}>
-                  <span className={styles.actionIcon}>📋</span>
-                  <span className={styles.actionTitle}>메뉴 관리</span>
-                  <span className={styles.actionDesc}>{store.menuCount}개 메뉴</span>
+                <button className={styles.actionCard} onClick={handleMenuManagement}>
+                  <div className={styles.actionHeader}>
+                    <span className={styles.actionIcon}>📋</span>
+                    <span className={styles.actionTitle}>메뉴 관리</span>
+                  </div>
+                  <span className={styles.actionStatus}>
+                    {store.menuCount}개 등록
+                  </span>
                 </button>
                 
-                <button className={styles.actionCard}>
-                  <span className={styles.actionIcon}>🪑</span>
-                  <span className={styles.actionTitle}>테이블 설정</span>
-                  <span className={styles.actionDesc}>{store.tableCount}개 테이블</span>
+                <button className={styles.actionCard} onClick={handleTableSettings}>
+                  <div className={styles.actionHeader}>
+                    <span className={styles.actionIcon}>🪑</span>
+                    <span className={styles.actionTitle}>테이블</span>
+                  </div>
+                  <span className={`${styles.actionStatus} ${store.tableStatusSummary.available > 0 ? styles.positive : styles.warning}`}>
+                    {store.tableStatusSummary.available}석 이용가능
+                  </span>
                 </button>
                 
-                <button className={styles.actionCard}>
-                  <span className={styles.actionIcon}>🏆</span>
-                  <span className={styles.actionTitle}>단골 등급</span>
-                  <span className={styles.actionDesc}>{store.promotionCount}개 등급</span>
+                <button className={styles.actionCard} onClick={handlePromotionSettings}>
+                  <div className={styles.actionHeader}>
+                    <span className={styles.actionIcon}>🏆</span>
+                    <span className={styles.actionTitle}>단골 관리</span>
+                  </div>
+                  <span className={styles.actionStatus}>
+                    {store.promotionCount}개 등급
+                  </span>
                 </button>
                 
-                <button className={styles.actionCard}>
-                  <span className={styles.actionIcon}>📸</span>
-                  <span className={styles.actionTitle}>사진 관리</span>
-                  <span className={styles.actionDesc}>매장 사진</span>
+                <button className={styles.actionCard} onClick={handleReviewManagement}>
+                  <div className={styles.actionHeader}>
+                    <span className={styles.actionIcon}>⭐</span>
+                    <span className={styles.actionTitle}>리뷰 관리</span>
+                  </div>
+                  <span className={`${styles.actionStatus} ${noReplyReviews > 0 ? styles.warning : ''}`}>
+                    {noReplyReviews > 0 ? `답글 필요 ${noReplyReviews}` : `${store.reviewCount}개`}
+                  </span>
                 </button>
               </div>
             </section>
 
-            {/* 매장 정보 요약 */}
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>매장 정보</h3>
-              <div className={styles.infoCard}>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>📞 전화번호</span>
-                  <span className={styles.infoValue}>{store.store_tel_number}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>📍 주소</span>
-                  <span className={styles.infoValue}>{store.full_address}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>🌍 지역</span>
-                  <span className={styles.infoValue}>{store.sido} {store.sigungu}</span>
-                </div>
-              </div>
-            </section>
-
-            {/* 최근 리뷰 */}
+            {/* 최근 리뷰 - 2개만, 관리 느낌 */}
             {store.reviews.length > 0 && (
               <section className={styles.section}>
-                <h3 className={styles.sectionTitle}>최근 리뷰</h3>
+                <div className={styles.sectionHeader}>
+                  <h3 className={styles.sectionTitle}>최근 리뷰</h3>
+                  {negativeReviews > 0 && (
+                    <span className={styles.alertBadge}>⚠️ 부정 {negativeReviews}</span>
+                  )}
+                </div>
                 <div className={styles.reviewList}>
                   {store.reviews.slice(0, 2).map(review => (
-                    <div key={review.id} className={styles.reviewCard}>
+                    <div 
+                      key={review.id} 
+                      className={`${styles.reviewCard} ${review.score <= 2 ? styles.negative : ''}`}
+                    >
                       <div className={styles.reviewHeader}>
-                        <span className={styles.reviewUser}>{review.user}</span>
-                        <span className={styles.reviewScore}>{'⭐'.repeat(review.score)}</span>
+                        <div className={styles.reviewMeta}>
+                          <span className={styles.reviewUser}>{review.user}</span>
+                          <span className={styles.reviewScore}>
+                            {'⭐'.repeat(review.score)}{'☆'.repeat(5 - review.score)}
+                          </span>
+                        </div>
+                        {(!review.status || review.status === 'pending') && (
+                          <span className={styles.replyNeeded}>답글 필요</span>
+                        )}
                       </div>
                       <p className={styles.reviewContent}>{review.content}</p>
                     </div>
                   ))}
                 </div>
+                <button className={styles.viewAllBtn} onClick={handleReviewManagement}>
+                  전체 리뷰 보기 →
+                </button>
               </section>
             )}
-
-            {/* 편의시설 */}
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>편의시설</h3>
-              <div className={styles.amenitiesList}>
-                <span className={`${styles.amenityTag} ${store.amenities.wifi ? styles.active : ''}`}>
-                  📶 Wi-Fi
-                </span>
-                <span className={`${styles.amenityTag} ${store.amenities.parking ? styles.active : ''}`}>
-                  🅿️ 주차장
-                </span>
-                <span className={`${styles.amenityTag} ${store.amenities.pet_friendly ? styles.active : ''}`}>
-                  🐕 반려동물
-                </span>
-                <span className={`${styles.amenityTag} ${store.amenities.power_outlet ? styles.active : ''}`}>
-                  🔌 콘센트
-                </span>
-                <span className={`${styles.amenityTag} ${store.amenities.smoking_area ? styles.active : ''}`}>
-                  🚬 흡연구역
-                </span>
-              </div>
-            </section>
-
-            {/* 단골 등급 */}
-            <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>단골 등급 설정</h3>
-              <div className={styles.promotionList}>
-                {store.promotions
-                  .sort((a, b) => a.min_orders - b.min_orders)
-                  .map(promo => (
-                    <div key={promo.id} className={styles.promotionCard}>
-                      <span className={styles.promotionLevel}>{promo.level}</span>
-                      <span className={styles.promotionReq}>
-                        {promo.min_orders}회 이상 / {promo.min_spent.toLocaleString()}원 이상
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </section>
           </main>
 
-          {/* 하단 네비게이션 */}
+          {/* 하단 네비게이션 - 5개 유지 */}
           <nav className={styles.bottomNav}>
-            <button className={`${styles.navItem} ${styles.active}`}>
+            <button 
+              className={`${styles.navItem} ${isActive('/') || isActive('/store') ? styles.active : ''}`}
+              onClick={() => navigate('/')}
+            >
               <span>🏠</span>
               <span>홈</span>
             </button>
-            <button className={styles.navItem}>
+            <button 
+              className={`${styles.navItem} ${isActive('/orders') ? styles.active : ''}`}
+              onClick={() => navigate('/orders')}
+            >
               <span>📋</span>
               <span>주문</span>
             </button>
-            <button className={styles.navItem} onClick={() => navigate('/preview')}>
+            <button 
+              className={`${styles.navItem} ${isActive('/preview') ? styles.active : ''}`}
+              onClick={() => navigate('/preview')}
+            >
               <span>👁️</span>
               <span>미리보기</span>
             </button>
-            <button className={styles.navItem}>
+            <button 
+              className={`${styles.navItem} ${isActive('/settings') ? styles.active : ''}`}
+              onClick={() => navigate('/settings')}
+            >
               <span>⚙️</span>
               <span>설정</span>
             </button>

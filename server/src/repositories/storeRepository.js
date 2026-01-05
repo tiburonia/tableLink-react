@@ -537,6 +537,49 @@ class StoreRepository {
 
     return result.rows;
   }
+
+  /**
+   * 매장 사진 조회
+   */
+  async getStorePhotos(storeId) {
+    const result = await pool.query(`
+      SELECT 
+        id,
+        store_id,
+        photo_url,
+        description,
+        uploaded_at,
+        is_primary
+      FROM store_photos
+      WHERE store_id = $1
+      ORDER BY is_primary DESC, uploaded_at DESC
+    `, [storeId]);
+
+    return result.rows;
+  }
+
+  /**
+   * 매장 사진 업로드
+   */
+  async uploadStorePhoto(storeId, photo_url, description) {
+    const result = await pool.query(`
+      INSERT INTO store_photos (store_id, photo_url, description, uploaded_at, is_primary)
+      VALUES ($1, $2, $3, NOW(), false)
+      RETURNING id, store_id, photo_url, description, uploaded_at, is_primary
+    `, [storeId, photo_url, description || null]);
+
+    return result.rows[0];
+  }
+
+  /**
+   * 매장 사진 삭제
+   */
+  async deleteStorePhoto(storeId, photoId) {
+    await pool.query(`
+      DELETE FROM store_photos
+      WHERE store_id = $1 AND id = $2
+    `, [storeId, photoId]);
+  }
 }
 
 module.exports = new StoreRepository();

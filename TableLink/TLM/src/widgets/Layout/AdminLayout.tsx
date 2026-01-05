@@ -12,7 +12,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <div className={styles.layout}>
-      <Sidebar collapsed={sidebarCollapsed} />
+      <Sidebar 
+        collapsed={sidebarCollapsed} 
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+      />
       <div className={`${styles.main} ${sidebarCollapsed ? styles.collapsed : ''}`}>
         <Header onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)} />
         <main className={styles.content}>

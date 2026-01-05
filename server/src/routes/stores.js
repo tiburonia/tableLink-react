@@ -32,4 +32,19 @@ router.get('/:storeId/menu', storeController.getStoreMenu);
 // 매장 메뉴 조회 API (TLL용)
 router.get('/:storeId/menu/tll', storeController.getStoreMenu);
 
+// 매장 테이블 목록 조회 API
+router.get('/:storeId/tables', storeController.getStoreTables);
+
+// 매장 단골 등급 조회 API
+router.get('/:storeId/promotions', storeController.getStorePromotions);
+
+// 매장 사진 조회 API
+router.get('/:storeId/photos', storeController.getStorePhotos);
+
+// 매장 사진 업로드 API
+router.post('/:storeId/photos', storeController.uploadStorePhoto);
+
+// 매장 사진 삭제 API
+router.delete('/:storeId/photos/:photoId', storeController.deleteStorePhoto);
+
 module.exports = router;

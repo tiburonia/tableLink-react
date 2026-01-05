@@ -14,6 +14,9 @@ router.get('/stores/:storeId', reviewController.getStoreReviews.bind(reviewContr
 // 사용자별 리뷰 조회
 router.get('/users/:userId', reviewController.getUserReviews.bind(reviewController));
 
+// 주문에 대한 리뷰 작성 가능 여부 검증
+router.get('/check/:orderId', reviewController.checkReviewEligibility.bind(reviewController));
+
 // 리뷰 제출
 router.post('/submit', reviewController.submitReview.bind(reviewController));
 

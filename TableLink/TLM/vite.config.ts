@@ -21,7 +21,7 @@ export default defineConfig({
     port: 5180,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://stunning-broccoli-7vwxrrpqr7vj29pj-5000.app.github.dev',
         changeOrigin: true,
       },
     },

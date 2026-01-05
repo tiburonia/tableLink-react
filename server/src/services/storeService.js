@@ -464,6 +464,89 @@ class StoreService {
       items: formattedItems
     };
   }
+
+  /**
+   * 매장 테이블 목록 조회
+   */
+  async getStoreTables(storeId) {
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    console.log(`🪑 매장 ${storeId} 테이블 목록 조회`);
+    const tables = await tableRepository.getStoreTable(numericStoreId);
+    console.log(`✅ 테이블 ${tables.length}개 조회 완료`);
+    
+    return tables;
+  }
+
+  /**
+   * 매장 단골 등급 조회
+   */
+  async getStorePromotions(storeId) {
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    console.log(`🏆 매장 ${storeId} 단골 등급 조회`);
+    const promotions = await storeRepository.getStorePromotion(numericStoreId);
+    console.log(`✅ 단골 등급 ${promotions.length}개 조회 완료`);
+    
+    return promotions;
+  }
+
+  /**
+   * 매장 사진 조회
+   */
+  async getStorePhotos(storeId) {
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    console.log(`📸 매장 ${storeId} 사진 조회`);
+    const photos = await storeRepository.getStorePhotos(numericStoreId);
+    console.log(`✅ 사진 ${photos.length}개 조회 완료`);
+    
+    return photos;
+  }
+
+  /**
+   * 매장 사진 업로드
+   */
+  async uploadStorePhoto(storeId, photo_url, description) {
+    const numericStoreId = parseInt(storeId);
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+
+    console.log(`📸 매장 ${storeId} 사진 업로드`);
+    const photo = await storeRepository.uploadStorePhoto(numericStoreId, photo_url, description);
+    console.log(`✅ 사진 업로드 완료`);
+    
+    return photo;
+  }
+
+  /**
+   * 매장 사진 삭제
+   */
+  async deleteStorePhoto(storeId, photoId) {
+    const numericStoreId = parseInt(storeId);
+    const numericPhotoId = parseInt(photoId);
+    
+    if (isNaN(numericStoreId) || numericStoreId <= 0) {
+      throw new Error('유효하지 않은 매장 ID입니다');
+    }
+    if (isNaN(numericPhotoId) || numericPhotoId <= 0) {
+      throw new Error('유효하지 않은 사진 ID입니다');
+    }
+
+    console.log(`📸 매장 ${storeId} 사진 ${photoId} 삭제`);
+    await storeRepository.deleteStorePhoto(numericStoreId, numericPhotoId);
+    console.log(`✅ 사진 삭제 완료`);
+  }
 }
 
 module.exports = new StoreService();

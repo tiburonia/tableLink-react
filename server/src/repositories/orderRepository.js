@@ -707,6 +707,7 @@ class OrderRepository {
         o.source,
         o.created_at,
         o.table_num as table_number,
+        COALESCE(o.is_reviewed, false) as is_reviewed,
         s.id as store_id,
         s.name as store_name,
         si.category as store_category,
@@ -725,15 +726,19 @@ class OrderRepository {
             AND oi.item_status != 'CANCELED'
           ),
           '[]'::json
-        ) as order_items
+        ) as order_items,
+        r.rating as review_rating,
+        r.content as review_content,
+        r.created_at as review_created_at
       FROM orders o
       JOIN stores s ON o.store_id = s.id
       LEFT JOIN store_info si ON s.id = si.store_id
       LEFT JOIN order_tickets ot ON o.id = ot.order_id
       LEFT JOIN order_tickets ot_paid ON o.id = ot_paid.order_id AND ot_paid.paid_status = 'PAID'
       LEFT JOIN order_items oi ON ot_paid.id = oi.ticket_id AND oi.item_status != 'CANCELED'
+      LEFT JOIN reviews r ON o.id = r.order_id
       ${whereClause}
-      GROUP BY o.id, s.id, s.name, si.category
+      GROUP BY o.id, s.id, s.name, si.category, r.rating, r.content, r.created_at
       ORDER BY o.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `, [...queryParams, limit, offset]);

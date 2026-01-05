@@ -152,6 +152,123 @@ class MerchantStoreService {
     console.log('✅ 매장 상세 조회 완료:', store.name);
     return store;
   }
+
+  /**
+   * 메뉴 목록 조회
+   */
+  async getMenuItems(storeId) {
+    console.log('🍽️ 메뉴 목록 조회:', storeId);
+    
+    const menus = await storeRepository.getMenusByStoreId(storeId);
+    console.log('✅ 메뉴 목록 조회 완료:', menus.length, '개');
+    
+    return menus;
+  }
+
+  /**
+   * 메뉴 수정
+   */
+  async updateMenuItem(storeId, menuId, menuData) {
+    console.log('✏️ 메뉴 수정:', { storeId, menuId, menuName: menuData.name });
+    
+    const result = await storeRepository.updateMenuItem(storeId, menuId, menuData);
+    if (!result) {
+      throw new Error('메뉴를 찾을 수 없습니다');
+    }
+    
+    console.log('✅ 메뉴 수정 완료:', result.id);
+    return result;
+  }
+
+  /**
+   * 메뉴 삭제
+   */
+  async deleteMenuItem(storeId, menuId) {
+    console.log('🗑️ 메뉴 삭제:', { storeId, menuId });
+    
+    const deleted = await storeRepository.deleteMenuItem(storeId, menuId);
+    if (!deleted) {
+      throw new Error('메뉴를 찾을 수 없습니다');
+    }
+    
+    console.log('✅ 메뉴 삭제 완료');
+  }
+
+  // ========== 테이블 관리 ==========
+
+  /**
+   * 테이블 목록 조회
+   */
+  async getTables(storeId) {
+    console.log('🪑 테이블 목록 조회:', storeId);
+    
+    const tables = await storeRepository.getTablesByStoreId(storeId);
+    console.log('✅ 테이블 목록 조회 완료:', tables.length, '개');
+    
+    return tables;
+  }
+
+  /**
+   * 테이블 추가
+   */
+  async addTable(storeId, tableData) {
+    console.log('🪑 테이블 추가:', { storeId, tableName: tableData.table_name });
+    
+    const result = await storeRepository.createTable(storeId, tableData);
+    console.log('✅ 테이블 추가 완료:', result.id);
+    
+    return result;
+  }
+
+  /**
+   * 테이블 수정
+   */
+  async updateTable(storeId, tableId, tableData) {
+    console.log('✏️ 테이블 수정:', { storeId, tableId, tableName: tableData.table_name });
+    
+    const result = await storeRepository.updateTable(storeId, tableId, tableData);
+    if (!result) {
+      throw new Error('테이블을 찾을 수 없습니다');
+    }
+    
+    console.log('✅ 테이블 수정 완료:', result.id);
+    return result;
+  }
+
+  /**
+   * 테이블 삭제
+   */
+  async deleteTable(storeId, tableId) {
+    console.log('🗑️ 테이블 삭제:', { storeId, tableId });
+    
+    // 점유 중인 테이블은 삭제 불가
+    const table = await storeRepository.getTableById(storeId, tableId);
+    if (table && table.status === 'OCCUPIED') {
+      throw new Error('사용 중인 테이블은 삭제할 수 없습니다');
+    }
+    
+    const deleted = await storeRepository.deleteTable(storeId, tableId);
+    if (!deleted) {
+      throw new Error('테이블을 찾을 수 없습니다');
+    }
+    
+    console.log('✅ 테이블 삭제 완료');
+  }
+
+  /**
+   * 테이블 상태 변경
+   */
+  async updateTableStatus(storeId, tableId, status) {
+    console.log('🔄 테이블 상태 변경:', { storeId, tableId, status });
+    
+    const result = await storeRepository.updateTableStatus(storeId, tableId, status);
+    if (!result) {
+      throw new Error('테이블을 찾을 수 없습니다');
+    }
+    
+    console.log('✅ 테이블 상태 변경 완료:', status);
+    return result;
+  }
 }
 
 module.exports = new MerchantStoreService();

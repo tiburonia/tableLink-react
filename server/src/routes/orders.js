@@ -17,6 +17,9 @@ router.get('/mypage/:userId', orderController.getUserOrders);
 // 사용자 주문 목록 조회 API
 router.get('/users/:userId', orderController.getUserOrders);
 
+// 사용자 주문 목록 조회 API (TLG 호환)
+router.get('/user/:userId', orderController.getUserOrders);
+
 // 매장 주문 목록 조회 API
 router.get('/store/:storeId', orderController.getStoreOrders);
 

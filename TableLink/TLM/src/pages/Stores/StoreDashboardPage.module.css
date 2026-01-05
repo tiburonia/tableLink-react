@@ -87,21 +87,33 @@
   color: #fecaca;
 }
 
-.menuBtn {
+/* 알림 버튼 */
+.notificationBtn {
+  position: relative;
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 20px;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.storeAddress {
-  font-size: 13px;
-  opacity: 0.9;
-  margin: 0;
+.notificationBtn .badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
 }
 
 /* 메인 콘텐츠 */
@@ -197,14 +209,15 @@
   background: white;
   border: none;
   border-radius: 16px;
-  padding: 20px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  text-align: left;
 }
 
 .actionCard:hover {
@@ -212,14 +225,35 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
+.actionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
 .actionIcon {
-  font-size: 32px;
+  font-size: 24px;
 }
 
 .actionTitle {
   font-size: 14px;
   font-weight: 600;
   color: #1f2937;
+}
+
+.actionStatus {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.actionStatus.positive {
+  color: #22c55e;
+}
+
+.actionStatus.warning {
+  color: #f59e0b;
 }
 
 .actionDesc {
@@ -281,6 +315,27 @@
   font-weight: 500;
 }
 
+/* 섹션 헤더 */
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.sectionHeader .sectionTitle {
+  margin: 0;
+}
+
+.alertBadge {
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
 /* 리뷰 리스트 */
 .reviewList {
   display: flex;
@@ -293,13 +348,25 @@
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border-left: 3px solid transparent;
+}
+
+.reviewCard.negative {
+  border-left-color: #ef4444;
+  background: #fffbfb;
 }
 
 .reviewHeader {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 8px;
+}
+
+.reviewMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .reviewUser {
@@ -312,11 +379,38 @@
   font-size: 12px;
 }
 
+.replyNeeded {
+  background: #fef3c7;
+  color: #d97706;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
 .reviewContent {
   font-size: 14px;
   color: #6b7280;
   margin: 0;
   line-height: 1.5;
+}
+
+.viewAllBtn {
+  width: 100%;
+  padding: 12px;
+  background: #f8f9fa;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #667eea;
+  cursor: pointer;
+  margin-top: 12px;
+  transition: background 0.2s;
+}
+
+.viewAllBtn:hover {
+  background: #f0f4ff;
 }
 
 /* 프로모션 리스트 */

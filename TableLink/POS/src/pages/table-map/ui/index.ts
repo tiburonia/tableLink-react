@@ -1,0 +1,1 @@
+export { TableMapPage } from './TableMapPage'

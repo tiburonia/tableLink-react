@@ -109,7 +109,7 @@ class ReviewRepository {
   }
 
   /**
-   * 주문에 대한 리뷰 존재 여부 확인
+   * 주문에 대한 리뷰 존재 여부 확인 (reviews 테이블)
    */
   async checkReviewExistsByOrderId(orderId) {
     const result = await pool.query(`
@@ -117,6 +117,39 @@ class ReviewRepository {
     `, [orderId]);
 
     return result.rows.length > 0;
+  }
+
+  /**
+   * 주문의 리뷰 작성 여부 확인 (orders.is_reviewed 컬럼)
+   */
+  async checkOrderIsReviewed(orderId) {
+    const result = await pool.query(`
+      SELECT is_reviewed FROM orders WHERE id = $1
+    `, [orderId]);
+
+    if (result.rows.length === 0) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    return result.rows[0].is_reviewed === true;
+  }
+
+  /**
+   * 주문의 is_reviewed 컬럼 업데이트
+   */
+  async updateOrderIsReviewed(orderId, isReviewed) {
+    const result = await pool.query(`
+      UPDATE orders 
+      SET is_reviewed = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING id, is_reviewed
+    `, [isReviewed, orderId]);
+
+    if (result.rows.length === 0) {
+      throw new Error('주문을 찾을 수 없습니다');
+    }
+
+    return result.rows[0];
   }
 }
 

@@ -1,0 +1,221 @@
+.card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card.cancelled {
+  opacity: 0.6;
+  background: #f9fafb;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sourceInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sourceBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.sourceBadge.pos {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.sourceBadge.tll {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.orderId {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.time {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* Items */
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.itemName {
+  font-size: 14px;
+  color: #1f2937;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemQuantity {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-left: 8px;
+}
+
+.moreItems {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+  padding: 4px;
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.amount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.totalAmount {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.unpaidAmount {
+  font-size: 12px;
+  color: #ef4444;
+}
+
+.statusRow {
+  display: flex;
+  gap: 8px;
+}
+
+.statusBadge,
+.paymentBadge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Status badges */
+.status_pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status_confirmed {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.status_preparing {
+  background: #e0e7ff;
+  color: #7c3aed;
+}
+
+.status_ready {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status_served {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status_cancelled {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Payment badges */
+.payment_unpaid {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.payment_partial {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.payment_paid {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.payment_refunded {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.confirmBtn,
+.cancelBtn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confirmBtn {
+  background: #3b82f6;
+  color: #ffffff;
+}
+
+.confirmBtn:hover {
+  background: #2563eb;
+}
+
+.cancelBtn {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.cancelBtn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
