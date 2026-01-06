@@ -16,7 +16,7 @@ export const tableApi = {
    * 매장의 전체 테이블 및 주문 정보 조회 (테이블맵용)
    */
   getStoreTables: async (storeId: number): Promise<Table[]> => {
-    const response = await apiClient.get<TablesResponse>(`/api/pos/store/${storeId}/tables`)
+    const response = await apiClient.get<TablesResponse>(`/pos/store/${storeId}/tables`)
     return response.tables
   },
 
@@ -24,6 +24,6 @@ export const tableApi = {
    * 특정 테이블 상태 조회
    */
   getTableStatus: async (storeId: number, tableNumber: number) => {
-    return apiClient.get(`/api/pos/stores/${storeId}/table/${tableNumber}/status`)
+    return apiClient.get(`/pos/stores/${storeId}/table/${tableNumber}/status`)
   },
 }

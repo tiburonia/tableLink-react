@@ -7,6 +7,7 @@ interface HeaderProps {
   tableNumber?: number
   onViewChange?: (view: ViewType) => void
   onOrderTabChange?: (tab: OrderTabType) => void
+  onLogout?: () => void
 }
 
 export function Header({
@@ -14,6 +15,7 @@ export function Header({
   tableNumber,
   onViewChange,
   onOrderTabChange,
+  onLogout,
 }: HeaderProps) {
   const { currentView, orderTab, setCurrentView, setOrderTab } = usePosStore()
 
@@ -25,6 +27,12 @@ export function Header({
   const handleOrderTabChange = (tab: OrderTabType) => {
     setOrderTab(tab)
     onOrderTabChange?.(tab)
+  }
+
+  const handleLogoutClick = () => {
+    if (window.confirm('로그아웃 하시겠습니까?')) {
+      onLogout?.()
+    }
   }
 
   return (
@@ -84,6 +92,15 @@ export function Header({
         >
           💳 결제
         </button>
+        {onLogout && (
+          <button
+            className={styles.logoutBtn}
+            onClick={handleLogoutClick}
+            title="로그아웃"
+          >
+            🚪
+          </button>
+        )}
       </div>
     </header>
   )

@@ -3,11 +3,11 @@ import type { Category, MenuItem } from '../model'
 
 export const menuApi = {
   getCategories: async (storeId: number): Promise<Category[]> => {
-    return apiClient.get<Category[]>(`/api/stores/${storeId}/categories`)
+    return apiClient.get<Category[]>(`/stores/${storeId}/categories`)
   },
 
   getMenuItems: async (storeId: number): Promise<MenuItem[]> => {
-    return apiClient.get<MenuItem[]>(`/api/stores/${storeId}/menus`)
+    return apiClient.get<MenuItem[]>(`/stores/${storeId}/menus`)
   },
 
   getMenuItemsByCategory: async (
@@ -15,25 +15,25 @@ export const menuApi = {
     categoryId: number
   ): Promise<MenuItem[]> => {
     return apiClient.get<MenuItem[]>(
-      `/api/stores/${storeId}/categories/${categoryId}/menus`
+      `/stores/${storeId}/categories/${categoryId}/menus`
     )
   },
 
   getMenuItem: async (menuId: number): Promise<MenuItem> => {
-    return apiClient.get<MenuItem>(`/api/menus/${menuId}`)
+    return apiClient.get<MenuItem>(`/menus/${menuId}`)
   },
 
   updateMenuAvailability: async (
     menuId: number,
     isAvailable: boolean
   ): Promise<void> => {
-    return apiClient.patch(`/api/menus/${menuId}/availability`, { isAvailable })
+    return apiClient.patch(`/menus/${menuId}/availability`, { isAvailable })
   },
 
   updateMenuSoldout: async (
     menuId: number,
     isSoldout: boolean
   ): Promise<void> => {
-    return apiClient.patch(`/api/menus/${menuId}/soldout`, { isSoldout })
+    return apiClient.patch(`/menus/${menuId}/soldout`, { isSoldout })
   },
 }

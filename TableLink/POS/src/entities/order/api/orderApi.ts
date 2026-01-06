@@ -7,12 +7,12 @@ export const orderApi = {
     tableNumber: number
   ): Promise<TableOrders> => {
     return apiClient.get<TableOrders>(
-      `/api/stores/${storeId}/tables/${tableNumber}/orders`
+      `/stores/${storeId}/tables/${tableNumber}/orders`
     )
   },
 
   getOrder: async (orderId: number): Promise<Order> => {
-    return apiClient.get<Order>(`/api/orders/${orderId}`)
+    return apiClient.get<Order>(`/orders/${orderId}`)
   },
 
   createOrder: async (
@@ -20,7 +20,7 @@ export const orderApi = {
     tableNumber: number,
     items: CartItem[]
   ): Promise<Order> => {
-    return apiClient.post<Order>(`/api/stores/${storeId}/orders`, {
+    return apiClient.post<Order>(`/stores/${storeId}/orders`, {
       tableNumber,
       items,
       source: 'POS',
@@ -31,18 +31,18 @@ export const orderApi = {
     orderId: number,
     items: CartItem[]
   ): Promise<Order> => {
-    return apiClient.post<Order>(`/api/orders/${orderId}/items`, { items })
+    return apiClient.post<Order>(`/orders/${orderId}/items`, { items })
   },
 
   updateOrderStatus: async (
     orderId: number,
     status: string
   ): Promise<Order> => {
-    return apiClient.patch<Order>(`/api/orders/${orderId}/status`, { status })
+    return apiClient.patch<Order>(`/orders/${orderId}/status`, { status })
   },
 
   cancelOrder: async (orderId: number, reason?: string): Promise<void> => {
-    return apiClient.delete(`/api/orders/${orderId}`, { reason })
+    return apiClient.delete(`/orders/${orderId}`, { reason })
   },
 
   cancelOrderItem: async (
@@ -51,7 +51,7 @@ export const orderApi = {
     reason?: string
   ): Promise<Order> => {
     return apiClient.delete<Order>(
-      `/api/orders/${orderId}/items/${orderItemId}`,
+      `/orders/${orderId}/items/${orderItemId}`,
       { reason }
     )
   },
@@ -62,7 +62,7 @@ export const orderApi = {
     quantity: number
   ): Promise<Order> => {
     return apiClient.patch<Order>(
-      `/api/orders/${orderId}/items/${orderItemId}`,
+      `/orders/${orderId}/items/${orderItemId}`,
       { quantity }
     )
   },

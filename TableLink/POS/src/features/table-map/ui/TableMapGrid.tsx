@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react'
 import { TableCard } from '@/entities/table'
 import { useTableMap } from '../model'
 import styles from './TableMapGrid.module.css'
@@ -9,21 +8,16 @@ interface TableMapGridProps {
   onTableSelect: (tableNumber: number) => void
 }
 
+/**
+ * 테이블맵 그리드 컴포넌트
+ * - 테이블 로딩은 App.tsx에서 1회만 수행
+ * - 이 컴포넌트는 store의 tables를 렌더링만 담당
+ */
 export function TableMapGrid({
-  storeId,
   columns = 5,
   onTableSelect,
 }: TableMapGridProps) {
-  const { tables, selectedTable, fetchTables, handleTableSelect } = useTableMap()
-  const hasFetched = useRef(false)
-
-  useEffect(() => {
-    // 초기 로딩 시 한 번만 실행
-    if (!hasFetched.current) {
-      hasFetched.current = true
-      fetchTables(storeId)
-    }
-  }, [storeId])
+  const { tables, selectedTable, handleTableSelect } = useTableMap()
 
   const handleClick = (tableNumber: number) => {
     handleTableSelect(tableNumber)
